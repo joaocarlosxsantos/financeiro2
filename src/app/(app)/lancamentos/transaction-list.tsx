@@ -1,0 +1,121 @@
+"use client";
+
+import { useTransition } from "react";
+import { Trash2 } from "lucide-react";
+import { deleteTransaction, setTransactionCategory } from "@/server/actions/transactions";
+import { formatCents } from "@/lib/money";
+import { formatDayMonth } from "@/lib/dates";
+import { cn } from "@/lib/cn";
+import type { PlainAccount, PlainCategory, PlainTransaction } from "./types";
+
+export function TransactionList({
+  transactions,
+  categories,
+}: {
+  transactions: PlainTransaction[];
+  categories: PlainCategory[];
+  accounts: PlainAccount[];
+}) {
+  const grouped = groupByDate(transactions);
+
+  return (
+    <div className="divide-y">
+      {grouped.map(([date, items]) => (
+        <div key={date}>
+          <div className="muted flex items-center justify-between bg-[var(--surface-2)] px-5 py-2 text-xs font-medium">
+            <span className="capitalize">{formatDayMonth(date)}</span>
+            <span className="tnum">
+              {formatCents(
+                items.reduce((acc, t) => acc + (t.kind === "INCOME" ? t.amountCents : -t.amountCents), 0),
+              )}
+            </span>
+          </div>
+          <ul className="divide-y">
+            {items.map((t) => (
+              <Row key={t.id} tx={t} categories={categories} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCategory[] }) {
+  const [pending, start] = useTransition();
+  const options = categories.filter((c) => c.kind === tx.kind);
+
+  return (
+    <li className={cn("flex items-center gap-3 px-5 py-3.5 transition-opacity", pending && "opacity-50")}>
+      <span
+        className="size-2.5 shrink-0 rounded-full"
+        style={{ background: tx.categoryColor ?? "#94a3b8" }}
+        aria-hidden
+      />
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[0.875rem] font-medium">{tx.description}</p>
+        <div className="muted mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <select
+            aria-label="Categoria"
+            value={tx.categoryId ?? ""}
+            disabled={pending}
+            onChange={(e) =>
+              start(async () => {
+                await setTransactionCategory(tx.id, e.target.value || null);
+              })
+            }
+            className="cursor-pointer rounded-md border bg-[var(--surface-2)] px-1.5 py-0.5 text-xs"
+          >
+            <option value="">Sem categoria</option>
+            {options.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {tx.kind === "EXPENSE" ? (
+            <span className="rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 ring-1 ring-[var(--border)] ring-inset">
+              {tx.nature === "FIXED" ? "fixo" : "variável"}
+            </span>
+          ) : null}
+          <span className="truncate">{tx.accountName}</span>
+        </div>
+      </div>
+
+      <span
+        className={cn(
+          "tnum shrink-0 text-[0.9375rem] font-semibold",
+          tx.kind === "INCOME" ? "text-[var(--color-money-in)]" : "text-[var(--color-money-out)]",
+        )}
+      >
+        {tx.kind === "INCOME" ? "+" : "−"} {formatCents(tx.amountCents)}
+      </span>
+
+      <button
+        type="button"
+        aria-label={`Excluir ${tx.description}`}
+        disabled={pending}
+        onClick={() => {
+          if (!confirm(`Excluir "${tx.description}"?`)) return;
+          start(async () => {
+            await deleteTransaction(tx.id);
+          });
+        }}
+        className="muted shrink-0 cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+      >
+        <Trash2 className="size-4" />
+      </button>
+    </li>
+  );
+}
+
+function groupByDate(items: PlainTransaction[]): [string, PlainTransaction[]][] {
+  const map = new Map<string, PlainTransaction[]>();
+  for (const t of items) {
+    const list = map.get(t.date) ?? [];
+    list.push(t);
+    map.set(t.date, list);
+  }
+  return [...map.entries()];
+}

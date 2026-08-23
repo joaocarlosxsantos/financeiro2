@@ -1,26 +1,133 @@
 @import "tailwindcss";
 
+/* O tema escuro é controlado pela classe .dark no <html>, não pelo
+   prefers-color-scheme — assim o botão de tema funciona de verdade. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------
+   Financeiro 2.0 — design tokens
+   Paleta calma, com verde para "entrou", rosa para "saiu" e índigo
+   como cor de ação. Contraste conferido para leitura confortável.
+------------------------------------------------------------------- */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceff3;
+  --color-ink-200: #dbe0e8;
+  --color-ink-300: #b9c2d0;
+  --color-ink-400: #8d99ab;
+  --color-ink-500: #68748a;
+  --color-ink-600: #4e5a6e;
+  --color-ink-700: #3c4557;
+  --color-ink-800: #2a3140;
+  --color-ink-900: #1b2130;
+  --color-ink-950: #11151f;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+
+  --color-money-in: #0d9488;
+  --color-money-in-soft: #ccfbf1;
+  --color-money-out: #f43f5e;
+  --color-money-out-soft: #ffe4e6;
+  --color-save: #0891b2;
+  --color-fixed: #6366f1;
+  --color-variable: #d95926;
+  --color-save-soft: #cffafe;
+
+  --radius-xl2: 1.25rem;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f5f6f9;
+  --surface: #ffffff;
+  --surface-2: #fafbfd;
+  --border: #e5e8ef;
+  --text: #1b2130;
+  --text-muted: #68748a;
+  --shadow-card: 0 1px 2px rgba(17, 21, 31, 0.04), 0 8px 24px -12px rgba(17, 21, 31, 0.12);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --bg: #0d1017;
+  --surface: #151a24;
+  --surface-2: #1a212d;
+  --border: #262e3d;
+  --text: #e8ecf3;
+  --text-muted: #97a2b5;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl2);
+    box-shadow: var(--shadow-card);
+  }
+
+  .muted {
+    color: var(--text-muted);
+  }
+
+  .input-base {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input-base:focus {
+    border-color: var(--color-brand-400);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 18%, transparent);
+  }
+  .input-base::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+/* Números monetários alinhados */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
