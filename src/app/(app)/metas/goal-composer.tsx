@@ -56,7 +56,14 @@ export function GoalComposer() {
         <div className="flex gap-2">
           {KINDS.map((k) => (
             <label key={k.color} className="cursor-pointer">
-              <input type="radio" name="color" value={k.color} defaultChecked={k.value === "PURCHASE"} className="peer sr-only" />
+              <input
+                type="radio"
+                name="color"
+                value={k.color}
+                aria-label={`Cor ${k.label.toLowerCase()}`}
+                defaultChecked={k.value === "PURCHASE"}
+                className="peer sr-only"
+              />
               <span
                 className="block size-8 rounded-lg ring-offset-2 ring-offset-[var(--surface)] peer-checked:ring-2 peer-checked:ring-[var(--text-muted)]"
                 style={{ background: k.color }}

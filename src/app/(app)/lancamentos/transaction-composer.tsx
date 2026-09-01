@@ -5,9 +5,13 @@ import { createTransaction, type ActionState } from "@/server/actions/transactio
 import { Field, Input, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { formatCents, parseMoneyToCents } from "@/lib/money";
+import { splitInstallments } from "@/lib/installments";
 import type { PlainAccount, PlainCategory } from "./types";
 
 const initial: ActionState = {};
+
+const PARCELAS = [2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 24, 36, 48];
 
 export function TransactionComposer({
   categories,
@@ -20,14 +24,21 @@ export function TransactionComposer({
   const [kind, setKind] = useState<"INCOME" | "EXPENSE">("EXPENSE");
   const [categoryId, setCategoryId] = useState("");
   const [nature, setNature] = useState<"FIXED" | "VARIABLE">("VARIABLE");
+  const [installments, setInstallments] = useState(1);
+  const [amount, setAmount] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   const visible = categories.filter((c) => c.kind === kind);
+  const totalCents = parseMoneyToCents(amount);
+  const parcelas =
+    installments > 1 && totalCents > 0 ? splitInstallments(totalCents, installments) : [];
 
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
       setCategoryId("");
+      setInstallments(1);
+      setAmount("");
     }
   }, [state]);
 
@@ -53,8 +64,8 @@ export function TransactionComposer({
               "cursor-pointer rounded-lg py-2 text-[0.8125rem] font-medium transition-colors",
               kind === k
                 ? k === "EXPENSE"
-                  ? "bg-[var(--color-money-out)] text-white shadow-sm"
-                  : "bg-[var(--color-money-in)] text-white shadow-sm"
+                  ? "bg-[var(--btn-out)] text-white shadow-sm"
+                  : "bg-[var(--btn-in)] text-white shadow-sm"
                 : "hover:bg-[var(--surface)]",
             )}
           >
@@ -70,8 +81,15 @@ export function TransactionComposer({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Valor (R$)">
-          <Input name="amount" inputMode="decimal" required placeholder="0,00" />
+        <Field label={installments > 1 ? "Valor total (R$)" : "Valor (R$)"}>
+          <Input
+            name="amount"
+            inputMode="decimal"
+            required
+            placeholder="0,00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
         </Field>
         <Field label="Data">
           <Input name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
@@ -109,6 +127,39 @@ export function TransactionComposer({
         </Field>
       ) : null}
 
+      {kind === "EXPENSE" ? (
+        <Field
+          label="Parcelamento"
+          hint={
+            installments > 1
+              ? "Uma parcela por mês, a partir da data acima."
+              : "Compra parcelada no cartão? Escolha o número de vezes."
+          }
+        >
+          <Select
+            value={String(installments)}
+            onChange={(e) => setInstallments(Number(e.target.value))}
+          >
+            <option value="1">À vista</option>
+            {PARCELAS.map((n) => (
+              <option key={n} value={n}>
+                {n}x
+              </option>
+            ))}
+          </Select>
+          {installments > 1 && parcelas.length ? (
+            <p className="muted mt-2 text-xs leading-snug">
+              {installments}x de <strong>{formatCents(parcelas[0])}</strong>
+              {parcelas[0] !== parcelas[parcelas.length - 1]
+                ? ` (a última fica em ${formatCents(parcelas[parcelas.length - 1])})`
+                : ""}
+              . Total {formatCents(totalCents)}.
+            </p>
+          ) : null}
+        </Field>
+      ) : null}
+      <input type="hidden" name="installments" value={kind === "EXPENSE" ? installments : 1} />
+
       <Field label="Conta">
         <Select name="accountId" required defaultValue={accounts[0]?.id ?? ""}>
           {accounts.map((a) => (
@@ -126,7 +177,9 @@ export function TransactionComposer({
       ) : null}
 
       <SubmitButton className="w-full" pendingLabel="Lançando...">
-        Adicionar lançamento
+        {installments > 1 && kind === "EXPENSE"
+          ? `Lançar ${installments} parcelas`
+          : "Adicionar lançamento"}
       </SubmitButton>
     </form>
   );

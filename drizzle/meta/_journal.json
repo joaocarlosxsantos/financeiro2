@@ -8,6 +8,41 @@
       "when": 1787504451326,
       "tag": "0000_good_lady_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787572923155,
+      "tag": "0001_nebulous_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787574519939,
+      "tag": "0002_awesome_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787576045904,
+      "tag": "0003_friendly_amazoness",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787581791173,
+      "tag": "0004_dazzling_lester",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787588268647,
+      "tag": "0005_soft_franklin_richards",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,32 @@
+# Financeiro 2.0 — Postgres local para desenvolvimento.
+#
+#   docker compose up -d      sobe o banco
+#   docker compose ps         mostra se está de pé e saudável
+#   docker compose down       para o banco (os dados continuam no volume)
+#   docker compose down -v    para o banco E APAGA os dados
+#
+# A aplicação roda fora do Docker, com `npm run dev`, para manter o hot reload.
+# As variáveis abaixo têm padrão próprio — só mexa se quiser mudar algo.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: financeiro-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-financeiro}
+      POSTGRES_DB: ${POSTGRES_DB:-financeiro}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - financeiro-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-financeiro}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  financeiro-pgdata:

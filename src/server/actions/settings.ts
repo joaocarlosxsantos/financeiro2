@@ -139,6 +139,39 @@ export async function createCategory(_prev: ActionState, formData: FormData): Pr
   return { ok: true };
 }
 
+/**
+ * Define o saldo inicial da conta e a data em que ele valia.
+ * Lançamentos anteriores a essa data param de contar no saldo — é assim que
+ * você concilia com o extrato do banco sem apagar histórico.
+ */
+export async function saveOpeningBalance(input: {
+  accountId: string;
+  amount: string;
+  date?: string | null;
+}): Promise<ActionState> {
+  const userId = await requireUserId();
+
+  const [account] = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
+    .limit(1);
+  if (!account) return { error: "Conta não encontrada." };
+
+  await db
+    .update(accounts)
+    .set({
+      openingBalanceCents: parseMoneyToCents(input.amount),
+      openingBalanceDate: input.date ? new Date(`${input.date}T00:00:00.000Z`) : null,
+    })
+    .where(eq(accounts.id, input.accountId));
+
+  revalidatePath("/contas");
+  revalidatePath("/configuracoes");
+  revalidatePath("/painel");
+  return { ok: true };
+}
+
 export async function deleteCategory(id: string) {
   const userId = await requireUserId();
   await db

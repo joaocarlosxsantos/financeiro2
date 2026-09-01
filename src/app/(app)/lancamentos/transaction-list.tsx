@@ -1,8 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { Trash2 } from "lucide-react";
-import { deleteTransaction, setTransactionCategory } from "@/server/actions/transactions";
+import { ArrowLeftRight, Repeat, Trash2 } from "lucide-react";
+import {
+  deleteTransaction,
+  setTransactionCategory,
+  setTransactionTransfer,
+} from "@/server/actions/transactions";
 import { formatCents } from "@/lib/money";
 import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
@@ -26,7 +30,12 @@ export function TransactionList({
             <span className="capitalize">{formatDayMonth(date)}</span>
             <span className="tnum">
               {formatCents(
-                items.reduce((acc, t) => acc + (t.kind === "INCOME" ? t.amountCents : -t.amountCents), 0),
+                items
+                  .filter((t) => !t.isTransfer)
+                  .reduce(
+                    (acc, t) => acc + (t.kind === "INCOME" ? t.amountCents : -t.amountCents),
+                    0,
+                  ),
               )}
             </span>
           </div>
@@ -74,9 +83,34 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
               </option>
             ))}
           </select>
-          {tx.kind === "EXPENSE" ? (
+          {tx.isTransfer ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-cyan-50 px-1.5 py-0.5 font-medium text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300"
+              title="Movimento entre contas suas — fora dos totais"
+            >
+              <ArrowLeftRight className="size-3" />
+              transferência
+            </span>
+          ) : tx.kind === "EXPENSE" ? (
             <span className="rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 ring-1 ring-[var(--border)] ring-inset">
               {tx.nature === "FIXED" ? "fixo" : "variável"}
+            </span>
+          ) : null}
+          {tx.installmentNumber && tx.installmentTotal ? (
+            <span
+              className="rounded-md bg-brand-50 px-1.5 py-0.5 font-medium text-brand-700 dark:bg-brand-500/12 dark:text-brand-300"
+              title="Compra parcelada"
+            >
+              parcela {tx.installmentNumber}/{tx.installmentTotal}
+            </span>
+          ) : null}
+          {tx.recurringRuleId ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 ring-1 ring-[var(--border)] ring-inset"
+              title="Gerado por uma recorrência"
+            >
+              <Repeat className="size-3" />
+              recorrente
             </span>
           ) : null}
           <span className="truncate">{tx.accountName}</span>
@@ -86,11 +120,41 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
       <span
         className={cn(
           "tnum shrink-0 text-[0.9375rem] font-semibold",
-          tx.kind === "INCOME" ? "text-[var(--color-money-in)]" : "text-[var(--color-money-out)]",
+          tx.isTransfer
+            ? "muted"
+            : tx.kind === "INCOME"
+              ? "text-[var(--text-in)]"
+              : "text-[var(--text-out)]",
         )}
       >
-        {tx.kind === "INCOME" ? "+" : "−"} {formatCents(tx.amountCents)}
+        {tx.isTransfer ? "" : tx.kind === "INCOME" ? "+" : "−"} {formatCents(tx.amountCents)}
       </span>
+
+      <button
+        type="button"
+        aria-label={
+          tx.isTransfer
+            ? `Voltar a contar ${tx.description} nos totais`
+            : `Marcar ${tx.description} como transferência`
+        }
+        title={
+          tx.isTransfer
+            ? "Voltar a contar nos totais"
+            : "Marcar como transferência entre contas suas"
+        }
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            await setTransactionTransfer(tx.id, !tx.isTransfer);
+          })
+        }
+        className={cn(
+          "shrink-0 cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-[var(--surface-2)]",
+          tx.isTransfer ? "text-cyan-600 dark:text-cyan-300" : "muted",
+        )}
+      >
+        <ArrowLeftRight className="size-4" />
+      </button>
 
       <button
         type="button"

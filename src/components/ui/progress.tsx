@@ -2,11 +2,14 @@ import { cn } from "@/lib/cn";
 
 export function Progress({
   value,
+  label,
   color = "var(--color-brand-500)",
   className,
   height = 8,
 }: {
   value: number; // 0-100
+  /** Nome acessível da barra. Sem ele o leitor de tela anuncia só o número. */
+  label: string;
   color?: string;
   className?: string;
   height?: number;
@@ -17,6 +20,8 @@ export function Progress({
       className={cn("w-full overflow-hidden rounded-full bg-[var(--surface-2)] ring-1 ring-inset ring-[var(--border)]", className)}
       style={{ height }}
       role="progressbar"
+      aria-label={label}
+      aria-valuetext={`${Math.round(v)}%`}
       aria-valuenow={Math.round(v)}
       aria-valuemin={0}
       aria-valuemax={100}

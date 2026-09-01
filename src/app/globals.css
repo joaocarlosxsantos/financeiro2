@@ -52,8 +52,27 @@
   --surface-2: #fafbfd;
   --border: #e5e8ef;
   --text: #1b2130;
-  --text-muted: #68748a;
+  --text-muted: #586373;
   --shadow-card: 0 1px 2px rgba(17, 21, 31, 0.04), 0 8px 24px -12px rgba(17, 21, 31, 0.12);
+
+  /* ------------------------------------------------------------------
+     Cores de TEXTO com o mesmo significado das cores de gráfico, porém
+     escurecidas até passar 4.5:1 (WCAG AA para texto normal).
+     As cores de marca (--color-money-*) continuam valendo para barras,
+     pontos e preenchimentos, onde o mínimo é 3:1.
+  ------------------------------------------------------------------- */
+  --text-in: #0f766e;
+  --text-out: #be123c;
+  --text-warn: #b4451d;
+  --text-brand: #4f46e5;
+}
+
+/* Botões preenchidos: o contraste é do texto branco contra o próprio botão,
+   então valem os mesmos tons nos dois temas. */
+:root,
+.dark {
+  --btn-in: #0f766e;
+  --btn-out: #be123c;
 }
 
 .dark {
@@ -63,6 +82,10 @@
   --border: #262e3d;
   --text: #e8ecf3;
   --text-muted: #97a2b5;
+  --text-in: #2dd4bf;
+  --text-out: #fb7185;
+  --text-warn: #fb923c;
+  --text-brand: #a5b4fc;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 }
 
@@ -114,6 +137,36 @@ body {
   .input-base::placeholder {
     color: var(--text-muted);
   }
+}
+
+/* ------------------------------------------------------------------
+   Foco visível em tudo que é interativo. O padrão do navegador some em
+   alguns componentes com fundo próprio, então definimos um anel único.
+------------------------------------------------------------------- */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Quem navega por teclado precisa pular o menu lateral repetido */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 50;
+  transform: translateY(-200%);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: transform 0.15s;
+}
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 /* Números monetários alinhados */

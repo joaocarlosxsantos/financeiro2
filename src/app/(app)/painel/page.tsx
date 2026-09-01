@@ -9,9 +9,12 @@ import {
 import { requireUserId } from "@/lib/auth";
 import {
   getAvgMonthlyCostCents,
+  getBudgetOverview,
+  getDebtOverview,
   getCategoryBreakdown,
   getMonthSummary,
   getMonthlySeries,
+  getRecurringStatus,
   getTotalSavedCents,
   getUser,
 } from "@/server/queries";
@@ -27,6 +30,7 @@ import {
 } from "@/lib/finance";
 import { PageHeader } from "@/components/page-header";
 import { MonthSwitcher } from "@/components/month-switcher";
+import { RecurringBanner } from "@/components/recurring-banner";
 import { StatTile } from "@/components/ui/stat";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/hint";
@@ -35,6 +39,8 @@ import { EmptyState } from "@/components/ui/empty";
 import { MonthlyFlowChart, FixedVariableChart } from "@/components/charts/monthly-flow";
 import { CategoryBars } from "@/components/charts/category-bars";
 import { HealthCard } from "./health-card";
+import { BudgetCard } from "./budget-card";
+import { DebtCard } from "./debt-card";
 
 export const metadata = { title: "Painel — Financeiro 2.0" };
 
@@ -47,14 +53,18 @@ export default async function DashboardPage({
   const { m } = await searchParams;
   const ref = monthRefFromParam(m);
 
-  const [user, summary, series, breakdown, avgCost, saved] = await Promise.all([
-    getUser(userId),
-    getMonthSummary(userId, ref),
-    getMonthlySeries(userId, 6, ref),
-    getCategoryBreakdown(userId, ref),
-    getAvgMonthlyCostCents(userId, 3),
-    getTotalSavedCents(userId),
-  ]);
+  const [user, summary, series, breakdown, avgCost, saved, budget, recurring, debts] =
+    await Promise.all([
+      getUser(userId),
+      getMonthSummary(userId, ref),
+      getMonthlySeries(userId, 6, ref),
+      getCategoryBreakdown(userId, ref),
+      getAvgMonthlyCostCents(userId, 3),
+      getTotalSavedCents(userId),
+      getBudgetOverview(userId, ref),
+      getRecurringStatus(userId, ref),
+      getDebtOverview(userId),
+    ]);
 
   const sobrou = balanceCents(summary);
   const rate = savingsRate(summary);
@@ -83,6 +93,16 @@ export default async function DashboardPage({
         description="Este é o retrato do seu mês. Comece de cima: o que entrou, o que saiu e o que sobrou."
         action={<MonthSwitcher value={ref} />}
       />
+
+      <RecurringBanner
+        monthRef={ref}
+        monthName={monthLabel(ref)}
+        count={recurring.pending.length}
+        incomeCents={recurring.pendingIncomeCents}
+        expenseCents={recurring.pendingExpenseCents}
+      />
+
+      <DebtCard overview={debts} incomeCents={user.monthlyIncomeCents} />
 
       {!hasData ? (
         <Card className="mb-6 p-0">
@@ -195,7 +215,9 @@ export default async function DashboardPage({
         </Card>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+      <section className="mt-4 grid gap-4 lg:grid-cols-3">
+        <BudgetCard overview={budget} monthRef={ref} />
+
         <Card>
           <CardHeader
             title="Reserva de emergência"
@@ -214,6 +236,7 @@ export default async function DashboardPage({
             <span className="muted tnum text-[0.8125rem]">de {formatCents(emergencyTarget)}</span>
           </div>
           <Progress
+            label="Progresso da reserva de emergência"
             value={emergencyTarget ? (saved / emergencyTarget) * 100 : 0}
             color="var(--color-save)"
             height={10}
@@ -301,7 +324,7 @@ function SplitRow({
           <span className="muted"> / {formatCents(target)}</span>
         </span>
       </div>
-      <Progress value={ratio} color={color} />
+      <Progress value={ratio} color={color} label={`${label}: quanto do sugerido já foi usado`} />
       <p className="muted mt-1 text-xs">{hint}</p>
     </li>
   );

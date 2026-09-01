@@ -207,9 +207,17 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                       />
                     </td>
                     <td className="tnum py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
-                    <td className="max-w-64 truncate py-2.5">{row.description}</td>
+                    <td className="max-w-64 py-2.5">
+                      <span className="block truncate">{row.description}</span>
+                      {row.isTransfer ? (
+                        <span className="mt-0.5 inline-block rounded-md bg-cyan-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300">
+                          transferência — fora dos totais
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="py-2.5">
                       <select
+                        disabled={row.isTransfer}
                         value={row.categoryId ?? ""}
                         onChange={(e) => changeCategory(i, e.target.value)}
                         className="cursor-pointer rounded-md border bg-[var(--surface-2)] px-1.5 py-1 text-xs"
@@ -228,8 +236,8 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                       className={cn(
                         "tnum px-5 py-2.5 text-right font-medium whitespace-nowrap",
                         row.kind === "INCOME"
-                          ? "text-[var(--color-money-in)]"
-                          : "text-[var(--color-money-out)]",
+                          ? "text-[var(--text-in)]"
+                          : "text-[var(--text-out)]",
                       )}
                     >
                       {row.kind === "INCOME" ? "+" : "−"} {formatCents(row.amountCents)}

@@ -79,7 +79,7 @@ export function GoalCard({
           {pct(goal.savedCents, goal.targetCents)}% de {formatCents(goal.targetCents)}
         </span>
       </div>
-      <Progress value={progress} color={goal.color} />
+      <Progress value={progress} color={goal.color} label={`Progresso da meta ${goal.name}`} />
 
       <div className="muted mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
         <span>Falta {formatCents(Math.max(0, goal.targetCents - goal.savedCents))}</span>

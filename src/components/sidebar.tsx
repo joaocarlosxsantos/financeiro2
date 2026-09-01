@@ -10,6 +10,11 @@ import {
   LogOut,
   Menu,
   Receipt,
+  Wallet,
+  TrendingDown,
+  CreditCard,
+  Repeat,
+  PiggyBank,
   Settings,
   Target,
   TrendingUp,
@@ -22,6 +27,11 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const nav = [
   { href: "/painel", label: "Painel", icon: LayoutDashboard },
   { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
+  { href: "/contas", label: "Contas", icon: Wallet },
+  { href: "/faturas", label: "Faturas", icon: CreditCard },
+  { href: "/recorrentes", label: "Recorrentes", icon: Repeat },
+  { href: "/orcamento", label: "Orçamento", icon: PiggyBank },
+  { href: "/dividas", label: "Dívidas", icon: TrendingDown },
   { href: "/metas", label: "Metas e reserva", icon: Target },
   { href: "/projecoes", label: "Projeções", icon: TrendingUp },
   { href: "/importar", label: "Importar extrato", icon: FileUp },
@@ -33,7 +43,7 @@ export function Sidebar({ userName, userEmail }: { userName: string; userEmail: 
   const [open, setOpen] = useState(false);
 
   const links = (
-    <nav className="space-y-1">
+    <nav className="space-y-1" aria-label="Navegação principal">
       {nav.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -41,6 +51,7 @@ export function Sidebar({ userName, userEmail }: { userName: string; userEmail: 
             key={href}
             href={href}
             onClick={() => setOpen(false)}
+            aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
               active
@@ -71,7 +82,8 @@ export function Sidebar({ userName, userEmail }: { userName: string; userEmail: 
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            aria-label="Abrir menu"
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={open}
             className="inline-flex size-9 cursor-pointer items-center justify-center rounded-xl border"
           >
             {open ? <X className="size-4" /> : <Menu className="size-4" />}

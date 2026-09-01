@@ -20,9 +20,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
+      <a href="#conteudo" className="skip-link">
+        Pular para o conteúdo
+      </a>
       <Sidebar userName={user.name} userEmail={user.email} />
       <div className="min-w-0 flex-1">
-        <main className="mx-auto max-w-6xl px-5 py-6 pb-24 sm:px-8 lg:py-10">{children}</main>
+        <main id="conteudo" className="mx-auto max-w-6xl px-5 py-6 pb-24 sm:px-8 lg:py-10">
+          {children}
+        </main>
       </div>
     </div>
   );

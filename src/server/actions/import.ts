@@ -6,7 +6,8 @@ import { db } from "@/db";
 import { accounts, categories, importBatches, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseStatement } from "@/lib/parsers";
-import { fingerprint, suggestCategoryId } from "@/lib/categorize";
+import { fingerprint, normalize, suggestCategoryId } from "@/lib/categorize";
+import { INVOICE_PAYMENT_HINTS } from "@/lib/invoices";
 
 export type PreviewRow = {
   date: string;
@@ -15,6 +16,8 @@ export type PreviewRow = {
   kind: "INCOME" | "EXPENSE";
   categoryId: string | null;
   nature: "FIXED" | "VARIABLE";
+  /** Pagamento de fatura e afins: entra como transferência, fora dos totais. */
+  isTransfer: boolean;
   /** true = não importar (duplicata detectada ou desmarcada pelo usuário) */
   duplicate: boolean;
   fingerprint: string;
@@ -83,13 +86,17 @@ export async function previewImport(input: {
     });
     prints.add(fp);
 
-    const categoryId = suggestCategoryId(r.description, cats, kind);
+    const description = normalize(r.description);
+    const isTransfer = INVOICE_PAYMENT_HINTS.some((hint) => description.includes(normalize(hint)));
+    const categoryId = isTransfer ? null : suggestCategoryId(r.description, cats, kind);
+
     return {
       date: r.date,
       description: r.description,
       amountCents,
       kind,
       categoryId,
+      isTransfer,
       nature: (categoryId ? (natureById.get(categoryId) ?? "VARIABLE") : "VARIABLE") as
         | "FIXED"
         | "VARIABLE",
@@ -168,6 +175,7 @@ export async function commitImport(input: {
         amountCents: r.amountCents,
         kind: r.kind,
         nature: (r.kind === "INCOME" ? "VARIABLE" : r.nature) as "FIXED" | "VARIABLE",
+        isTransfer: r.isTransfer,
         importBatchId: batch.id,
         fingerprint: r.fingerprint,
       })),

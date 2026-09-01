@@ -1,10 +1,17 @@
 import { Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
-import { getAccounts, getCategories, getMonthSummary, getTransactions } from "@/server/queries";
+import {
+  getAccounts,
+  getCategories,
+  getMonthSummary,
+  getRecurringStatus,
+  getTransactions,
+} from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { MonthSwitcher } from "@/components/month-switcher";
+import { RecurringBanner } from "@/components/recurring-banner";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty";
 import { Hint } from "@/components/ui/hint";
@@ -23,7 +30,7 @@ export default async function TransactionsPage({
   const sp = await searchParams;
   const ref = monthRefFromParam(sp.m);
 
-  const [accounts, categories, transactions, summary] = await Promise.all([
+  const [accounts, categories, transactions, summary, recurring] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
     getTransactions(userId, {
@@ -34,6 +41,7 @@ export default async function TransactionsPage({
       search: sp.q || undefined,
     }),
     getMonthSummary(userId, ref),
+    getRecurringStatus(userId, ref),
   ]);
 
   const plain = transactions.map((t) => ({
@@ -49,6 +57,11 @@ export default async function TransactionsPage({
     accountId: t.accountId,
     accountName: t.accountName,
     notes: t.notes,
+    isTransfer: t.isTransfer,
+    recurringRuleId: t.recurringRuleId,
+    installmentGroupId: t.installmentGroupId,
+    installmentNumber: t.installmentNumber,
+    installmentTotal: t.installmentTotal,
   }));
 
   const plainCategories = categories.map((c) => ({
@@ -68,6 +81,14 @@ export default async function TransactionsPage({
         title="Lançamentos"
         description="Tudo que entrou e saiu. Classificar cada gasto como fixo ou variável é o que faz o painel virar decisão."
         action={<MonthSwitcher value={ref} />}
+      />
+
+      <RecurringBanner
+        monthRef={ref}
+        monthName={monthLabel(ref)}
+        count={recurring.pending.length}
+        incomeCents={recurring.pendingIncomeCents}
+        expenseCents={recurring.pendingExpenseCents}
       />
 
       <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -100,26 +121,26 @@ export default async function TransactionsPage({
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card>
-            <div className="mb-4 grid grid-cols-3 gap-3 text-center">
-              <div>
-                <p className="muted text-xs">Entrou</p>
-                <p className="tnum mt-0.5 text-[0.9375rem] font-semibold text-[var(--color-money-in)]">
+            <ul className="mb-4 space-y-2 border-b pb-4 text-[0.8125rem]">
+              <li className="flex items-baseline justify-between gap-3">
+                <span className="muted">Entrou</span>
+                <span className="tnum font-semibold text-[var(--text-in)]">
                   {formatCents(summary.incomeCents)}
-                </p>
-              </div>
-              <div>
-                <p className="muted text-xs">Saiu</p>
-                <p className="tnum mt-0.5 text-[0.9375rem] font-semibold text-[var(--color-money-out)]">
+                </span>
+              </li>
+              <li className="flex items-baseline justify-between gap-3">
+                <span className="muted">Saiu</span>
+                <span className="tnum font-semibold text-[var(--text-out)]">
                   {formatCents(summary.expenseCents)}
-                </p>
-              </div>
-              <div>
-                <p className="muted text-xs">Sobrou</p>
-                <p className="tnum mt-0.5 text-[0.9375rem] font-semibold">
+                </span>
+              </li>
+              <li className="flex items-baseline justify-between gap-3">
+                <span className="muted">Sobrou</span>
+                <span className="tnum font-semibold">
                   {formatCents(summary.incomeCents - summary.expenseCents)}
-                </p>
-              </div>
-            </div>
+                </span>
+              </li>
+            </ul>
             <TransactionComposer categories={plainCategories} accounts={plainAccounts} />
           </Card>
         </div>

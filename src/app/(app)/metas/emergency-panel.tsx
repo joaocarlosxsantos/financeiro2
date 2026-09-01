@@ -53,7 +53,12 @@ export function EmergencyPanel({
         <span className="tnum text-3xl font-semibold tracking-tight">{formatCents(saved)}</span>
         <span className="muted tnum text-[0.875rem]">meta: {formatCents(target)}</span>
       </div>
-      <Progress value={target ? (saved / target) * 100 : 0} color="var(--color-save)" height={12} />
+      <Progress
+        label="Progresso da reserva de emergência"
+        value={target ? (saved / target) * 100 : 0}
+        color="var(--color-save)"
+        height={12}
+      />
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         <Metric label="Falta guardar" value={formatCents(missing)} />

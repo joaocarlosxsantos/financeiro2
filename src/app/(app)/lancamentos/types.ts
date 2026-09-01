@@ -21,4 +21,11 @@ export type PlainTransaction = {
   accountId: string;
   accountName: string;
   notes: string | null;
+  /** Movimento entre contas suas — fica fora dos totais de receita e despesa. */
+  isTransfer: boolean;
+  /** Preenchido quando o lançamento nasceu de uma regra recorrente. */
+  recurringRuleId: string | null;
+  installmentGroupId: string | null;
+  installmentNumber: number | null;
+  installmentTotal: number | null;
 };
