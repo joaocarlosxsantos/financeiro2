@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { and, asc, desc, eq, gte, ilike, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -31,9 +32,18 @@ import {
   type InvoiceStatus,
 } from "@/lib/invoices";
 
+/**
+ * O usuário da sessão.
+ *
+ * Se o id da sessão não existe mais no banco, a sessão está órfã — conta
+ * apagada, banco trocado, cookie antigo. Isso não é erro do sistema: é alguém
+ * deslogado segurando um cookie velho. Mandamos limpar a sessão em vez de
+ * estourar um 500 (e mandar direto para /login criaria um laço, porque de lá
+ * a sessão ainda parece válida).
+ */
 export async function getUser(userId: string) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) throw new Error("USER_NOT_FOUND");
+  if (!user) redirect("/api/sessao-invalida");
   return user;
 }
 

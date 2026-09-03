@@ -13,7 +13,7 @@ export default async function OnboardingPage() {
   if (!userId) redirect("/login");
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) redirect("/login");
+  if (!user) redirect("/api/sessao-invalida");
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 py-14">

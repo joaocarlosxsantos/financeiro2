@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -54,10 +55,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
-/** Usuário logado ou erro — usar dentro de Server Components/Actions. */
+/**
+ * Id do usuário logado. Usar dentro de Server Components e Server Actions.
+ *
+ * Sem sessão, manda para o login: quem chega aqui sem cookie válido é um
+ * visitante, não uma falha do sistema.
+ */
 export async function requireUserId(): Promise<string> {
   const session = await auth();
   const id = (session?.user as { id?: string } | undefined)?.id;
-  if (!id) throw new Error("UNAUTHENTICATED");
+  if (!id) redirect("/login");
   return id;
 }
