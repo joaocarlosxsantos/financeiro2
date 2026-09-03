@@ -780,10 +780,12 @@ export async function getCardInvoices(
   card: CardView,
   monthsBack = 5,
   today = new Date(),
+  /** Quantas faturas ainda não fechadas (status "aberta") incluir, além da atual. */
+  monthsAhead = 1,
 ): Promise<CardInvoice[]> {
   const currentRef = invoiceForPurchase(today, card.closingDay, card.dueDay);
   const refs: InvoiceRef[] = [];
-  for (let i = 1; i >= -monthsBack; i--) refs.push(shiftInvoice(currentRef, i));
+  for (let i = monthsAhead; i >= -monthsBack; i--) refs.push(shiftInvoice(currentRef, i));
 
   const oldest = refs[refs.length - 1];
   const newest = refs[0];

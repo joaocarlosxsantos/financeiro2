@@ -1,13 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, importBatches, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseStatement } from "@/lib/parsers";
 import { fingerprint, suggestCategoryId } from "@/lib/categorize";
-import { DEFAULT_CLOSING_DAY, DEFAULT_DUE_DAY, invoiceLabel, type InvoiceRef } from "@/lib/invoices";
+import {
+  closingDateFor,
+  DEFAULT_CLOSING_DAY,
+  DEFAULT_DUE_DAY,
+  invoiceLabel,
+  periodStartFor,
+  type InvoiceRef,
+} from "@/lib/invoices";
 import { resolveImportDate, type ImportKind } from "@/lib/import-dates";
 import { formatDate } from "@/lib/dates";
 import { getCardInvoices } from "@/server/queries";
@@ -71,7 +78,34 @@ export type PreviewResult = {
   warnings?: string[];
   detectedColumns?: Record<string, string>;
   duplicates?: number;
+  /** Intervalo de datas que esta importação cobre — usado para o "substituir esse período". */
+  period?: { start: string; end: string };
+  /** Quantos lançamentos já importados antes caem dentro desse período (candidatos a substituição). */
+  existingInPeriod?: number;
 };
+
+/**
+ * O "período" de uma importação, para decidir o que substituir num
+ * reimport: na fatura fechada é o ciclo exato daquela fatura (mesmo que
+ * nenhuma linha caia perto das bordas); no extrato geral é o intervalo entre
+ * a primeira e a última data das linhas resultantes (já com data ajustada).
+ */
+function periodRangeFor(params: {
+  importKind: ImportKind;
+  invoiceRef?: InvoiceRef;
+  closingDay: number;
+  dueDay: number;
+  rows: { date: string }[];
+}): { start: string; end: string } | null {
+  if (params.importKind === "CLOSED_INVOICE" && params.invoiceRef) {
+    const start = periodStartFor(params.invoiceRef, params.closingDay, params.dueDay);
+    const end = closingDateFor(params.invoiceRef, params.closingDay, params.dueDay);
+    return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  }
+  if (!params.rows.length) return null;
+  const dates = params.rows.map((r) => r.date).sort();
+  return { start: dates[0], end: dates[dates.length - 1] };
+}
 
 export type InvoiceOption = {
   ref: InvoiceRef;
@@ -119,10 +153,12 @@ export async function listCardInvoiceOptions(accountId: string): Promise<Invoice
     usingDefaults: account.closingDay === null || account.dueDay === null,
   };
 
-  // 2 faturas à frente (a aberta e a seguinte) + 12 meses de histórico —
-  // cobre tanto importar uma fatura recém-fechada quanto reprocessar algo antigo.
+  // 3 faturas à frente (ainda abertas, sem fechar) + 12 meses de histórico —
+  // cobre importar uma fatura recém-fechada, reprocessar algo antigo, e
+  // também uma "fatura futura" que o banco já deixa baixar (compras
+  // programadas, parcelas futuras) antes mesmo dela fechar.
   const today = new Date();
-  const invoices = await getCardInvoices(userId, card, 12, today);
+  const invoices = await getCardInvoices(userId, card, 12, today, 3);
 
   return invoices
     .slice()
@@ -287,6 +323,35 @@ export async function previewImport(input: {
     );
   }
 
+  // Reimportar a mesma fatura ou o mesmo período de extrato é comum (o banco
+  // corrigiu algo, ou você baixou de novo) — em vez de duplicar ou deixar
+  // lançamentos velhos e errados junto dos novos, detectamos o que já foi
+  // importado antes nesse mesmo período pra oferecer substituir tudo de uma
+  // vez (ver commitImport). Só conta o que veio de importação (importBatchId
+  // preenchido) — o que você digitou à mão nunca é tocado.
+  const period = periodRangeFor({ importKind, invoiceRef: input.invoiceRef, closingDay, dueDay, rows });
+  let existingInPeriod = 0;
+  if (period) {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.accountId, input.accountId),
+          isNotNull(transactions.importBatchId),
+          gte(transactions.date, new Date(`${period.start}T00:00:00.000Z`)),
+          lte(transactions.date, new Date(`${period.end}T23:59:59.999Z`)),
+        ),
+      );
+    existingInPeriod = count;
+    if (existingInPeriod > 0) {
+      warnings.push(
+        `${existingInPeriod} lançamento(s) importado(s) antes já cobrem esse período (${formatDate(period.start)} a ${formatDate(period.end)}). Se você confirmar com "substituir" marcado, eles são apagados e trocados pelos desta importação.`,
+      );
+    }
+  }
+
   return {
     fileName: input.fileName,
     accountId: input.accountId,
@@ -294,6 +359,8 @@ export async function previewImport(input: {
     warnings,
     detectedColumns: parsed.detectedColumns,
     duplicates,
+    period: period ?? undefined,
+    existingInPeriod,
   };
 }
 
@@ -302,11 +369,22 @@ export async function commitImport(input: {
   accountId: string;
   source: "CSV" | "OFX";
   rows: PreviewRow[];
-}): Promise<{ error?: string; saved?: number }> {
+  importKind?: ImportKind;
+  invoiceRef?: InvoiceRef;
+  /**
+   * Reimportar a mesma fatura/período? Por padrão troca tudo: apaga os
+   * lançamentos que vieram de importação anterior nesse mesmo período e
+   * grava os novos no lugar — é o comportamento esperado quando você baixa
+   * o arquivo de novo (arquivo corrigido, ou só reprocessando). Passe false
+   * pra manter os antigos e só acrescentar (arrisca duplicar quem não bate
+   * fingerprint exata).
+   */
+  replacePeriod?: boolean;
+}): Promise<{ error?: string; saved?: number; replaced?: number }> {
   const userId = await requireUserId();
 
   const [account] = await db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, closingDay: accounts.closingDay, dueDay: accounts.dueDay })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
@@ -315,52 +393,90 @@ export async function commitImport(input: {
   const rows = input.rows.filter((r) => !r.duplicate && r.amountCents > 0);
   if (!rows.length) return { error: "Nenhuma linha selecionada para importar." };
 
-  const [batch] = await db
-    .insert(importBatches)
-    .values({
-      userId,
-      accountId: input.accountId,
-      fileName: input.fileName,
-      source: input.source,
-      rowCount: input.rows.length,
-      status: "COMMITTED",
-      savedRows: 0,
-    })
-    .returning({ id: importBatches.id });
+  const importKind = input.importKind ?? "GENERAL";
+  const closingDay = account.closingDay ?? DEFAULT_CLOSING_DAY;
+  const dueDay = account.dueDay ?? DEFAULT_DUE_DAY;
+  const replacePeriod = input.replacePeriod ?? true;
+  const period = periodRangeFor({ importKind, invoiceRef: input.invoiceRef, closingDay, dueDay, rows });
 
-  const inserted = await db
-    .insert(transactions)
-    .values(
-      rows.map((r) => ({
+  const result = await db.transaction(async (tx) => {
+    let replaced = 0;
+
+    if (replacePeriod && period) {
+      const removed = await tx
+        .delete(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.accountId, input.accountId),
+            isNotNull(transactions.importBatchId),
+            gte(transactions.date, new Date(`${period.start}T00:00:00.000Z`)),
+            lte(transactions.date, new Date(`${period.end}T23:59:59.999Z`)),
+          ),
+        )
+        .returning({ importBatchId: transactions.importBatchId });
+      replaced = removed.length;
+
+      // Limpa lotes de importação que ficaram sem nenhum lançamento — senão
+      // o histórico em "Importações recentes" mostra um lote fantasma.
+      const touchedBatchIds = [...new Set(removed.map((r) => r.importBatchId).filter((id): id is string => Boolean(id)))];
+      for (const oldBatchId of touchedBatchIds) {
+        const [{ count }] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(transactions)
+          .where(eq(transactions.importBatchId, oldBatchId));
+        if (count === 0) {
+          await tx.delete(importBatches).where(eq(importBatches.id, oldBatchId));
+        }
+      }
+    }
+
+    const [batch] = await tx
+      .insert(importBatches)
+      .values({
         userId,
         accountId: input.accountId,
-        categoryId: r.categoryId,
-        date: new Date(`${r.date}T12:00:00.000Z`),
-        description: r.description,
-        amountCents: r.amountCents,
-        kind: r.kind,
-        nature: (r.kind === "INCOME" ? "VARIABLE" : r.nature) as "FIXED" | "VARIABLE",
-        isTransfer: r.isTransfer,
-        importBatchId: batch.id,
-        fingerprint: r.fingerprint,
-        installmentNumber: r.installmentNumber,
-        installmentTotal: r.installmentTotal,
-        notes: r.dateAdjusted && r.originalDate ? `Compra original em ${formatDate(r.originalDate)}` : null,
-      })),
-    )
-    .onConflictDoNothing()
-    .returning({ id: transactions.id });
+        fileName: input.fileName,
+        source: input.source,
+        rowCount: input.rows.length,
+        status: "COMMITTED",
+        savedRows: 0,
+      })
+      .returning({ id: importBatches.id });
 
-  await db
-    .update(importBatches)
-    .set({ savedRows: inserted.length })
-    .where(eq(importBatches.id, batch.id));
+    const inserted = await tx
+      .insert(transactions)
+      .values(
+        rows.map((r) => ({
+          userId,
+          accountId: input.accountId,
+          categoryId: r.categoryId,
+          date: new Date(`${r.date}T12:00:00.000Z`),
+          description: r.description,
+          amountCents: r.amountCents,
+          kind: r.kind,
+          nature: (r.kind === "INCOME" ? "VARIABLE" : r.nature) as "FIXED" | "VARIABLE",
+          isTransfer: r.isTransfer,
+          importBatchId: batch.id,
+          fingerprint: r.fingerprint,
+          installmentNumber: r.installmentNumber,
+          installmentTotal: r.installmentTotal,
+          notes: r.dateAdjusted && r.originalDate ? `Compra original em ${formatDate(r.originalDate)}` : null,
+        })),
+      )
+      .onConflictDoNothing()
+      .returning({ id: transactions.id });
+
+    await tx.update(importBatches).set({ savedRows: inserted.length }).where(eq(importBatches.id, batch.id));
+
+    return { saved: inserted.length, replaced };
+  });
 
   revalidatePath("/lancamentos");
   revalidatePath("/painel");
   revalidatePath("/importar");
   revalidatePath("/faturas");
-  return { saved: inserted.length };
+  return result;
 }
 
 /**

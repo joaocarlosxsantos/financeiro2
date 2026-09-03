@@ -21,12 +21,32 @@ import { cn } from "@/lib/cn";
 type Account = { id: string; name: string; type: string };
 type Category = { id: string; name: string; kind: "INCOME" | "EXPENSE"; nature: "FIXED" | "VARIABLE"; color: string };
 
-const STATUS_LABEL: Record<InvoiceOption["status"], string> = {
-  aberta: "aberta",
-  fechada: "fechada, não paga",
-  paga: "paga",
-  vencida: "vencida",
-  "sem-registro": "sem registro de pagamento",
+const STATUS: Record<InvoiceOption["status"], { label: string; dot: string; badge: string }> = {
+  aberta: {
+    label: "aberta — ainda não fechou",
+    dot: "#0ea5e9",
+    badge: "bg-brand-50 text-brand-700 dark:bg-brand-500/12 dark:text-brand-300",
+  },
+  fechada: {
+    label: "fechada, não paga",
+    dot: "#d97706",
+    badge: "bg-amber-50 text-amber-800 dark:bg-amber-400/12 dark:text-amber-200",
+  },
+  vencida: {
+    label: "vencida",
+    dot: "#e11d48",
+    badge: "bg-rose-50 text-rose-700 dark:bg-rose-500/12 dark:text-rose-300",
+  },
+  paga: {
+    label: "paga",
+    dot: "#059669",
+    badge: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300",
+  },
+  "sem-registro": {
+    label: "sem registro de pagamento",
+    dot: "#94a3b8",
+    badge: "bg-[var(--surface-2)] text-[var(--text-muted)]",
+  },
 };
 
 export function ImportWizard({ accounts, categories }: { accounts: Account[]; categories: Category[] }) {
@@ -44,8 +64,12 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
   const [rows, setRows] = useState<PreviewRow[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [columns, setColumns] = useState<Record<string, string> | undefined>();
+  const [period, setPeriod] = useState<{ start: string; end: string } | null>(null);
+  const [existingInPeriod, setExistingInPeriod] = useState(0);
+  const [replacePeriod, setReplacePeriod] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState<number | null>(null);
+  const [replacedCount, setReplacedCount] = useState<number | null>(null);
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -81,11 +105,22 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       }
       setInvoiceOptions(result);
       // Prioriza a fatura mais recente já fechada e ainda não paga — é o
-      // caso mais comum de quem está importando uma fatura para conferir.
-      const preferred = ["fechada", "vencida", "sem-registro", "aberta", "paga"] as const;
+      // caso mais comum de quem está importando uma fatura para conferir. Se
+      // não houver nenhuma fechada, cai para a mais antiga "aberta" (o ciclo
+      // atual, o mais próximo de fechar) em vez da fatura mais distante no
+      // futuro — as futuras existem pra quem quer escolhê-las, não pra virar
+      // o padrão.
+      const statuses = result.map((o) => o.status);
+      const preferred: { status: InvoiceOption["status"]; fromEnd: boolean }[] = [
+        { status: "fechada", fromEnd: true },
+        { status: "vencida", fromEnd: true },
+        { status: "sem-registro", fromEnd: true },
+        { status: "aberta", fromEnd: false },
+        { status: "paga", fromEnd: true },
+      ];
       let bestIndex = result.length - 1;
-      for (const status of preferred) {
-        const idx = result.map((o) => o.status).lastIndexOf(status);
+      for (const { status, fromEnd } of preferred) {
+        const idx = fromEnd ? statuses.lastIndexOf(status) : statuses.indexOf(status);
         if (idx !== -1) {
           bestIndex = idx;
           break;
@@ -103,6 +138,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
   async function handleFile(file: File) {
     setError(null);
     setSavedCount(null);
+    setReplacedCount(null);
     if (!accountId) {
       setError("Cadastre um cartão de crédito em Configurações antes de importar uma fatura.");
       return;
@@ -131,6 +167,9 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       setRows(result.rows ?? []);
       setWarnings(result.warnings ?? []);
       setColumns(result.detectedColumns);
+      setPeriod(result.period ?? null);
+      setExistingInPeriod(result.existingInPeriod ?? 0);
+      setReplacePeriod(true);
     });
   }
 
@@ -169,14 +208,20 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
         accountId,
         source: fileName.toLowerCase().endsWith(".ofx") ? "OFX" : "CSV",
         rows,
+        importKind,
+        invoiceRef: importKind === "CLOSED_INVOICE" ? selectedInvoice!.ref : undefined,
+        replacePeriod: existingInPeriod > 0 ? replacePeriod : false,
       });
       if (result.error) {
         setError(result.error);
         return;
       }
       setSavedCount(result.saved ?? 0);
+      setReplacedCount(result.replaced ?? 0);
       setRows(null);
       setFileName(null);
+      setPeriod(null);
+      setExistingInPeriod(0);
       if (inputRef.current) inputRef.current.value = "";
     });
   }
@@ -229,8 +274,8 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
             <Field
               label="Qual fatura"
               hint={
-                selectedInvoice
-                  ? `Fecha ${formatDate(selectedInvoice.closingDate)} · vence ${formatDate(selectedInvoice.dueDate)} · ${STATUS_LABEL[selectedInvoice.status]}`
+                !loadingInvoices && !invoiceListError && invoiceOptions.length
+                  ? "Inclui as próximas faturas ainda em aberto — dá pra importar uma fatura futura, antes dela fechar."
                   : "Escolha pelo fechamento e vencimento, não só pelo nome do mês."
               }
             >
@@ -241,19 +286,37 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
               ) : invoiceListError ? (
                 <p className="text-[0.8125rem] text-rose-600">{invoiceListError}</p>
               ) : (
-                <Select
-                  value={invoiceIndex ?? ""}
-                  onChange={(e) => setInvoiceIndex(e.target.value === "" ? null : Number(e.target.value))}
-                  disabled={!invoiceOptions.length}
-                >
-                  {!invoiceOptions.length ? <option value="">Nenhuma fatura encontrada</option> : null}
-                  {invoiceOptions.map((opt, i) => (
-                    <option key={`${opt.ref.year}-${opt.ref.month}`} value={i}>
-                      {opt.label} — fecha {formatDate(opt.closingDate)}, vence {formatDate(opt.dueDate)} (
-                      {STATUS_LABEL[opt.status]})
-                    </option>
-                  ))}
-                </Select>
+                <>
+                  <Select
+                    value={invoiceIndex ?? ""}
+                    onChange={(e) => setInvoiceIndex(e.target.value === "" ? null : Number(e.target.value))}
+                    disabled={!invoiceOptions.length}
+                  >
+                    {!invoiceOptions.length ? <option value="">Nenhuma fatura encontrada</option> : null}
+                    {invoiceOptions.map((opt, i) => (
+                      <option key={`${opt.ref.year}-${opt.ref.month}`} value={i} style={{ color: STATUS[opt.status].dot }}>
+                        ● {STATUS[opt.status].label} — {opt.label} (fecha {formatDate(opt.closingDate)}, vence{" "}
+                        {formatDate(opt.dueDate)})
+                      </option>
+                    ))}
+                  </Select>
+                  {selectedInvoice ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[0.8125rem]">
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium",
+                          STATUS[selectedInvoice.status].badge,
+                        )}
+                      >
+                        {STATUS[selectedInvoice.status].label}
+                      </span>
+                      <span className="muted">
+                        Fatura {selectedInvoice.label} · fecha {formatDate(selectedInvoice.closingDate)} · vence{" "}
+                        {formatDate(selectedInvoice.dueDate)}
+                      </span>
+                    </div>
+                  ) : null}
+                </>
               )}
             </Field>
           ) : null}
@@ -312,6 +375,11 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                 {savedCount} lançamento(s) importado(s) com sucesso
               </p>
               <p className="muted text-[0.8125rem]">
+                {replacedCount ? (
+                  <>
+                    {replacedCount} lançamento(s) de uma importação anterior desse período foram substituídos.{" "}
+                  </>
+                ) : null}
                 Confira em Lançamentos — as categorias sugeridas podem ser trocadas a qualquer momento.
               </p>
             </div>
@@ -339,10 +407,36 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           ) : null}
 
           {warnings.map((w) => (
-            <Hint key={w} tone={w.includes("não encaixaram") || w.includes("já existir") ? "warn" : "info"} className="mb-3">
+            <Hint
+              key={w}
+              tone={w.includes("não encaixaram") || w.includes("já existir") || w.includes("já cobrem esse período") ? "warn" : "info"}
+              className="mb-3"
+            >
               {w}
             </Hint>
           ))}
+
+          {existingInPeriod > 0 && period ? (
+            <label className="mb-4 flex cursor-pointer items-start gap-2.5 rounded-xl border bg-[var(--surface-2)] px-3.5 py-3 text-[0.8125rem]">
+              <input
+                type="checkbox"
+                checked={replacePeriod}
+                onChange={(e) => setReplacePeriod(e.target.checked)}
+                className="mt-0.5 size-4 accent-[var(--color-brand-600)]"
+              />
+              <span>
+                <span className="block font-medium">
+                  Substituir os {existingInPeriod} lançamento(s) já importado(s) entre {formatDate(period.start)} e{" "}
+                  {formatDate(period.end)}
+                </span>
+                <span className="muted mt-0.5 block">
+                  {replacePeriod
+                    ? "Marcado: eles serão apagados e trocados pelos desta importação — o jeito certo de reimportar a mesma fatura ou o mesmo extrato."
+                    : "Desmarcado: os antigos ficam como estão, e só o que for novo entra (nada de outra importação é tocado; lançamentos digitados à mão nunca são apagados de qualquer forma)."}
+                </span>
+              </span>
+            </label>
+          ) : null}
 
           <div className="-mx-5 overflow-x-auto">
             <table className="w-full min-w-[800px] text-[0.8125rem]">
