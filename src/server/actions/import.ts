@@ -6,8 +6,8 @@ import { db } from "@/db";
 import { accounts, categories, importBatches, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseStatement } from "@/lib/parsers";
-import { fingerprint, normalize, suggestCategoryId } from "@/lib/categorize";
-import { DEFAULT_CLOSING_DAY, DEFAULT_DUE_DAY, INVOICE_PAYMENT_HINTS, invoiceLabel, type InvoiceRef } from "@/lib/invoices";
+import { fingerprint, suggestCategoryId } from "@/lib/categorize";
+import { DEFAULT_CLOSING_DAY, DEFAULT_DUE_DAY, invoiceLabel, type InvoiceRef } from "@/lib/invoices";
 import { resolveImportDate, type ImportKind } from "@/lib/import-dates";
 import { formatDate } from "@/lib/dates";
 import { getCardInvoices } from "@/server/queries";
@@ -39,10 +39,17 @@ export type PreviewRow = {
   kind: "INCOME" | "EXPENSE";
   categoryId: string | null;
   nature: "FIXED" | "VARIABLE";
-  /** Pagamento de fatura e afins: entra como transferência, fora dos totais. */
+  /**
+   * Transferência (pagamento de fatura, transferência entre contas suas etc.):
+   * entra no saldo, mas fora dos relatórios de receita/despesa. Ninguém
+   * detecta isso sozinho — o usuário marca a linha na prévia, do mesmo jeito
+   * que já faz em Lançamentos.
+   */
   isTransfer: boolean;
-  /** true = não importar (duplicata detectada ou desmarcada pelo usuário) */
+  /** true = não importar (desmarcada pelo usuário). Todas as linhas começam marcadas. */
   duplicate: boolean;
+  /** Informativo: já existe um lançamento com essa mesma data/valor/descrição/conta. Não desmarca sozinho. */
+  possibleDuplicate: boolean;
   fingerprint: string;
   installmentNumber: number | null;
   installmentTotal: number | null;
@@ -210,9 +217,12 @@ export async function previewImport(input: {
     });
     prints.add(fp);
 
-    const description = normalize(r.description);
-    const isTransfer = INVOICE_PAYMENT_HINTS.some((hint) => description.includes(normalize(hint)));
-    const categoryId = isTransfer ? null : suggestCategoryId(r.description, cats, kind);
+    // Transferência (pagamento de fatura, transferência entre contas suas) não
+    // dá pra adivinhar com segurança pelo texto — cada banco escreve diferente,
+    // e um palpite errado escondia gasto real dos relatórios sem o usuário
+    // perceber. Todas as linhas entram como não-transferência; quem sabe o que
+    // é o quê é o usuário, marcando na prévia.
+    const categoryId = suggestCategoryId(r.description, cats, kind);
 
     return {
       date: resolved.date.toISOString().slice(0, 10),
@@ -221,11 +231,14 @@ export async function previewImport(input: {
       amountCents,
       kind,
       categoryId,
-      isTransfer,
+      isTransfer: false,
       nature: (categoryId ? (natureById.get(categoryId) ?? "VARIABLE") : "VARIABLE") as
         | "FIXED"
         | "VARIABLE",
+      // Todas as linhas começam marcadas para importar — é o usuário quem
+      // desmarca, mesmo quando há uma possível duplicata (veja abaixo).
       duplicate: false,
+      possibleDuplicate: false,
       fingerprint: fp,
       installmentNumber: resolved.marker?.number ?? null,
       installmentTotal: resolved.marker?.total ?? null,
@@ -255,14 +268,23 @@ export async function previewImport(input: {
 
   const existingSet = new Set(existing.map((e) => e.fingerprint));
 
+  // Só informativo: mostra o aviso e marca a linha visualmente, mas não
+  // desmarca ninguém sozinho. Se for mesmo duplicata, o banco recusa a
+  // gravação (fingerprint é único) — não corre o risco de duplicar; se não
+  // for, o usuário não perde um lançamento por engano.
   let duplicates = 0;
   const seen = new Set<string>();
   for (const row of rows) {
     if (existingSet.has(row.fingerprint) || seen.has(row.fingerprint)) {
-      row.duplicate = true;
+      row.possibleDuplicate = true;
       duplicates++;
     }
     seen.add(row.fingerprint);
+  }
+  if (duplicates > 0) {
+    warnings.push(
+      `${duplicates} linha(s) parecem já existir no sistema (mesma data, valor e descrição) — continuam marcadas para importar. Desmarque na tabela abaixo se alguma for mesmo repetida.`,
+    );
   }
 
   return {

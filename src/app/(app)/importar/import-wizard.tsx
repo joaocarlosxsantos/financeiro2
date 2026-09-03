@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { AlertTriangle, CheckCircle2, FileUp, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, CheckCircle2, FileUp, Loader2 } from "lucide-react";
 import {
   commitImport,
   listCardInvoiceOptions,
@@ -137,6 +137,16 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
   function toggleRow(index: number) {
     setRows((prev) =>
       prev ? prev.map((r, i) => (i === index ? { ...r, duplicate: !r.duplicate } : r)) : prev,
+    );
+  }
+
+  function toggleTransfer(index: number) {
+    setRows((prev) =>
+      prev
+        ? prev.map((r, i) =>
+            i === index ? { ...r, isTransfer: !r.isTransfer, categoryId: r.isTransfer ? r.categoryId : null } : r,
+          )
+        : prev,
     );
   }
 
@@ -329,19 +339,20 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           ) : null}
 
           {warnings.map((w) => (
-            <Hint key={w} tone={w.includes("não encaixaram") ? "warn" : "info"} className="mb-3">
+            <Hint key={w} tone={w.includes("não encaixaram") || w.includes("já existir") ? "warn" : "info"} className="mb-3">
               {w}
             </Hint>
           ))}
 
           <div className="-mx-5 overflow-x-auto">
-            <table className="w-full min-w-[720px] text-[0.8125rem]">
+            <table className="w-full min-w-[800px] text-[0.8125rem]">
               <thead>
                 <tr className="muted border-b text-left text-xs">
                   <th className="px-5 py-2 font-medium">Importar</th>
                   <th className="py-2 font-medium">Data</th>
                   <th className="py-2 font-medium">Descrição</th>
                   <th className="py-2 font-medium">Categoria</th>
+                  <th className="py-2 text-center font-medium">Transferência</th>
                   <th className="px-5 py-2 text-right font-medium">Valor</th>
                 </tr>
               </thead>
@@ -381,9 +392,9 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                     <td className="max-w-64 py-2.5">
                       <span className="block truncate">{row.description}</span>
                       <span className="mt-0.5 flex flex-wrap gap-1">
-                        {row.isTransfer ? (
-                          <span className="inline-block rounded-md bg-cyan-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300">
-                            transferência — fora dos totais
+                        {row.possibleDuplicate ? (
+                          <span className="inline-block rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-amber-700 dark:bg-amber-500/12 dark:text-amber-300">
+                            possível duplicata
                           </span>
                         ) : null}
                         {row.installmentNumber && row.installmentTotal ? (
@@ -398,7 +409,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                         disabled={row.isTransfer}
                         value={row.categoryId ?? ""}
                         onChange={(e) => changeCategory(i, e.target.value)}
-                        className="cursor-pointer rounded-md border bg-[var(--surface-2)] px-1.5 py-1 text-xs"
+                        className="cursor-pointer rounded-md border bg-[var(--surface-2)] px-1.5 py-1 text-xs disabled:opacity-50"
                       >
                         <option value="">Sem categoria</option>
                         {categories
@@ -409,6 +420,27 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                             </option>
                           ))}
                       </select>
+                    </td>
+                    <td className="py-2.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleTransfer(i)}
+                        title={
+                          row.isTransfer
+                            ? "É transferência (pagamento de fatura, entre contas suas etc.) — fora dos relatórios de receita/despesa, mas conta no saldo. Clique para desmarcar."
+                            : "Marcar como transferência entre contas suas (ex.: pagamento de fatura) — fora dos relatórios, mas conta no saldo"
+                        }
+                        aria-pressed={row.isTransfer}
+                        aria-label={`Marcar ${row.description} como transferência`}
+                        className={cn(
+                          "inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-[0.6875rem] font-medium transition-colors",
+                          row.isTransfer
+                            ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300"
+                            : "muted hover:bg-[var(--surface-2)]",
+                        )}
+                      >
+                        <ArrowLeftRight className="size-3.5" />
+                      </button>
                     </td>
                     <td
                       className={cn(

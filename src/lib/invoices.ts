@@ -151,15 +151,3 @@ export function dateWithinInvoice(
   return { date, monthsShifted: shifted, matched: compareInvoiceRef(current, target) === 0 };
 }
 
-/** Palavras que costumam identificar o pagamento de uma fatura no extrato. */
-export const INVOICE_PAYMENT_HINTS = [
-  "pagamento de fatura",
-  "pagamento fatura",
-  "pgto fatura",
-  "pagto fatura",
-  "pagamento cartao",
-  "pagamento de cartao",
-  "fatura cartao",
-  "pag fatura",
-  "pagamento efetuado cartao",
-];
