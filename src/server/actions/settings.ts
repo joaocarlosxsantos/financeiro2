@@ -172,6 +172,54 @@ export async function saveOpeningBalance(input: {
   return { ok: true };
 }
 
+export async function updateCategory(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const userId = await requireUserId();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Categoria não encontrada." };
+
+  const parsed = categorySchema.safeParse({
+    name: formData.get("name"),
+    kind: formData.get("kind"),
+    nature: formData.get("nature"),
+    color: formData.get("color") || undefined,
+    keywords: formData.get("keywords") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
+
+  const [existing] = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.id, id), eq(categories.userId, userId)))
+    .limit(1);
+  if (!existing) return { error: "Categoria não encontrada." };
+
+  const keywords = (parsed.data.keywords ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  try {
+    await db
+      .update(categories)
+      .set({
+        name: parsed.data.name,
+        kind: parsed.data.kind,
+        nature: parsed.data.kind === "INCOME" ? "VARIABLE" : parsed.data.nature,
+        color: parsed.data.color || "#64748b",
+        keywords,
+      })
+      .where(and(eq(categories.id, id), eq(categories.userId, userId)));
+  } catch {
+    return { error: "Já existe uma categoria com esse nome." };
+  }
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/lancamentos");
+  revalidatePath("/orcamento");
+  revalidatePath("/painel");
+  return { ok: true };
+}
+
 export async function deleteCategory(id: string) {
   const userId = await requireUserId();
   await db

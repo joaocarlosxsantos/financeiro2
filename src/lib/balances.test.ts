@@ -46,3 +46,50 @@ test("patrimônio líquido desconta cartão e dívidas", () => {
     -490000,
   );
 });
+
+test("pagar a fatura não muda o patrimônio líquido — só move o dinheiro", () => {
+  // Compra de R$800 no cartão (já virou despesa no dia da compra, não aqui).
+  const purchaseCents = 80000;
+  // Conta corrente com R$1000 de saldo inicial, sem nenhum outro lançamento.
+  const openingCents = 100000;
+
+  const beforePayment = {
+    availableCents: accountBalance({ openingCents, incomeCents: 0, expenseCents: 0 }),
+    cardOwedCents: cardOwed({
+      purchasesCents: purchaseCents,
+      creditsCents: 0,
+      invoicePaymentsCents: 0,
+    }),
+  };
+  const netWorthBefore = netWorth({
+    availableCents: beforePayment.availableCents,
+    savedInGoalsCents: 0,
+    cardOwedCents: beforePayment.cardOwedCents,
+    debtBalanceCents: 0,
+  });
+
+  // Paga a fatura inteira a partir da conta corrente: o pagamento entra como
+  // saída na conta que pagou (é o que a query de saldo por conta faz agora)
+  // e reduz o quanto se deve no cartão.
+  const afterPayment = {
+    availableCents: accountBalance({ openingCents, incomeCents: 0, expenseCents: purchaseCents }),
+    cardOwedCents: cardOwed({
+      purchasesCents: purchaseCents,
+      creditsCents: 0,
+      invoicePaymentsCents: purchaseCents,
+    }),
+  };
+  const netWorthAfter = netWorth({
+    availableCents: afterPayment.availableCents,
+    savedInGoalsCents: 0,
+    cardOwedCents: afterPayment.cardOwedCents,
+    debtBalanceCents: 0,
+  });
+
+  // O dinheiro saiu da conta e a dívida sumiu — o total não pode ter mudado.
+  assert.equal(netWorthAfter, netWorthBefore);
+  // E a conta que pagou realmente ficou com menos dinheiro (o bug que isso
+  // corrige: antes o pagamento não aparecia em lugar nenhum).
+  assert.equal(afterPayment.availableCents, beforePayment.availableCents - purchaseCents);
+  assert.equal(afterPayment.cardOwedCents, 0);
+});

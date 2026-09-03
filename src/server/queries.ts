@@ -863,7 +863,7 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
     };
   }
 
-  const [movements, invoicePaid, savedInGoals, debtRows] = await Promise.all([
+  const [movements, invoicePaid, invoicePaidOut, savedInGoals, debtRows] = await Promise.all([
     // Só contam os lançamentos a partir da data do saldo inicial de cada conta.
     db
       .select({
@@ -891,6 +891,24 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       .where(eq(cardInvoicePayments.userId, userId))
       .groupBy(cardInvoicePayments.accountId),
 
+    // O pagamento da fatura é uma transferência: sai da conta que pagou (o
+    // cartão nunca gera um lançamento de despesa, para não contar a compra
+    // duas vezes). Sem isso a conta que pagou nunca via o dinheiro sair.
+    db
+      .select({
+        accountId: cardInvoicePayments.paidFromAccountId,
+        total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
+      })
+      .from(cardInvoicePayments)
+      .innerJoin(accountsTable, eq(accountsTable.id, cardInvoicePayments.paidFromAccountId))
+      .where(
+        and(
+          eq(cardInvoicePayments.userId, userId),
+          sql`(${accountsTable.openingBalanceDate} is null or ${cardInvoicePayments.paidAt} >= ${accountsTable.openingBalanceDate})`,
+        ),
+      )
+      .groupBy(cardInvoicePayments.paidFromAccountId),
+
     getTotalSavedCents(userId),
 
     db
@@ -910,11 +928,16 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
   }
 
   const paidByCard = new Map(invoicePaid.map((p) => [p.accountId, Number(p.total)]));
+  const paidOutByAccount = new Map(
+    invoicePaidOut.filter((p) => p.accountId).map((p) => [p.accountId as string, Number(p.total)]),
+  );
 
   const accounts: AccountBalance[] = accountRows.map((a) => {
     const incomeCents = income.get(a.id) ?? 0;
-    const expenseCents = expense.get(a.id) ?? 0;
     const isCard = a.type === "CREDIT_CARD";
+    // Na conta que pagou a fatura, o pagamento entra como saída — é dinheiro
+    // de verdade saindo dela, mesmo não sendo um lançamento de despesa comum.
+    const expenseCents = (expense.get(a.id) ?? 0) + (isCard ? 0 : (paidOutByAccount.get(a.id) ?? 0));
 
     return {
       id: a.id,
