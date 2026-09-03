@@ -2,6 +2,8 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 import {
   closingDateFor,
+  compareInvoiceRef,
+  dateWithinInvoice,
   dueDateFor,
   invoiceForPurchase,
   invoiceLabel,
@@ -61,4 +63,39 @@ test("estado da fatura ao longo do ciclo", () => {
   assert.equal(st("2027-01-01"), "sem-registro");
   // pagamento registrado vence qualquer data
   assert.equal(st("2027-01-01", true), "paga");
+});
+
+test("dateWithinInvoice empurra a data da compra original até a fatura alvo", () => {
+  const C = 5; // fecha dia 5
+  const V = 12; // vence dia 12 do mesmo mês
+
+  // Compra em 17/07 cai na fatura de agosto (fecha 05/08, compra é depois).
+  const compra = new Date("2026-07-17T12:00:00Z");
+  assert.equal(invoiceLabel(invoiceForPurchase(compra, C, V)), "08/2026");
+
+  // 2ª parcela de 12: precisa cair na fatura de setembro.
+  const target = { year: 2026, month: 9 };
+  const result = dateWithinInvoice(compra, target, C, V);
+  assert.equal(result.matched, true);
+  assert.equal(result.monthsShifted, 1);
+  assert.equal(invoiceLabel(invoiceForPurchase(result.date, C, V)), "09/2026");
+  // mantém o dia 17 (o dia do mês não muda, só o mês)
+  assert.equal(result.date.getUTCDate(), 17);
+
+  // Uma compra que já cai na fatura certa não precisa de ajuste.
+  const jaCerta = dateWithinInvoice(compra, { year: 2026, month: 8 }, C, V);
+  assert.equal(jaCerta.monthsShifted, 0);
+  assert.equal(jaCerta.date.getTime(), compra.getTime());
+
+  // Indo pra trás também funciona (fatura alvo é anterior à calculada).
+  const paraTras = dateWithinInvoice(compra, { year: 2026, month: 7 }, C, V);
+  assert.equal(paraTras.matched, true);
+  assert.equal(paraTras.monthsShifted, -1);
+  assert.equal(invoiceLabel(invoiceForPurchase(paraTras.date, C, V)), "07/2026");
+});
+
+test("compareInvoiceRef ordena faturas no tempo", () => {
+  assert.ok(compareInvoiceRef({ year: 2026, month: 1 }, { year: 2026, month: 2 }) < 0);
+  assert.ok(compareInvoiceRef({ year: 2026, month: 12 }, { year: 2027, month: 1 }) < 0);
+  assert.equal(compareInvoiceRef({ year: 2026, month: 5 }, { year: 2026, month: 5 }), 0);
 });

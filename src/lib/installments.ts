@@ -30,3 +30,31 @@ export function addMonthsKeepingDay(base: Date, monthsAhead: number): Date {
   target.setUTCDate(Math.min(base.getUTCDate(), lastDay));
   return target;
 }
+
+export type InstallmentMarker = { number: number; total: number };
+
+// "parcela 2/12", "parc 02 de 12", "2/12" no fim da descrição.
+const EXPLICIT_RE = /parc(?:ela)?\.?\s*(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i;
+const TRAILING_RE = /(?:^|\s)(\d{1,2})\s*\/\s*(\d{1,2})\s*$/;
+
+/**
+ * Identifica "parcela N de T" numa descrição de extrato/fatura importada.
+ *
+ * Heurística, igual à categorização automática: bancos não têm um formato
+ * único. Prioriza um marcador explícito ("parcela"/"parc"); sem isso, só
+ * aceita "N/T" no FINAL da descrição (formato comum tipo "UBER 3/10") — e só
+ * quando N ≤ T e T é um número plausível de parcelas, pra não confundir com
+ * uma data (17/07) que sobrou de uma coluna mal separada.
+ */
+export function parseInstallmentMarker(description: string): InstallmentMarker | null {
+  const explicit = description.match(EXPLICIT_RE);
+  const match = explicit ?? description.match(TRAILING_RE);
+  if (!match) return null;
+
+  const number = Number.parseInt(match[1], 10);
+  const total = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(number) || !Number.isFinite(total)) return null;
+  if (number < 1 || total < 2 || number > total || total > 60) return null;
+
+  return { number, total };
+}

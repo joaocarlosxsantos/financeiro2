@@ -11,6 +11,8 @@
  * Funções puras — sem banco, importáveis pelo cliente.
  */
 
+import { addMonthsKeepingDay } from "./installments";
+
 export const DEFAULT_CLOSING_DAY = 27;
 export const DEFAULT_DUE_DAY = 5;
 
@@ -105,6 +107,48 @@ export function invoiceStatus(
 
 export function invoiceLabel(ref: InvoiceRef): string {
   return `${String(ref.month).padStart(2, "0")}/${ref.year}`;
+}
+
+/** Índice absoluto do mês — útil só para comparar duas InvoiceRef. */
+function refIndex(ref: InvoiceRef): number {
+  return ref.year * 12 + (ref.month - 1);
+}
+
+export function compareInvoiceRef(a: InvoiceRef, b: InvoiceRef): number {
+  return refIndex(a) - refIndex(b);
+}
+
+/**
+ * Empurra uma data (mês a mês, mantendo o dia) até ela cair na fatura alvo.
+ *
+ * Serve para importar uma fatura fechada: o arquivo do banco mostra a data da
+ * COMPRA original em cada parcela, não a data em que aquela parcela específica
+ * cai. Se a compra foi em 17/07 e esta linha é a 2ª de 12 parcelas, e você está
+ * importando a fatura de setembro, a data tem que virar algo dentro do ciclo
+ * de setembro — senão o lançamento cai na fatura errada (e nos relatórios do
+ * mês errado, já que a data é a mesma coisa que decide as duas coisas).
+ *
+ * matched: false quando não convergiu (limite de segurança) — a data volta
+ * inalterada e quem chamou decide como avisar o usuário.
+ */
+export function dateWithinInvoice(
+  printedDate: Date,
+  target: InvoiceRef,
+  closingDay: number,
+  dueDay: number,
+): { date: Date; monthsShifted: number; matched: boolean } {
+  let date = printedDate;
+  let current = invoiceForPurchase(date, closingDay, dueDay);
+  let shifted = 0;
+
+  for (let guard = 0; guard < 48 && compareInvoiceRef(current, target) !== 0; guard++) {
+    const direction = compareInvoiceRef(current, target) < 0 ? 1 : -1;
+    date = addMonthsKeepingDay(date, direction);
+    shifted += direction;
+    current = invoiceForPurchase(date, closingDay, dueDay);
+  }
+
+  return { date, monthsShifted: shifted, matched: compareInvoiceRef(current, target) === 0 };
 }
 
 /** Palavras que costumam identificar o pagamento de uma fatura no extrato. */

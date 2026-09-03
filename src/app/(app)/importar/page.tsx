@@ -6,8 +6,8 @@ import { accounts as accountsTable, importBatches } from "@/db/schema";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/hint";
-import { formatDate } from "@/lib/dates";
 import { ImportWizard } from "./import-wizard";
+import { ImportHistory } from "./import-history";
 
 export const metadata = { title: "Importar extrato — Financeiro 2.0" };
 
@@ -81,17 +81,20 @@ export default async function ImportPage() {
 
           {history.length ? (
             <Card>
-              <CardHeader title="Importações recentes" />
-              <ul className="space-y-3">
-                {history.map((b) => (
-                  <li key={b.id} className="text-[0.8125rem]">
-                    <p className="truncate font-medium">{b.fileName}</p>
-                    <p className="muted text-xs">
-                      {b.savedRows} de {b.rowCount} linhas · {b.accountName} · {formatDate(b.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <CardHeader
+                title="Importações recentes"
+                subtitle="Importou algo errado? Apague o lote e importe de novo."
+              />
+              <ImportHistory
+                batches={history.map((b) => ({
+                  id: b.id,
+                  fileName: b.fileName,
+                  rowCount: b.rowCount,
+                  savedRows: b.savedRows,
+                  createdAt: b.createdAt.toISOString(),
+                  accountName: b.accountName,
+                }))}
+              />
             </Card>
           ) : null}
         </div>
