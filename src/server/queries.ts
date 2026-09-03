@@ -63,25 +63,60 @@ export async function getCategories(userId: string) {
     .orderBy(asc(categoriesTable.kind), asc(categoriesTable.name));
 }
 
-export async function getMonthSummary(userId: string, ref: MonthRef): Promise<MonthSummary> {
-  const { start, end } = monthRange(ref);
+export type CardMode = "accrual" | "cash";
 
-  const rows = await db
-    .select({
-      kind: txTable.kind,
-      nature: txTable.nature,
-      total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
-    })
-    .from(txTable)
-    .where(
-      and(
-        eq(txTable.userId, userId),
-        eq(txTable.isTransfer, false),
-        gte(txTable.date, start),
-        lt(txTable.date, end),
-      ),
-    )
-    .groupBy(txTable.kind, txTable.nature);
+/**
+ * accrual (padrão): compra no cartão conta no mês da compra — é o custo real,
+ * mesmo que a fatura só vença depois. Usado em orçamento, projeções e reserva
+ * de emergência, onde subestimar o cartão distorceria o número.
+ *
+ * cash: pensado só para o resumo principal do painel. A compra no cartão vira
+ * só demonstrativo (não soma aqui — tem um gráfico próprio para isso); em vez
+ * dela, conta o pagamento da fatura no mês em que ele sai de fato da conta.
+ */
+export async function getMonthSummary(
+  userId: string,
+  ref: MonthRef,
+  opts?: { cardMode?: CardMode },
+): Promise<MonthSummary> {
+  const { start, end } = monthRange(ref);
+  const cash = opts?.cardMode === "cash";
+
+  const [rows, invoicePaid] = await Promise.all([
+    db
+      .select({
+        kind: txTable.kind,
+        nature: txTable.nature,
+        total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
+      })
+      .from(txTable)
+      .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+      .where(
+        and(
+          eq(txTable.userId, userId),
+          eq(txTable.isTransfer, false),
+          gte(txTable.date, start),
+          lt(txTable.date, end),
+          cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+        ),
+      )
+      .groupBy(txTable.kind, txTable.nature),
+
+    cash
+      ? db
+          .select({
+            total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
+          })
+          .from(cardInvoicePayments)
+          .where(
+            and(
+              eq(cardInvoicePayments.userId, userId),
+              gte(cardInvoicePayments.paidAt, start),
+              lt(cardInvoicePayments.paidAt, end),
+            ),
+          )
+      : Promise.resolve([{ total: 0 }]),
+  ]);
 
   let incomeCents = 0;
   let expenseCents = 0;
@@ -97,6 +132,15 @@ export async function getMonthSummary(userId: string, ref: MonthRef): Promise<Mo
       if (r.nature === "FIXED") fixedCents += total;
       else variableCents += total;
     }
+  }
+
+  // Fatura paga: não dá para saber quanto dela era fixo ou variável sem
+  // reabrir a fatura em compra por compra, então entra como variável — o
+  // total (expenseCents) é o que importa de verdade aqui.
+  const paidCents = Number(invoicePaid[0]?.total ?? 0);
+  if (paidCents > 0) {
+    expenseCents += paidCents;
+    variableCents += paidCents;
   }
 
   return { incomeCents, expenseCents, fixedCents, variableCents };
@@ -116,28 +160,51 @@ export async function getMonthlySeries(
   userId: string,
   months: number,
   from?: MonthRef,
+  opts?: { cardMode?: CardMode },
 ): Promise<SeriesPoint[]> {
   const refs = lastNMonths(months, from);
   const first = monthRange(refs[0]).start;
   const last = monthRange(refs[refs.length - 1]).end;
+  const cash = opts?.cardMode === "cash";
 
-  const rows = await db
-    .select({
-      bucket: sql<string>`to_char(${txTable.date} at time zone 'UTC', 'YYYY-MM')`,
-      kind: txTable.kind,
-      nature: txTable.nature,
-      total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
-    })
-    .from(txTable)
-    .where(
-      and(
-        eq(txTable.userId, userId),
-        eq(txTable.isTransfer, false),
-        gte(txTable.date, first),
-        lt(txTable.date, last),
-      ),
-    )
-    .groupBy(sql`1`, txTable.kind, txTable.nature);
+  const [rows, invoicePaidRows] = await Promise.all([
+    db
+      .select({
+        bucket: sql<string>`to_char(${txTable.date} at time zone 'UTC', 'YYYY-MM')`,
+        kind: txTable.kind,
+        nature: txTable.nature,
+        total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
+      })
+      .from(txTable)
+      .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+      .where(
+        and(
+          eq(txTable.userId, userId),
+          eq(txTable.isTransfer, false),
+          gte(txTable.date, first),
+          lt(txTable.date, last),
+          cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+        ),
+      )
+      .groupBy(sql`1`, txTable.kind, txTable.nature),
+
+    cash
+      ? db
+          .select({
+            bucket: sql<string>`to_char(${cardInvoicePayments.paidAt} at time zone 'UTC', 'YYYY-MM')`,
+            total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
+          })
+          .from(cardInvoicePayments)
+          .where(
+            and(
+              eq(cardInvoicePayments.userId, userId),
+              gte(cardInvoicePayments.paidAt, first),
+              lt(cardInvoicePayments.paidAt, last),
+            ),
+          )
+          .groupBy(sql`1`)
+      : Promise.resolve([]),
+  ]);
 
   const buckets = new Map<string, SeriesPoint>();
   for (const ref of refs) {
@@ -157,6 +224,16 @@ export async function getMonthlySeries(
     }
   }
 
+  // Fatura paga entra como variável, pelo mesmo motivo do getMonthSummary:
+  // não dá para saber a mistura fixo/variável sem reabrir a fatura.
+  for (const r of invoicePaidRows) {
+    const bucket = buckets.get(r.bucket);
+    if (!bucket) continue;
+    const total = Number(r.total);
+    bucket.saiu += total;
+    bucket.variavel += total;
+  }
+
   for (const b of buckets.values()) b.sobrou = b.entrou - b.saiu;
   return [...buckets.values()];
 }
@@ -169,7 +246,56 @@ export type CategorySlice = {
   totalCents: number;
 };
 
-export async function getCategoryBreakdown(userId: string, ref: MonthRef): Promise<CategorySlice[]> {
+export async function getCategoryBreakdown(
+  userId: string,
+  ref: MonthRef,
+  opts?: { cardMode?: CardMode },
+): Promise<CategorySlice[]> {
+  const { start, end } = monthRange(ref);
+  const cash = opts?.cardMode === "cash";
+
+  const rows = await db
+    .select({
+      id: txTable.categoryId,
+      name: categoriesTable.name,
+      color: categoriesTable.color,
+      nature: categoriesTable.nature,
+      total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
+    })
+    .from(txTable)
+    .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .where(
+      and(
+        eq(txTable.userId, userId),
+        eq(txTable.kind, "EXPENSE"),
+        eq(txTable.isTransfer, false),
+        gte(txTable.date, start),
+        lt(txTable.date, end),
+        cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+      ),
+    )
+    .groupBy(txTable.categoryId, categoriesTable.name, categoriesTable.color, categoriesTable.nature);
+
+  return rows
+    .map((r) => ({
+      id: r.id ?? "sem-categoria",
+      name: r.name ?? "Sem categoria",
+      color: r.color ?? "#94a3b8",
+      nature: (r.nature ?? "VARIABLE") as "FIXED" | "VARIABLE",
+      totalCents: Number(r.total),
+    }))
+    .filter((s) => s.totalCents > 0)
+    .sort((a, b) => b.totalCents - a.totalCents);
+}
+
+/**
+ * O mesmo ranking por categoria, só que olhando só para o cartão — pra você
+ * ver onde o dinheiro do cartão está indo. É demonstrativo: essas compras já
+ * não entram no resumo principal do painel (ficaram de fora pra não contar
+ * a mesma compra duas vezes — uma como compra, outra quando a fatura é paga).
+ */
+export async function getCardCategoryBreakdown(userId: string, ref: MonthRef): Promise<CategorySlice[]> {
   const { start, end } = monthRange(ref);
 
   const rows = await db
@@ -182,11 +308,13 @@ export async function getCategoryBreakdown(userId: string, ref: MonthRef): Promi
     })
     .from(txTable)
     .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
     .where(
       and(
         eq(txTable.userId, userId),
         eq(txTable.kind, "EXPENSE"),
         eq(txTable.isTransfer, false),
+        eq(accountsTable.type, "CREDIT_CARD"),
         gte(txTable.date, start),
         lt(txTable.date, end),
       ),
@@ -243,6 +371,8 @@ export type TransactionFilters = {
   ref?: MonthRef;
   categoryId?: string;
   accountId?: string;
+  /** Filtro rápido: CARD = só cartão de crédito, OTHER = tudo, menos cartão. */
+  accountKind?: "CARD" | "OTHER";
   kind?: "INCOME" | "EXPENSE";
   nature?: "FIXED" | "VARIABLE";
   search?: string;
@@ -257,6 +387,8 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   }
   if (filters.categoryId) conditions.push(eq(txTable.categoryId, filters.categoryId));
   if (filters.accountId) conditions.push(eq(txTable.accountId, filters.accountId));
+  if (filters.accountKind === "CARD") conditions.push(eq(accountsTable.type, "CREDIT_CARD"));
+  else if (filters.accountKind === "OTHER") conditions.push(sql`${accountsTable.type} <> 'CREDIT_CARD'`);
   if (filters.kind) conditions.push(eq(txTable.kind, filters.kind));
   if (filters.nature) conditions.push(eq(txTable.nature, filters.nature));
   if (filters.search) conditions.push(ilike(txTable.description, `%${filters.search}%`));
@@ -275,6 +407,7 @@ export async function getTransactions(userId: string, filters: TransactionFilter
       categoryColor: categoriesTable.color,
       accountId: txTable.accountId,
       accountName: accountsTable.name,
+      accountType: accountsTable.type,
       isTransfer: txTable.isTransfer,
       recurringRuleId: txTable.recurringRuleId,
       installmentGroupId: txTable.installmentGroupId,

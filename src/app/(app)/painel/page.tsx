@@ -11,6 +11,7 @@ import {
   getAvgMonthlyCostCents,
   getBudgetOverview,
   getDebtOverview,
+  getCardCategoryBreakdown,
   getCategoryBreakdown,
   getMonthSummary,
   getMonthlySeries,
@@ -53,12 +54,16 @@ export default async function DashboardPage({
   const { m } = await searchParams;
   const ref = monthRefFromParam(m);
 
-  const [user, summary, series, breakdown, avgCost, saved, budget, recurring, debts] =
+  const [user, summary, series, breakdown, cardBreakdown, avgCost, saved, budget, recurring, debts] =
     await Promise.all([
       getUser(userId),
-      getMonthSummary(userId, ref),
-      getMonthlySeries(userId, 6, ref),
-      getCategoryBreakdown(userId, ref),
+      // "cash": o resumo principal do painel é o retrato do dinheiro que
+      // realmente entrou e saiu — compra no cartão vira demonstrativo (tem
+      // gráfico próprio abaixo) e o que conta aqui é a fatura paga.
+      getMonthSummary(userId, ref, { cardMode: "cash" }),
+      getMonthlySeries(userId, 6, ref, { cardMode: "cash" }),
+      getCategoryBreakdown(userId, ref, { cardMode: "cash" }),
+      getCardCategoryBreakdown(userId, ref),
       getAvgMonthlyCostCents(userId, 3),
       getTotalSavedCents(userId),
       getBudgetOverview(userId, ref),
@@ -181,7 +186,7 @@ export default async function DashboardPage({
         <Card className="lg:col-span-3">
           <CardHeader
             title={`Para onde foi o dinheiro em ${monthLabel(ref)}`}
-            subtitle="Ranking das categorias que mais pesaram no mês."
+            subtitle="Ranking das categorias que mais pesaram no mês. Não inclui compras no cartão — elas têm o gráfico próprio logo abaixo."
           />
           {breakdown.length ? (
             <CategoryBars slices={breakdown} />
@@ -214,6 +219,26 @@ export default async function DashboardPage({
           </div>
         </Card>
       </section>
+
+      {cardBreakdown.length ? (
+        <section className="mt-4">
+          <Card>
+            <CardHeader
+              title={`Gastos no cartão em ${monthLabel(ref)}`}
+              subtitle="Demonstrativo — essas compras já saíram do resumo acima para não contar duas vezes. Elas só entram nos totais quando você paga a fatura."
+              action={
+                <Link
+                  href="/faturas"
+                  className="text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                >
+                  Ver faturas
+                </Link>
+              }
+            />
+            <CategoryBars slices={cardBreakdown} />
+          </Card>
+        </section>
+      ) : null}
 
       <section className="mt-4 grid gap-4 lg:grid-cols-3">
         <BudgetCard overview={budget} monthRef={ref} />

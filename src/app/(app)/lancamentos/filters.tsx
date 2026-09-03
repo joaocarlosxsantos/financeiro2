@@ -22,7 +22,8 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
   const kind = params.get("kind") ?? "";
   const nature = params.get("nature") ?? "";
   const cat = params.get("cat") ?? "";
-  const hasFilters = Boolean(kind || nature || cat || params.get("q"));
+  const acc = params.get("acc") ?? "";
+  const hasFilters = Boolean(kind || nature || cat || acc || params.get("q"));
 
   return (
     <div className="card flex flex-wrap items-center gap-2 p-3">
@@ -56,6 +57,15 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         onClick={() => update("nature", nature === "VARIABLE" ? "" : "VARIABLE")}
       >
         Variáveis
+      </Chip>
+
+      <span className="muted mx-0.5 h-5 w-px bg-[var(--border)]" aria-hidden />
+
+      <Chip active={acc === "OTHER"} onClick={() => update("acc", acc === "OTHER" ? "" : "OTHER")}>
+        Conta corrente
+      </Chip>
+      <Chip active={acc === "CARD"} onClick={() => update("acc", acc === "CARD" ? "" : "CARD")}>
+        Cartão
       </Chip>
 
       <select

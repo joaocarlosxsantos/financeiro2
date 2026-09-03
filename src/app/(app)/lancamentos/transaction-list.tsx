@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { ArrowLeftRight, Repeat, Trash2 } from "lucide-react";
+import { ArrowLeftRight, CreditCard, Repeat, Trash2 } from "lucide-react";
 import {
   deleteTransaction,
   setTransactionCategory,
@@ -94,6 +94,15 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
           ) : tx.kind === "EXPENSE" ? (
             <span className="rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 ring-1 ring-[var(--border)] ring-inset">
               {tx.nature === "FIXED" ? "fixo" : "variável"}
+            </span>
+          ) : null}
+          {tx.isCard && !tx.isTransfer ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 dark:bg-amber-500/12 dark:text-amber-300"
+              title="Compra no cartão — demonstrativo, fora do resumo do painel até a fatura ser paga"
+            >
+              <CreditCard className="size-3" />
+              demonstrativo
             </span>
           ) : null}
           {tx.installmentNumber && tx.installmentTotal ? (

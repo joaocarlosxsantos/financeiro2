@@ -24,7 +24,14 @@ export const metadata = { title: "Lançamentos — Financeiro 2.0" };
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ m?: string; cat?: string; kind?: string; nature?: string; q?: string }>;
+  searchParams: Promise<{
+    m?: string;
+    cat?: string;
+    kind?: string;
+    nature?: string;
+    q?: string;
+    acc?: string;
+  }>;
 }) {
   const userId = await requireUserId();
   const sp = await searchParams;
@@ -36,6 +43,7 @@ export default async function TransactionsPage({
     getTransactions(userId, {
       ref,
       categoryId: sp.cat || undefined,
+      accountKind: sp.acc === "CARD" || sp.acc === "OTHER" ? sp.acc : undefined,
       kind: sp.kind === "INCOME" || sp.kind === "EXPENSE" ? sp.kind : undefined,
       nature: sp.nature === "FIXED" || sp.nature === "VARIABLE" ? sp.nature : undefined,
       search: sp.q || undefined,
@@ -56,6 +64,7 @@ export default async function TransactionsPage({
     categoryColor: t.categoryColor,
     accountId: t.accountId,
     accountName: t.accountName,
+    isCard: t.accountType === "CREDIT_CARD",
     notes: t.notes,
     isTransfer: t.isTransfer,
     recurringRuleId: t.recurringRuleId,
