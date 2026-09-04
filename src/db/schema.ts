@@ -204,8 +204,56 @@ export const goalContributions = pgTable(
     deltaCents: integer("delta_cents").notNull(),
     date: timestamp("date", { withTimezone: true }).notNull().defaultNow(),
     note: text("note"),
+    /** Preenchido quando o aporte veio de uma regra automática, não da mão. */
+    recurringRuleId: varchar("recurring_rule_id", { length: 32 }).references(
+      () => goalRecurringRules.id,
+      { onDelete: "set null" },
+    ),
   },
-  (t) => [index("goal_contributions_goal_idx").on(t.goalId)],
+  (t) => [
+    index("goal_contributions_goal_idx").on(t.goalId),
+    // Uma geração por regra por dia — a mesma regra sempre cai no mesmo dia
+    // do mês, então isso impede duplicar o aporte se o botão for clicado
+    // duas vezes. Aportes manuais (recurringRuleId nulo) não são afetados —
+    // Postgres trata NULL como distinto em índice único.
+    uniqueIndex("goal_contributions_recurring_rule_date_key").on(t.recurringRuleId, t.date),
+  ],
+);
+
+/**
+ * "Guarde R$ 200 todo dia 5 na meta X" — o mesmo conceito de `recurringRules`
+ * (lançamentos), só que aportando em meta em vez de gerar lançamento. Cada
+ * geração mensal vira um `goalContributions` normal, marcado com
+ * `recurringRuleId`, o que permite saber o que já caiu no mês sem precisar
+ * de outra tabela de controle.
+ */
+export const goalRecurringRules = pgTable(
+  "goal_recurring_rules",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    goalId: varchar("goal_id", { length: 32 })
+      .notNull()
+      .references(() => goals.id, { onDelete: "cascade" }),
+    amountCents: integer("amount_cents").notNull(),
+    /** Dia do mês em que cai. Meses curtos usam o último dia disponível. */
+    dayOfMonth: integer("day_of_month").notNull().default(5),
+    startYear: integer("start_year").notNull(),
+    startMonth: integer("start_month").notNull(),
+    /** Opcional: a partir daqui a regra para de gerar. */
+    endYear: integer("end_year"),
+    endMonth: integer("end_month"),
+    active: boolean("active").notNull().default(true),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("goal_recurring_rules_user_idx").on(t.userId),
+    index("goal_recurring_rules_goal_idx").on(t.goalId),
+  ],
 );
 
 /**
@@ -362,6 +410,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   goals: many(goals),
   budgets: many(budgets),
   recurringRules: many(recurringRules),
+  goalRecurringRules: many(goalRecurringRules),
   debts: many(debts),
 }));
 
@@ -410,10 +459,21 @@ export const recurringRulesRelations = relations(recurringRules, ({ one, many })
 export const goalsRelations = relations(goals, ({ one, many }) => ({
   user: one(users, { fields: [goals.userId], references: [users.id] }),
   contributions: many(goalContributions),
+  recurringRules: many(goalRecurringRules),
 }));
 
 export const goalContributionsRelations = relations(goalContributions, ({ one }) => ({
   goal: one(goals, { fields: [goalContributions.goalId], references: [goals.id] }),
+  recurringRule: one(goalRecurringRules, {
+    fields: [goalContributions.recurringRuleId],
+    references: [goalRecurringRules.id],
+  }),
+}));
+
+export const goalRecurringRulesRelations = relations(goalRecurringRules, ({ one, many }) => ({
+  user: one(users, { fields: [goalRecurringRules.userId], references: [users.id] }),
+  goal: one(goals, { fields: [goalRecurringRules.goalId], references: [goals.id] }),
+  contributions: many(goalContributions),
 }));
 
 export const importBatchesRelations = relations(importBatches, ({ one }) => ({
@@ -435,5 +495,6 @@ export type Transaction = typeof transactions.$inferSelect;
 export type Goal = typeof goals.$inferSelect;
 export type Budget = typeof budgets.$inferSelect;
 export type RecurringRule = typeof recurringRules.$inferSelect;
+export type GoalRecurringRule = typeof goalRecurringRules.$inferSelect;
 export type Debt = typeof debts.$inferSelect;
 export type DebtKind = (typeof debtKind.enumValues)[number];

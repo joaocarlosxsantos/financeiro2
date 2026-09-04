@@ -10,6 +10,7 @@ import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/field";
 import { formatCents } from "@/lib/money";
 import { monthsToTarget, monthsOfRunway } from "@/lib/finance";
+import { GoalRecurringControl, type PlainGoalRecurringRule } from "./goal-recurring-control";
 
 export function EmergencyPanel({
   target,
@@ -19,6 +20,7 @@ export function EmergencyPanel({
   usingRealCost,
   goalId,
   monthlyCapacity,
+  recurringRule,
 }: {
   target: number;
   saved: number;
@@ -27,6 +29,7 @@ export function EmergencyPanel({
   usingRealCost: boolean;
   goalId: string | null;
   monthlyCapacity: number;
+  recurringRule?: PlainGoalRecurringRule | null;
 }) {
   const [pending, start] = useTransition();
   const missing = Math.max(0, target - saved);
@@ -108,6 +111,8 @@ export function EmergencyPanel({
           ) : null}
         </div>
       )}
+
+      {goalId ? <GoalRecurringControl goalId={goalId} rule={recurringRule ?? null} /> : null}
 
       <div className="mt-5">
         <Hint tone={done ? "good" : "tip"}>

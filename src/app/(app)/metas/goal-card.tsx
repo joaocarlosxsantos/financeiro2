@@ -10,6 +10,7 @@ import { formatCents, pct } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { GoalRecurringControl, type PlainGoalRecurringRule } from "./goal-recurring-control";
 
 const KIND_LABEL: Record<string, string> = {
   EMERGENCY_FUND: "Reserva",
@@ -34,9 +35,11 @@ export type PlainGoal = {
 export function GoalCard({
   goal,
   monthsAtCurrentPace,
+  recurringRule,
 }: {
   goal: PlainGoal;
   monthsAtCurrentPace: number | null;
+  recurringRule?: PlainGoalRecurringRule | null;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -126,6 +129,8 @@ export function GoalCard({
           </Button>
         </form>
       ) : null}
+
+      <GoalRecurringControl goalId={goal.id} rule={recurringRule ?? null} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   debtPayments,
   debts as debtsTable,
   goalContributions,
+  goalRecurringRules as goalRecurringRulesTable,
   recurringRules as recurringRulesTable,
   goals as goalsTable,
   transactions as txTable,
@@ -335,6 +336,102 @@ export async function getGoals(userId: string) {
     ...goal,
     contributions: contributions.filter((c) => c.goalId === goal.id).slice(0, 5),
   }));
+}
+
+export type GoalRecurringRuleRow = {
+  id: string;
+  goalId: string;
+  goalName: string;
+  goalColor: string;
+  amountCents: number;
+  dayOfMonth: number;
+  active: boolean;
+  note: string | null;
+  startYear: number;
+  startMonth: number;
+  endYear: number | null;
+  endMonth: number | null;
+  /** Já caiu um aporte desta regra no mês de referência? */
+  generated: boolean;
+  /** A regra está ativa e dentro da janela de início/fim deste mês? */
+  dueThisMonth: boolean;
+};
+
+export type GoalRecurringStatus = {
+  rules: GoalRecurringRuleRow[];
+  pending: GoalRecurringRuleRow[];
+  pendingAmountCents: number;
+};
+
+/**
+ * Mesmo espírito de `getRecurringStatus`, mas para aportes automáticos em
+ * metas: "guarde R$ 200 todo dia 5 na meta X" em vez de lançamento. Uma
+ * regra está "pendente" no mês quando está ativa, dentro da janela de
+ * início/fim, e ainda não gerou um `goalContributions` com o seu id neste
+ * mês — do jeito que uma recorrência de lançamento pendente é detectada.
+ */
+export async function getGoalRecurringStatus(
+  userId: string,
+  ref: MonthRef,
+): Promise<GoalRecurringStatus> {
+  const { start, end } = monthRange(ref);
+
+  const [rules, generated] = await Promise.all([
+    db
+      .select({
+        id: goalRecurringRulesTable.id,
+        goalId: goalRecurringRulesTable.goalId,
+        goalName: goalsTable.name,
+        goalColor: goalsTable.color,
+        amountCents: goalRecurringRulesTable.amountCents,
+        dayOfMonth: goalRecurringRulesTable.dayOfMonth,
+        active: goalRecurringRulesTable.active,
+        note: goalRecurringRulesTable.note,
+        startYear: goalRecurringRulesTable.startYear,
+        startMonth: goalRecurringRulesTable.startMonth,
+        endYear: goalRecurringRulesTable.endYear,
+        endMonth: goalRecurringRulesTable.endMonth,
+      })
+      .from(goalRecurringRulesTable)
+      .innerJoin(goalsTable, eq(goalsTable.id, goalRecurringRulesTable.goalId))
+      .where(and(eq(goalRecurringRulesTable.userId, userId), eq(goalsTable.archived, false)))
+      .orderBy(asc(goalRecurringRulesTable.dayOfMonth)),
+
+    db
+      .selectDistinct({ ruleId: goalContributions.recurringRuleId })
+      .from(goalContributions)
+      .innerJoin(goalsTable, eq(goalsTable.id, goalContributions.goalId))
+      .where(
+        and(
+          eq(goalsTable.userId, userId),
+          gte(goalContributions.date, start),
+          lt(goalContributions.date, end),
+        ),
+      ),
+  ]);
+
+  const generatedIds = new Set(generated.map((g) => g.ruleId).filter(Boolean) as string[]);
+  const current = periodValue(ref.year, ref.month);
+
+  const rows: GoalRecurringRuleRow[] = rules.map((r) => {
+    const startsBy = periodValue(r.startYear, r.startMonth) <= current;
+    const endsAfter =
+      r.endYear === null || r.endMonth === null || periodValue(r.endYear, r.endMonth) >= current;
+
+    return {
+      ...r,
+      generated: generatedIds.has(r.id),
+      dueThisMonth: r.active && startsBy && endsAfter,
+    };
+  });
+
+  const pending = rows.filter((r) => r.dueThisMonth && !r.generated);
+
+  return {
+    rules: rows,
+    pending,
+    pendingAmountCents: pending.reduce((acc, r) => acc + r.amountCents, 0),
+  };
 }
 
 export type TransactionFilters = {
