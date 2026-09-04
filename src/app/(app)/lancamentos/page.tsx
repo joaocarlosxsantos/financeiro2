@@ -12,6 +12,7 @@ import { TransactionComposer } from "./transaction-composer";
 import { TransactionList } from "./transaction-list";
 import { Filters } from "./filters";
 import { PeriodSwitcher } from "./period-switcher";
+import { ExportMenu } from "./export-menu";
 
 export const metadata = { title: "Lançamentos — Financeiro 2.0" };
 
@@ -117,7 +118,12 @@ export default async function TransactionsPage({
       <PageHeader
         title="Lançamentos"
         description="Tudo que entrou e saiu. Classificar cada gasto como fixo ou variável é o que faz o painel virar decisão."
-        action={<PeriodSwitcher value={ref} range={customRange} />}
+        action={
+          <div className="flex items-center gap-2">
+            <PeriodSwitcher value={ref} range={customRange} />
+            <ExportMenu />
+          </div>
+        }
       />
 
       <RecurringBanner
