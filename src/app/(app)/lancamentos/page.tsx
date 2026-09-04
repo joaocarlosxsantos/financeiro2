@@ -1,13 +1,6 @@
 import { CreditCard, Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
-import {
-  getAccounts,
-  getCategories,
-  getMonthCardTotals,
-  getMonthSummary,
-  getRecurringStatus,
-  getTransactions,
-} from "@/server/queries";
+import { getAccounts, getCategories, getRecurringStatus, getTransactions } from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -38,7 +31,7 @@ export default async function TransactionsPage({
   const sp = await searchParams;
   const ref = monthRefFromParam(sp.m);
 
-  const [accounts, categories, transactions, summary, cardTotals, recurring] = await Promise.all([
+  const [accounts, categories, transactions, recurring] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
     getTransactions(userId, {
@@ -50,8 +43,6 @@ export default async function TransactionsPage({
       nature: sp.nature === "FIXED" || sp.nature === "VARIABLE" ? sp.nature : undefined,
       search: sp.q || undefined,
     }),
-    getMonthSummary(userId, ref),
-    getMonthCardTotals(userId, ref),
     getRecurringStatus(userId, ref),
   ]);
 
@@ -86,6 +77,20 @@ export default async function TransactionsPage({
 
   const plainAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
   const uncategorized = plain.filter((t) => !t.categoryId).length;
+
+  /**
+   * Entrou/Saiu/Sobrou consideram só conta corrente — cartão tem linha própria,
+   * porque a compra no cartão ainda não saiu de fato da conta (só quando a
+   * fatura é paga). Os quatro valores refletem exatamente os filtros ativos
+   * acima: a lista e o resumo nunca mostram números diferentes.
+   */
+  const cash = plain.filter((t) => !t.isTransfer && !t.isCard);
+  const card = plain.filter((t) => !t.isTransfer && t.isCard);
+
+  const entrouCents = sumByKind(cash, "INCOME");
+  const saiuCents = sumByKind(cash, "EXPENSE");
+  const cartaoCents = sumByKind(card, "EXPENSE") - sumByKind(card, "INCOME");
+  const sobrouCents = entrouCents - saiuCents;
 
   return (
     <>
@@ -133,52 +138,35 @@ export default async function TransactionsPage({
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card>
-            <ul className="mb-4 space-y-2 border-b pb-4 text-[0.8125rem]">
-              <li className="flex items-baseline justify-between gap-3">
+            <ul className="mb-4 border-b pb-4 text-[0.8125rem]">
+              <li className="flex items-baseline justify-between gap-3 py-1">
                 <span className="muted">Entrou</span>
-                <span className="text-right">
-                  <span className="tnum block font-semibold text-[var(--text-in)]">
-                    {formatCents(summary.incomeCents)}
-                  </span>
-                  {cardTotals.incomeCents > 0 ? (
-                    <span
-                      className="tnum block text-[0.6875rem] font-medium text-amber-700 dark:text-amber-300"
-                      title="Incluso no total acima, mas veio de conta de cartão"
-                    >
-                      {formatCents(cardTotals.incomeCents)} no cartão
-                    </span>
-                  ) : null}
+                <span className="tnum font-semibold text-[var(--text-in)]">
+                  {formatCents(entrouCents)}
                 </span>
               </li>
-              <li className="flex items-baseline justify-between gap-3">
+              <li className="flex items-baseline justify-between gap-3 py-1">
                 <span className="muted">Saiu</span>
-                <span className="text-right">
-                  <span className="tnum block font-semibold text-[var(--text-out)]">
-                    {formatCents(summary.expenseCents)}
-                  </span>
-                  {cardTotals.expenseCents > 0 ? (
-                    <span
-                      className="tnum block text-[0.6875rem] font-medium text-amber-700 dark:text-amber-300"
-                      title="Incluso no total acima, mas é compra no cartão — só sai da sua conta quando a fatura é paga"
-                    >
-                      {formatCents(cardTotals.expenseCents)} no cartão
-                    </span>
-                  ) : null}
+                <span className="tnum font-semibold text-[var(--text-out)]">
+                  {formatCents(saiuCents)}
                 </span>
               </li>
-              <li className="flex items-baseline justify-between gap-3">
+              <li
+                className="mt-2 flex items-baseline justify-between gap-3 border-t pt-2"
+                title="Compras no cartão — só saem da sua conta de fato quando a fatura é paga"
+              >
+                <span className="muted inline-flex items-center gap-1.5">
+                  <CreditCard className="size-3.5" />
+                  Cartão
+                </span>
+                <span className="tnum font-semibold text-amber-700 dark:text-amber-300">
+                  {formatCents(cartaoCents)}
+                </span>
+              </li>
+              <li className="mt-2 flex items-baseline justify-between gap-3 border-t pt-2">
                 <span className="muted">Sobrou</span>
-                <span className="tnum font-semibold">
-                  {formatCents(summary.incomeCents - summary.expenseCents)}
-                </span>
+                <span className="tnum font-semibold">{formatCents(sobrouCents)}</span>
               </li>
-              {cardTotals.incomeCents > 0 || cardTotals.expenseCents > 0 ? (
-                <li className="muted flex items-start gap-1.5 pt-1 text-[0.6875rem] leading-snug text-amber-700 dark:text-amber-300">
-                  <CreditCard className="mt-0.5 size-3 shrink-0" />
-                  Os valores em amarelo são de cartão e não deveriam entrar direto nessa conta —
-                  eles só afetam seu saldo de fato quando a fatura é paga.
-                </li>
-              ) : null}
             </ul>
             <TransactionComposer categories={plainCategories} accounts={plainAccounts} />
           </Card>
@@ -186,4 +174,8 @@ export default async function TransactionsPage({
       </div>
     </>
   );
+}
+
+function sumByKind(items: { kind: "INCOME" | "EXPENSE"; amountCents: number }[], kind: "INCOME" | "EXPENSE") {
+  return items.filter((t) => t.kind === kind).reduce((acc, t) => acc + t.amountCents, 0);
 }
