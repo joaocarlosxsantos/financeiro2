@@ -14,6 +14,7 @@ import {
   getCardCategoryBreakdown,
   getCategoryBreakdown,
   getEmergencyFundSavedCents,
+  getGoals,
   getMonthSummary,
   getMonthlySeries,
   getRecurringStatus,
@@ -30,6 +31,7 @@ import {
   monthsOfRunway,
   savingsRate,
 } from "@/lib/finance";
+import { buildBudgetAlerts, buildGoalAlerts } from "@/lib/alerts";
 import { PageHeader } from "@/components/page-header";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { RecurringBanner } from "@/components/recurring-banner";
@@ -43,6 +45,7 @@ import { CategoryBars } from "@/components/charts/category-bars";
 import { HealthCard } from "./health-card";
 import { BudgetCard } from "./budget-card";
 import { DebtCard } from "./debt-card";
+import { AlertsCard } from "./alerts-card";
 
 export const metadata = { title: "Painel — Financeiro 2.0" };
 
@@ -67,6 +70,7 @@ export default async function DashboardPage({
     budget,
     recurring,
     debts,
+    goals,
   ] = await Promise.all([
     getUser(userId),
     // "cash": o resumo principal do painel é o retrato do dinheiro que
@@ -85,7 +89,11 @@ export default async function DashboardPage({
     getBudgetOverview(userId, ref),
     getRecurringStatus(userId, ref),
     getDebtOverview(userId),
+    // Só para a central de avisos abaixo (meta que passou do prazo).
+    getGoals(userId),
   ]);
+
+  const alerts = [...buildBudgetAlerts(budget.rows), ...buildGoalAlerts(goals)];
 
   const sobrou = balanceCents(summary);
   const rate = savingsRate(summary);
@@ -128,6 +136,8 @@ export default async function DashboardPage({
         incomeCents={recurring.pendingIncomeCents}
         expenseCents={recurring.pendingExpenseCents}
       />
+
+      <AlertsCard alerts={alerts} />
 
       <DebtCard overview={debts} incomeCents={user.monthlyIncomeCents} />
 
