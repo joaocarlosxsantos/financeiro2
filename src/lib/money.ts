@@ -15,18 +15,28 @@ const BRL_COMPACT = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 1,
 });
 
+/**
+ * `Intl.NumberFormat` mostra sinal de menos em `-0` ("-R$ 0,00") mesmo sendo
+ * zero de verdade — acontece sempre que alguém inverte um valor pra exibir
+ * (`-saldoDevedor`, por exemplo) e o saldo por trás é zero. `-0 || 0` troca
+ * o `-0` pelo `0` positivo sem afetar nenhum outro valor.
+ */
+function noNegativeZero(v: number): number {
+  return v || 0;
+}
+
 export function formatCents(cents: number): string {
-  return BRL.format((cents ?? 0) / 100);
+  return BRL.format(noNegativeZero((cents ?? 0) / 100));
 }
 
 export function formatCentsCompact(cents: number): string {
-  const v = (cents ?? 0) / 100;
+  const v = noNegativeZero((cents ?? 0) / 100);
   return Math.abs(v) >= 10000 ? BRL_COMPACT.format(v) : BRL.format(v);
 }
 
 /** Rótulo curto para eixos de gráfico: "R$ 8 mil", "R$ 1,2 mi". */
 export function formatAxisCents(cents: number): string {
-  const v = (cents ?? 0) / 100;
+  const v = noNegativeZero((cents ?? 0) / 100);
   return Math.abs(v) >= 1000 ? BRL_COMPACT.format(v) : BRL.format(v);
 }
 
