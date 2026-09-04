@@ -57,6 +57,13 @@
       "when": 1788551103453,
       "tag": "0007_motionless_war_machine",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788562546446,
+      "tag": "0008_sad_sabretooth",
+      "breakpoints": true
     }
   ]
 }

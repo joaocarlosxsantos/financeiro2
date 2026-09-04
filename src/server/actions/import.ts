@@ -9,7 +9,7 @@ import { parseStatement } from "@/lib/parsers";
 import { fingerprint, suggestCategoryId } from "@/lib/categorize";
 import { resolveImportDate } from "@/lib/import-dates";
 import { isInvoicePaymentLine } from "@/lib/import-filters";
-import { formatDate, monthLabel, monthRange, monthRefFromParam, type MonthRef } from "@/lib/dates";
+import { formatDate, monthLabel, monthRange, monthRefFromParam, monthRefToParam, type MonthRef } from "@/lib/dates";
 
 export type PreviewRow = {
   /** Data que vai para o banco — já ajustada quando necessário (parcela de cartão). */
@@ -201,8 +201,11 @@ export async function previewImport(input: {
     isCard && !input.invertSign && rows.length >= 3 && rows.filter((r) => r.kind === "INCOME").length > rows.length / 2;
 
   if (isCard && invoiceRef) {
+    const installmentCount = rows.filter((r) => r.installmentNumber !== null).length;
     warnings.push(
-      `Fatura de ${monthLabel(invoiceRef)}: todas as ${rows.length} linha(s) foram gravadas nesse mês, independente da data de compra que veio no arquivo — é assim que cada parcela cai no mês certo.`,
+      installmentCount > 0
+        ? `Fatura de ${monthLabel(invoiceRef)}: ${installmentCount} parcela(s) foram gravadas nesse mês (dia da compra original, mês da fatura escolhida); as demais linhas mantêm a data real da compra, impressa no arquivo.`
+        : `Fatura de ${monthLabel(invoiceRef)}: as linhas mantêm a data real de cada compra, impressa no arquivo.`,
     );
   }
   if (paymentLinesSkipped > 0) {
@@ -237,16 +240,39 @@ export async function previewImport(input: {
     );
   }
 
-  // Reimportar o mesmo período de extrato é comum (o banco corrigiu algo, ou
-  // você baixou de novo) — em vez de duplicar ou deixar lançamentos velhos e
-  // errados junto dos novos, detectamos o que já foi importado antes nesse
-  // mesmo período pra oferecer substituir tudo de uma vez (ver commitImport).
-  // Só conta o que veio de importação (importBatchId preenchido) — o que você
-  // digitou à mão nunca é tocado. Fatura de cartão usa o mês inteiro
-  // escolhido (não o intervalo das linhas) — ver invoicePeriodRange.
+  // Reimportar é comum (o banco corrigiu algo, ou você baixou de novo) — em
+  // vez de duplicar ou deixar lançamentos velhos e errados junto dos novos,
+  // detectamos o que já foi importado antes pra oferecer substituir tudo de
+  // uma vez (ver commitImport). Só conta o que veio de importação
+  // (importBatchId preenchido) — o que você digitou à mão nunca é tocado.
+  //
+  // Fatura de cartão não pode mais usar intervalo de data para achar "o que
+  // já foi importado dessa fatura": compra à vista agora mantém a data real
+  // (que pode cair fora do mês da fatura), então o lote de importação guarda
+  // o mês da fatura (`invoiceRef`) e é isso que decide, não mais a data dos
+  // lançamentos. Conta comum continua pelo intervalo de datas do arquivo.
   const period = isCard && invoiceRef ? invoicePeriodRange(invoiceRef) : periodRangeFor(rows);
   let existingInPeriod = 0;
-  if (period) {
+  if (isCard && invoiceRef) {
+    const invoiceParam = monthRefToParam(invoiceRef);
+    const oldBatches = await db
+      .select({ id: importBatches.id })
+      .from(importBatches)
+      .where(and(eq(importBatches.accountId, input.accountId), eq(importBatches.invoiceRef, invoiceParam)));
+    const oldBatchIds = oldBatches.map((b) => b.id);
+    if (oldBatchIds.length) {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(transactions)
+        .where(and(eq(transactions.userId, userId), inArray(transactions.importBatchId, oldBatchIds)));
+      existingInPeriod = count;
+    }
+    if (existingInPeriod > 0) {
+      warnings.push(
+        `${existingInPeriod} lançamento(s) importado(s) antes já fazem parte dessa fatura (${monthLabel(invoiceRef)}). Se você confirmar com "substituir" marcado, eles são apagados e trocados pelos desta importação.`,
+      );
+    }
+  } else if (period) {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(transactions)
@@ -317,11 +343,32 @@ export async function commitImport(input: {
 
   const replacePeriod = input.replacePeriod ?? true;
   const period = isCard && invoiceRef ? invoicePeriodRange(invoiceRef) : periodRangeFor(rows);
+  const invoiceParam = isCard && invoiceRef ? monthRefToParam(invoiceRef) : undefined;
 
   const result = await db.transaction(async (tx) => {
     let replaced = 0;
 
-    if (replacePeriod && period) {
+    if (replacePeriod && invoiceParam) {
+      // Fatura de cartão: substitui pelo rótulo do lote (invoiceRef), não
+      // pelo intervalo de datas — compra à vista agora mantém a data real,
+      // que pode cair fora do mês da fatura (ver comentário em previewImport).
+      const oldBatches = await tx
+        .select({ id: importBatches.id })
+        .from(importBatches)
+        .where(and(eq(importBatches.accountId, input.accountId), eq(importBatches.invoiceRef, invoiceParam)));
+      const oldBatchIds = oldBatches.map((b) => b.id);
+
+      if (oldBatchIds.length) {
+        const removed = await tx
+          .delete(transactions)
+          .where(and(eq(transactions.userId, userId), inArray(transactions.importBatchId, oldBatchIds)))
+          .returning({ id: transactions.id });
+        replaced = removed.length;
+        // Todo lançamento desses lotes acabou de ser apagado — pode limpar
+        // os lotes junto, sem precisar checar se sobrou algo.
+        await tx.delete(importBatches).where(inArray(importBatches.id, oldBatchIds));
+      }
+    } else if (replacePeriod && period) {
       const removed = await tx
         .delete(transactions)
         .where(
@@ -360,6 +407,7 @@ export async function commitImport(input: {
         rowCount: input.rows.length,
         status: "COMMITTED",
         savedRows: 0,
+        invoiceRef: invoiceParam ?? null,
       })
       .returning({ id: importBatches.id });
 

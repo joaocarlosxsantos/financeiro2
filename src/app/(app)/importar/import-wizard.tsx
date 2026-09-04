@@ -166,7 +166,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           {isCard ? (
             <Field
               label="Mês de referência da fatura"
-              hint="Toda linha do arquivo é gravada nesse mês — é o que faz cada parcela cair no mês certo."
+              hint="Parcela vai para esse mês (dia original preservado). Compra à vista mantém a data real de compra do arquivo."
             >
               <input
                 type="month"
@@ -223,7 +223,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           </p>
           <p className="muted mt-1 text-[0.8125rem]">
             {isCard
-              ? `Todas as linhas do arquivo entram como lançamentos de ${monthLabel(monthRefFromParam(invoiceMonth))} — parcela (ex.: “2/12”) é detectada pelo texto só para mostrar o selo, a data sempre vem do mês escolhido acima.`
+              ? `Parcela (ex.: "2/12") vai para ${monthLabel(monthRefFromParam(invoiceMonth))}, dia original preservado. Compra à vista entra com a data real de compra do arquivo, mesmo fora desse mês.`
               : "Aceita CSV e OFX de extrato bancário — cada linha entra com a própria data do arquivo."}
           </p>
         </label>
@@ -286,7 +286,11 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           {warnings.map((w) => (
             <Hint
               key={w}
-              tone={w.includes("já existir") || w.includes("já cobrem esse período") ? "warn" : "info"}
+              tone={
+                w.includes("já existir") || w.includes("já cobrem esse período") || w.includes("já fazem parte dessa fatura")
+                  ? "warn"
+                  : "info"
+              }
               className="mb-3"
             >
               {w}
@@ -303,8 +307,9 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
               />
               <span>
                 <span className="block font-medium">
-                  Substituir os {existingInPeriod} lançamento(s) já importado(s) entre {formatDate(period.start)} e{" "}
-                  {formatDate(period.end)}
+                  {isCard
+                    ? `Substituir os ${existingInPeriod} lançamento(s) já importado(s) antes para essa fatura (${monthLabel(monthRefFromParam(invoiceMonth))})`
+                    : `Substituir os ${existingInPeriod} lançamento(s) já importado(s) entre ${formatDate(period.start)} e ${formatDate(period.end)}`}
                 </span>
                 <span className="muted mt-0.5 block">
                   {replacePeriod

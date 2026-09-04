@@ -12,19 +12,32 @@ test("cartão com mês de referência: linha vai para o mês escolhido, preserva
   assert.deepEqual(r.marker, { number: 9, total: 12 });
 });
 
-test("cartão com mês de referência: linha sem parcela também vai para o mês escolhido", () => {
-  const impressa = new Date("2026-08-03T12:00:00Z");
-  const r = resolveImportDate(impressa, "IFOOD LANCHONETE", { isCard: true, invoiceRef: { year: 2026, month: 9 } });
-  assert.equal(r.adjusted, true);
-  assert.equal(r.date.getUTCMonth() + 1, 9);
+test("cartão com mês de referência: linha sem parcela (à vista) mantém a data real impressa no arquivo", () => {
+  const impressa = new Date("2026-07-31T12:00:00Z");
+  const r = resolveImportDate(impressa, "SUPERMERCADO", { isCard: true, invoiceRef: { year: 2026, month: 9 } });
+  assert.equal(r.adjusted, false);
+  assert.equal(r.date.getTime(), impressa.getTime());
   assert.equal(r.marker, null);
 });
 
-test("cartão com mês de referência: dia 31 num mês curto cai no último dia disponível", () => {
+test("cartão com mês de referência: parcela com dia 31 num mês curto cai no último dia disponível", () => {
   const impressa = new Date("2026-01-31T12:00:00Z");
-  const r = resolveImportDate(impressa, "LOJA X", { isCard: true, invoiceRef: { year: 2026, month: 2 } });
+  const r = resolveImportDate(impressa, "LOJA X 3/6", { isCard: true, invoiceRef: { year: 2026, month: 2 } });
   assert.equal(r.date.getUTCMonth() + 1, 2);
   assert.equal(r.date.getUTCDate(), 28); // fevereiro de 2026 não é bissexto
+});
+
+test("cartão com mês de referência: parcela usa o dia original + mês/ano da fatura escolhida (exemplo real)", () => {
+  // Parcela 9/12 comprada em 02/12/2025, importando a fatura de setembro/2026.
+  const impressa = new Date("2025-12-02T12:00:00Z");
+  const r = resolveImportDate(impressa, "LITE VivoEasyAnual Parcela 9/12", {
+    isCard: true,
+    invoiceRef: { year: 2026, month: 9 },
+  });
+  assert.equal(r.date.getUTCFullYear(), 2026);
+  assert.equal(r.date.getUTCMonth() + 1, 9);
+  assert.equal(r.date.getUTCDate(), 2);
+  assert.deepEqual(r.marker, { number: 9, total: 12 });
 });
 
 test("cartão sem mês de referência: data não é mexida (falta escolher o mês)", () => {

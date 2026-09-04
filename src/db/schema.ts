@@ -396,9 +396,20 @@ export const importBatches = pgTable(
     status: importStatus("status").notNull().default("PENDING"),
     rowCount: integer("row_count").notNull().default(0),
     savedRows: integer("saved_rows").notNull().default(0),
+    /**
+     * Mês/ano da fatura ("AAAA-MM"), só para importação de cartão. Com
+     * compra à vista mantendo a data real (fora do mês da fatura, às vezes),
+     * não dá mais para descobrir "o que já foi importado dessa fatura" só
+     * pela data do lançamento — precisa desse rótulo no lote em vez disso.
+     * Nulo para extrato de conta comum.
+     */
+    invoiceRef: varchar("invoice_ref", { length: 7 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("import_batches_user_idx").on(t.userId)],
+  (t) => [
+    index("import_batches_user_idx").on(t.userId),
+    index("import_batches_invoice_idx").on(t.accountId, t.invoiceRef),
+  ],
 );
 
 // ---------------------------------------------------------------- relations
