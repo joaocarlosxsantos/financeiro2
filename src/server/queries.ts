@@ -339,6 +339,13 @@ export async function getGoals(userId: string) {
 
 export type TransactionFilters = {
   ref?: MonthRef;
+  /**
+   * Período customizado ("AAAA-MM-DD", inclusivo dos dois lados). Quando os
+   * dois vêm preenchidos, manda mais que `ref` — é o que permite ver ou
+   * buscar lançamentos além de um único mês.
+   */
+  dateFrom?: string;
+  dateTo?: string;
   categoryId?: string;
   accountId?: string;
   /** Filtro rápido: CARD = só cartão de crédito, OTHER = tudo, menos cartão. */
@@ -353,7 +360,12 @@ export type TransactionFilters = {
 export async function getTransactions(userId: string, filters: TransactionFilters, take = 300) {
   const conditions = [eq(txTable.userId, userId)];
 
-  if (filters.ref) {
+  if (filters.dateFrom && filters.dateTo) {
+    const start = new Date(`${filters.dateFrom}T00:00:00.000Z`);
+    const end = new Date(`${filters.dateTo}T00:00:00.000Z`);
+    end.setUTCDate(end.getUTCDate() + 1); // limite superior exclusivo — inclui o dia "até" inteiro
+    conditions.push(gte(txTable.date, start), lt(txTable.date, end));
+  } else if (filters.ref) {
     const { start, end } = monthRange(filters.ref);
     conditions.push(gte(txTable.date, start), lt(txTable.date, end));
   }

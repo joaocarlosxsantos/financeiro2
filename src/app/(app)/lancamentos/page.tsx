@@ -4,7 +4,6 @@ import { getAccounts, getCategories, getRecurringStatus, getTransactions } from 
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
-import { MonthSwitcher } from "@/components/month-switcher";
 import { RecurringBanner } from "@/components/recurring-banner";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty";
@@ -12,8 +11,11 @@ import { Hint } from "@/components/ui/hint";
 import { TransactionComposer } from "./transaction-composer";
 import { TransactionList } from "./transaction-list";
 import { Filters } from "./filters";
+import { PeriodSwitcher } from "./period-switcher";
 
 export const metadata = { title: "Lançamentos — Financeiro 2.0" };
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function TransactionsPage({
   searchParams,
@@ -25,24 +27,42 @@ export default async function TransactionsPage({
     nature?: string;
     q?: string;
     acc?: string;
+    from?: string;
+    to?: string;
   }>;
 }) {
   const userId = await requireUserId();
   const sp = await searchParams;
   const ref = monthRefFromParam(sp.m);
 
+  /**
+   * Período customizado: só entra em vigor com `from` e `to` válidos e com
+   * `from <= to`. Fora isso a página se comporta como sempre — presa ao mês
+   * de `ref`. É o que deixa buscar/ver lançamentos além de um único mês.
+   */
+  const customRange =
+    sp.from && sp.to && ISO_DATE.test(sp.from) && ISO_DATE.test(sp.to) && sp.from <= sp.to
+      ? { from: sp.from, to: sp.to }
+      : null;
+
   const [accounts, categories, transactions, recurring] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
-    getTransactions(userId, {
-      ref,
-      categoryId: sp.cat && sp.cat !== "NONE" ? sp.cat : undefined,
-      uncategorized: sp.cat === "NONE",
-      accountKind: sp.acc === "CARD" || sp.acc === "OTHER" ? sp.acc : undefined,
-      kind: sp.kind === "INCOME" || sp.kind === "EXPENSE" ? sp.kind : undefined,
-      nature: sp.nature === "FIXED" || sp.nature === "VARIABLE" ? sp.nature : undefined,
-      search: sp.q || undefined,
-    }),
+    getTransactions(
+      userId,
+      {
+        ref: customRange ? undefined : ref,
+        dateFrom: customRange?.from,
+        dateTo: customRange?.to,
+        categoryId: sp.cat && sp.cat !== "NONE" ? sp.cat : undefined,
+        uncategorized: sp.cat === "NONE",
+        accountKind: sp.acc === "CARD" || sp.acc === "OTHER" ? sp.acc : undefined,
+        kind: sp.kind === "INCOME" || sp.kind === "EXPENSE" ? sp.kind : undefined,
+        nature: sp.nature === "FIXED" || sp.nature === "VARIABLE" ? sp.nature : undefined,
+        search: sp.q || undefined,
+      },
+      customRange ? 1000 : 300,
+    ),
     getRecurringStatus(userId, ref),
   ]);
 
@@ -97,7 +117,7 @@ export default async function TransactionsPage({
       <PageHeader
         title="Lançamentos"
         description="Tudo que entrou e saiu. Classificar cada gasto como fixo ou variável é o que faz o painel virar decisão."
-        action={<MonthSwitcher value={ref} />}
+        action={<PeriodSwitcher value={ref} range={customRange} />}
       />
 
       <RecurringBanner
@@ -114,8 +134,15 @@ export default async function TransactionsPage({
 
           {uncategorized > 0 ? (
             <Hint tone="info">
-              {uncategorized} lançamento(s) sem categoria neste mês. Escolha a categoria direto na
-              lista — o valor entra na análise no mesmo instante.
+              {uncategorized} lançamento(s) sem categoria {customRange ? "nesse período" : "neste mês"}.
+              Escolha a categoria direto na lista — o valor entra na análise no mesmo instante.
+            </Hint>
+          ) : null}
+
+          {customRange && plain.length >= 1000 ? (
+            <Hint tone="warn">
+              Mostrando os 1.000 lançamentos mais recentes do período. Estreite as datas ou use a
+              busca para achar algo mais específico.
             </Hint>
           ) : null}
 
@@ -129,7 +156,7 @@ export default async function TransactionsPage({
             ) : (
               <EmptyState
                 icon={Receipt}
-                title={`Nada lançado em ${monthLabel(ref)}`}
+                title={customRange ? "Nada lançado nesse período" : `Nada lançado em ${monthLabel(ref)}`}
                 description="Use o formulário ao lado para adicionar, ou importe o extrato do banco na aba Importar."
               />
             )}
