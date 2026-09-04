@@ -24,12 +24,14 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
   const [invertSign, setInvertSign] = useState(false);
   const [invoiceMonth, setInvoiceMonth] = useState(currentMonthValue);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
   const [rows, setRows] = useState<PreviewRow[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [columns, setColumns] = useState<Record<string, string> | undefined>();
   const [period, setPeriod] = useState<{ start: string; end: string } | null>(null);
   const [existingInPeriod, setExistingInPeriod] = useState(0);
   const [replacePeriod, setReplacePeriod] = useState(true);
+  const [suggestInvertSign, setSuggestInvertSign] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState<number | null>(null);
   const [replacedCount, setReplacedCount] = useState<number | null>(null);
@@ -38,27 +40,19 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
 
   const isCard = accounts.find((a) => a.id === accountId)?.type === "CREDIT_CARD";
 
-  async function handleFile(file: File) {
+  async function runPreview(name: string, content: string, nextInvertSign: boolean) {
     setError(null);
     setSavedCount(null);
     setReplacedCount(null);
-    if (!accountId) {
-      setError("Cadastre uma conta em Configurações antes de importar um extrato.");
-      return;
-    }
-    if (isCard && !invoiceMonth) {
-      setError("Escolha o mês de referência da fatura antes de importar.");
-      return;
-    }
-    const content = await file.text();
-    setFileName(file.name);
+    setFileName(name);
+    setFileContent(content);
 
     start(async () => {
       const result = await previewImport({
-        fileName: file.name,
+        fileName: name,
         content,
         accountId,
-        invertSign,
+        invertSign: nextInvertSign,
         invoiceMonth: isCard ? invoiceMonth : undefined,
       });
       if (result.error) {
@@ -72,7 +66,28 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       setPeriod(result.period ?? null);
       setExistingInPeriod(result.existingInPeriod ?? 0);
       setReplacePeriod(true);
+      setSuggestInvertSign(result.suggestInvertSign ?? false);
     });
+  }
+
+  async function handleFile(file: File) {
+    if (!accountId) {
+      setError("Cadastre uma conta em Configurações antes de importar um extrato.");
+      return;
+    }
+    if (isCard && !invoiceMonth) {
+      setError("Escolha o mês de referência da fatura antes de importar.");
+      return;
+    }
+    const content = await file.text();
+    await runPreview(file.name, content, invertSign);
+  }
+
+  /** Aplica a sugestão de "inverter sinal" e atualiza a prévia com o mesmo arquivo, sem pedir pra escolher de novo. */
+  function acceptInvertSignSuggestion() {
+    if (!fileName || !fileContent) return;
+    setInvertSign(true);
+    void runPreview(fileName, fileContent, true);
   }
 
   function toggleRow(index: number) {
@@ -121,8 +136,10 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       setReplacedCount(result.replaced ?? 0);
       setRows(null);
       setFileName(null);
+      setFileContent(null);
       setPeriod(null);
       setExistingInPeriod(0);
+      setSuggestInvertSign(false);
       if (inputRef.current) inputRef.current.value = "";
     });
   }
@@ -165,7 +182,13 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
               <input
                 type="checkbox"
                 checked={invertSign}
-                onChange={(e) => setInvertSign(e.target.checked)}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setInvertSign(next);
+                  // Já tem arquivo carregado: atualiza a prévia na hora em
+                  // vez de deixar os valores errados até escolher de novo.
+                  if (fileName && fileContent) void runPreview(fileName, fileContent, next);
+                }}
                 className="size-4 accent-[var(--color-brand-600)]"
               />
               <span className="text-[0.8125rem]">Inverter sinal dos valores</span>
@@ -246,6 +269,18 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
               Colunas detectadas — data: <strong>{columns.data}</strong> · descrição:{" "}
               <strong>{columns.descricao}</strong> · valor: <strong>{columns.valor}</strong>
             </p>
+          ) : null}
+
+          {suggestInvertSign ? (
+            <Hint tone="tip" title="Os valores parecem estar ao contrário" className="mb-3">
+              <p className="mb-2">
+                A maioria das linhas dessa fatura virou entrada — é bem comum o cartão exportar os
+                gastos como valor positivo. Marcar &quot;inverter sinal&quot; deve corrigir.
+              </p>
+              <Button type="button" size="sm" variant="outline" onClick={acceptInvertSignSuggestion}>
+                Marcar &quot;inverter sinal&quot; e atualizar prévia
+              </Button>
+            </Hint>
           ) : null}
 
           {warnings.map((w) => (

@@ -51,6 +51,12 @@ export type PreviewResult = {
   period?: { start: string; end: string };
   /** Quantos lançamentos já importados antes caem dentro desse período (candidatos a substituição). */
   existingInPeriod?: number;
+  /**
+   * true quando a maioria das linhas virou "entrada" numa conta de cartão
+   * com o sinal atual — sinal forte de que falta marcar "inverter sinal".
+   * Só um aviso; quem decide continua sendo o usuário.
+   */
+  suggestInvertSign?: boolean;
 };
 
 /**
@@ -186,6 +192,14 @@ export async function previewImport(input: {
     };
   });
 
+  // Fatura de cartão é quase sempre gasto — se a maioria das linhas virou
+  // "entrada" com o sinal atual, é sinal forte de que o arquivo trouxe os
+  // valores positivos (comum em fatura) e falta marcar "inverter sinal". Só
+  // sugerimos — nunca inverte sozinho — mas em vez de o usuário descobrir só
+  // depois de ver a prévia toda errada, a sugestão já vem junto dela.
+  const suggestInvertSign =
+    isCard && !input.invertSign && rows.length >= 3 && rows.filter((r) => r.kind === "INCOME").length > rows.length / 2;
+
   if (isCard && invoiceRef) {
     warnings.push(
       `Fatura de ${monthLabel(invoiceRef)}: todas as ${rows.length} linha(s) foram gravadas nesse mês, independente da data de compra que veio no arquivo — é assim que cada parcela cai no mês certo.`,
@@ -262,6 +276,7 @@ export async function previewImport(input: {
     duplicates,
     period: period ?? undefined,
     existingInPeriod,
+    suggestInvertSign,
   };
 }
 
