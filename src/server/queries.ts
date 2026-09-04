@@ -4,7 +4,6 @@ import { db } from "@/db";
 import {
   accounts as accountsTable,
   budgets as budgetsTable,
-  cardInvoicePayments,
   categories as categoriesTable,
   debtPayments,
   debts as debtsTable,
@@ -17,20 +16,7 @@ import {
 import { monthRange, monthShortLabel, lastNMonths, shiftMonth, type MonthRef } from "@/lib/dates";
 import type { MonthSummary } from "@/lib/finance";
 import { monthlyInterestCents } from "@/lib/debts";
-import { accountBalance, cardOwed, netWorth } from "@/lib/balances";
-import {
-  DEFAULT_CLOSING_DAY,
-  DEFAULT_DUE_DAY,
-  closingDateFor,
-  dueDateFor,
-  invoiceForPurchase,
-  invoiceLabel,
-  invoiceStatus,
-  periodStartFor,
-  shiftInvoice,
-  type InvoiceRef,
-  type InvoiceStatus,
-} from "@/lib/invoices";
+import { accountBalance, netWorth } from "@/lib/balances";
 
 /**
  * O usuário da sessão.
@@ -82,41 +68,24 @@ export async function getMonthSummary(
   const { start, end } = monthRange(ref);
   const cash = opts?.cardMode === "cash";
 
-  const [rows, invoicePaid] = await Promise.all([
-    db
-      .select({
-        kind: txTable.kind,
-        nature: txTable.nature,
-        total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
-      })
-      .from(txTable)
-      .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
-      .where(
-        and(
-          eq(txTable.userId, userId),
-          eq(txTable.isTransfer, false),
-          gte(txTable.date, start),
-          lt(txTable.date, end),
-          cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
-        ),
-      )
-      .groupBy(txTable.kind, txTable.nature),
-
-    cash
-      ? db
-          .select({
-            total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
-          })
-          .from(cardInvoicePayments)
-          .where(
-            and(
-              eq(cardInvoicePayments.userId, userId),
-              gte(cardInvoicePayments.paidAt, start),
-              lt(cardInvoicePayments.paidAt, end),
-            ),
-          )
-      : Promise.resolve([{ total: 0 }]),
-  ]);
+  const rows = await db
+    .select({
+      kind: txTable.kind,
+      nature: txTable.nature,
+      total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
+    })
+    .from(txTable)
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .where(
+      and(
+        eq(txTable.userId, userId),
+        eq(txTable.isTransfer, false),
+        gte(txTable.date, start),
+        lt(txTable.date, end),
+        cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+      ),
+    )
+    .groupBy(txTable.kind, txTable.nature);
 
   let incomeCents = 0;
   let expenseCents = 0;
@@ -132,15 +101,6 @@ export async function getMonthSummary(
       if (r.nature === "FIXED") fixedCents += total;
       else variableCents += total;
     }
-  }
-
-  // Fatura paga: não dá para saber quanto dela era fixo ou variável sem
-  // reabrir a fatura em compra por compra, então entra como variável — o
-  // total (expenseCents) é o que importa de verdade aqui.
-  const paidCents = Number(invoicePaid[0]?.total ?? 0);
-  if (paidCents > 0) {
-    expenseCents += paidCents;
-    variableCents += paidCents;
   }
 
   return { incomeCents, expenseCents, fixedCents, variableCents };
@@ -167,44 +127,25 @@ export async function getMonthlySeries(
   const last = monthRange(refs[refs.length - 1]).end;
   const cash = opts?.cardMode === "cash";
 
-  const [rows, invoicePaidRows] = await Promise.all([
-    db
-      .select({
-        bucket: sql<string>`to_char(${txTable.date} at time zone 'UTC', 'YYYY-MM')`,
-        kind: txTable.kind,
-        nature: txTable.nature,
-        total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
-      })
-      .from(txTable)
-      .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
-      .where(
-        and(
-          eq(txTable.userId, userId),
-          eq(txTable.isTransfer, false),
-          gte(txTable.date, first),
-          lt(txTable.date, last),
-          cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
-        ),
-      )
-      .groupBy(sql`1`, txTable.kind, txTable.nature),
-
-    cash
-      ? db
-          .select({
-            bucket: sql<string>`to_char(${cardInvoicePayments.paidAt} at time zone 'UTC', 'YYYY-MM')`,
-            total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
-          })
-          .from(cardInvoicePayments)
-          .where(
-            and(
-              eq(cardInvoicePayments.userId, userId),
-              gte(cardInvoicePayments.paidAt, first),
-              lt(cardInvoicePayments.paidAt, last),
-            ),
-          )
-          .groupBy(sql`1`)
-      : Promise.resolve([]),
-  ]);
+  const rows = await db
+    .select({
+      bucket: sql<string>`to_char(${txTable.date} at time zone 'UTC', 'YYYY-MM')`,
+      kind: txTable.kind,
+      nature: txTable.nature,
+      total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
+    })
+    .from(txTable)
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .where(
+      and(
+        eq(txTable.userId, userId),
+        eq(txTable.isTransfer, false),
+        gte(txTable.date, first),
+        lt(txTable.date, last),
+        cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+      ),
+    )
+    .groupBy(sql`1`, txTable.kind, txTable.nature);
 
   const buckets = new Map<string, SeriesPoint>();
   for (const ref of refs) {
@@ -222,16 +163,6 @@ export async function getMonthlySeries(
       if (r.nature === "FIXED") bucket.fixo += total;
       else bucket.variavel += total;
     }
-  }
-
-  // Fatura paga entra como variável, pelo mesmo motivo do getMonthSummary:
-  // não dá para saber a mistura fixo/variável sem reabrir a fatura.
-  for (const r of invoicePaidRows) {
-    const bucket = buckets.get(r.bucket);
-    if (!bucket) continue;
-    const total = Number(r.total);
-    bucket.saiu += total;
-    bucket.variavel += total;
   }
 
   for (const b of buckets.values()) b.sobrou = b.entrou - b.saiu;
@@ -711,170 +642,6 @@ export async function getRecurringStatus(userId: string, ref: MonthRef): Promise
   };
 }
 
-// ------------------------------------------------------- faturas de cartão
-
-export type InvoiceItem = {
-  id: string;
-  date: Date;
-  description: string;
-  amountCents: number;
-  categoryName: string | null;
-  categoryColor: string | null;
-  installmentNumber: number | null;
-  installmentTotal: number | null;
-};
-
-export type CardInvoice = {
-  ref: InvoiceRef;
-  label: string;
-  periodStart: Date;
-  closingDate: Date;
-  dueDate: Date;
-  totalCents: number;
-  status: InvoiceStatus;
-  paidAmountCents: number | null;
-  paidAt: Date | null;
-  items: InvoiceItem[];
-};
-
-export type CardView = {
-  id: string;
-  name: string;
-  color: string;
-  closingDay: number;
-  dueDay: number;
-  /** O cartão ainda está com os dias padrão, sem o usuário ter configurado? */
-  usingDefaults: boolean;
-};
-
-export async function getCreditCards(userId: string): Promise<CardView[]> {
-  const rows = await db
-    .select()
-    .from(accountsTable)
-    .where(
-      and(
-        eq(accountsTable.userId, userId),
-        eq(accountsTable.archived, false),
-        eq(accountsTable.type, "CREDIT_CARD"),
-      ),
-    )
-    .orderBy(asc(accountsTable.createdAt));
-
-  return rows.map((a) => ({
-    id: a.id,
-    name: a.name,
-    color: a.color,
-    closingDay: a.closingDay ?? DEFAULT_CLOSING_DAY,
-    dueDay: a.dueDay ?? DEFAULT_DUE_DAY,
-    usingDefaults: a.closingDay === null || a.dueDay === null,
-  }));
-}
-
-/**
- * Monta as faturas de um cartão: a próxima a vencer, as anteriores e a que
- * ainda está aberta. Cada compra é colocada na fatura pelo ciclo — a despesa
- * é do dia da compra, não do dia do pagamento.
- */
-export async function getCardInvoices(
-  userId: string,
-  card: CardView,
-  monthsBack = 5,
-  today = new Date(),
-  /** Quantas faturas ainda não fechadas (status "aberta") incluir, além da atual. */
-  monthsAhead = 1,
-): Promise<CardInvoice[]> {
-  const currentRef = invoiceForPurchase(today, card.closingDay, card.dueDay);
-  const refs: InvoiceRef[] = [];
-  for (let i = monthsAhead; i >= -monthsBack; i--) refs.push(shiftInvoice(currentRef, i));
-
-  const oldest = refs[refs.length - 1];
-  const newest = refs[0];
-  const rangeStart = periodStartFor(oldest, card.closingDay, card.dueDay);
-  const rangeEnd = closingDateFor(newest, card.closingDay, card.dueDay);
-  const rangeEndExclusive = new Date(rangeEnd);
-  rangeEndExclusive.setUTCDate(rangeEndExclusive.getUTCDate() + 1);
-
-  const [rows, payments] = await Promise.all([
-    db
-      .select({
-        id: txTable.id,
-        date: txTable.date,
-        description: txTable.description,
-        amountCents: txTable.amountCents,
-        kind: txTable.kind,
-        categoryName: categoriesTable.name,
-        categoryColor: categoriesTable.color,
-        installmentNumber: txTable.installmentNumber,
-        installmentTotal: txTable.installmentTotal,
-      })
-      .from(txTable)
-      .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
-      .where(
-        and(
-          eq(txTable.userId, userId),
-          eq(txTable.accountId, card.id),
-          eq(txTable.isTransfer, false),
-          gte(txTable.date, rangeStart),
-          lt(txTable.date, rangeEndExclusive),
-        ),
-      )
-      .orderBy(desc(txTable.date)),
-
-    db
-      .select()
-      .from(cardInvoicePayments)
-      .where(
-        and(eq(cardInvoicePayments.userId, userId), eq(cardInvoicePayments.accountId, card.id)),
-      ),
-  ]);
-
-  const paymentByLabel = new Map(
-    payments.map((p) => [invoiceLabel({ year: p.dueYear, month: p.dueMonth }), p]),
-  );
-
-  const itemsByLabel = new Map<string, InvoiceItem[]>();
-  const totalByLabel = new Map<string, number>();
-
-  for (const row of rows) {
-    const ref = invoiceForPurchase(new Date(row.date), card.closingDay, card.dueDay);
-    const label = invoiceLabel(ref);
-    // Estorno/crédito no cartão entra como receita e abate a fatura.
-    const signed = row.kind === "INCOME" ? -row.amountCents : row.amountCents;
-
-    totalByLabel.set(label, (totalByLabel.get(label) ?? 0) + signed);
-    const list = itemsByLabel.get(label) ?? [];
-    list.push({
-      id: row.id,
-      date: new Date(row.date),
-      description: row.description,
-      amountCents: signed,
-      categoryName: row.categoryName,
-      categoryColor: row.categoryColor,
-      installmentNumber: row.installmentNumber,
-      installmentTotal: row.installmentTotal,
-    });
-    itemsByLabel.set(label, list);
-  }
-
-  return refs.map((ref) => {
-    const label = invoiceLabel(ref);
-    const payment = paymentByLabel.get(label) ?? null;
-
-    return {
-      ref,
-      label,
-      periodStart: periodStartFor(ref, card.closingDay, card.dueDay),
-      closingDate: closingDateFor(ref, card.closingDay, card.dueDay),
-      dueDate: dueDateFor(ref, card.dueDay),
-      totalCents: totalByLabel.get(label) ?? 0,
-      status: invoiceStatus(ref, card.closingDay, card.dueDay, Boolean(payment), today),
-      paidAmountCents: payment?.paidAmountCents ?? null,
-      paidAt: payment ? new Date(payment.paidAt) : null,
-      items: itemsByLabel.get(label) ?? [],
-    };
-  });
-}
-
 // ---------------------------------------------------------------- dívidas
 
 export type DebtRow = {
@@ -960,18 +727,14 @@ export type AccountBalance = {
   openingBalanceDate: Date | null;
   incomeCents: number;
   expenseCents: number;
-  /** Contas comuns: quanto há. Cartão: quanto se deve. */
   balanceCents: number;
-  isCard: boolean;
   transactionCount: number;
 };
 
 export type BalancesOverview = {
+  /** Só contas comuns — cartão de crédito é só demonstrativo, sem saldo aqui. */
   accounts: AccountBalance[];
-  /** Soma das contas que não são cartão. */
   availableCents: number;
-  /** Soma do que se deve nos cartões. */
-  cardOwedCents: number;
   savedInGoalsCents: number;
   debtBalanceCents: number;
   netWorthCents: number;
@@ -980,17 +743,18 @@ export type BalancesOverview = {
 };
 
 export async function getBalances(userId: string): Promise<BalancesOverview> {
-  const accountRows = await db
-    .select()
-    .from(accountsTable)
-    .where(and(eq(accountsTable.userId, userId), eq(accountsTable.archived, false)))
-    .orderBy(asc(accountsTable.type), asc(accountsTable.createdAt));
+  const accountRows = (
+    await db
+      .select()
+      .from(accountsTable)
+      .where(and(eq(accountsTable.userId, userId), eq(accountsTable.archived, false)))
+      .orderBy(asc(accountsTable.type), asc(accountsTable.createdAt))
+  ).filter((a) => a.type !== "CREDIT_CARD");
 
   if (!accountRows.length) {
     return {
       accounts: [],
       availableCents: 0,
-      cardOwedCents: 0,
       savedInGoalsCents: 0,
       debtBalanceCents: 0,
       netWorthCents: 0,
@@ -998,7 +762,7 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
     };
   }
 
-  const [movements, invoicePaid, invoicePaidOut, savedInGoals, debtRows] = await Promise.all([
+  const [movements, savedInGoals, debtRows] = await Promise.all([
     // Só contam os lançamentos a partir da data do saldo inicial de cada conta.
     db
       .select({
@@ -1016,33 +780,6 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
         ),
       )
       .groupBy(txTable.accountId, txTable.kind),
-
-    db
-      .select({
-        accountId: cardInvoicePayments.accountId,
-        total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
-      })
-      .from(cardInvoicePayments)
-      .where(eq(cardInvoicePayments.userId, userId))
-      .groupBy(cardInvoicePayments.accountId),
-
-    // O pagamento da fatura é uma transferência: sai da conta que pagou (o
-    // cartão nunca gera um lançamento de despesa, para não contar a compra
-    // duas vezes). Sem isso a conta que pagou nunca via o dinheiro sair.
-    db
-      .select({
-        accountId: cardInvoicePayments.paidFromAccountId,
-        total: sql<number>`coalesce(sum(${cardInvoicePayments.paidAmountCents}), 0)::int`,
-      })
-      .from(cardInvoicePayments)
-      .innerJoin(accountsTable, eq(accountsTable.id, cardInvoicePayments.paidFromAccountId))
-      .where(
-        and(
-          eq(cardInvoicePayments.userId, userId),
-          sql`(${accountsTable.openingBalanceDate} is null or ${cardInvoicePayments.paidAt} >= ${accountsTable.openingBalanceDate})`,
-        ),
-      )
-      .groupBy(cardInvoicePayments.paidFromAccountId),
 
     getTotalSavedCents(userId),
 
@@ -1062,17 +799,9 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
     counts.set(m.accountId, (counts.get(m.accountId) ?? 0) + Number(m.count));
   }
 
-  const paidByCard = new Map(invoicePaid.map((p) => [p.accountId, Number(p.total)]));
-  const paidOutByAccount = new Map(
-    invoicePaidOut.filter((p) => p.accountId).map((p) => [p.accountId as string, Number(p.total)]),
-  );
-
   const accounts: AccountBalance[] = accountRows.map((a) => {
     const incomeCents = income.get(a.id) ?? 0;
-    const isCard = a.type === "CREDIT_CARD";
-    // Na conta que pagou a fatura, o pagamento entra como saída — é dinheiro
-    // de verdade saindo dela, mesmo não sendo um lançamento de despesa comum.
-    const expenseCents = (expense.get(a.id) ?? 0) + (isCard ? 0 : (paidOutByAccount.get(a.id) ?? 0));
+    const expenseCents = expense.get(a.id) ?? 0;
 
     return {
       id: a.id,
@@ -1084,38 +813,26 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       openingBalanceDate: a.openingBalanceDate ? new Date(a.openingBalanceDate) : null,
       incomeCents,
       expenseCents,
-      isCard,
-      balanceCents: isCard
-        ? cardOwed({
-            purchasesCents: expenseCents,
-            creditsCents: incomeCents,
-            invoicePaymentsCents: paidByCard.get(a.id) ?? 0,
-          })
-        : accountBalance({ openingCents: a.openingBalanceCents, incomeCents, expenseCents }),
+      balanceCents: accountBalance({ openingCents: a.openingBalanceCents, incomeCents, expenseCents }),
       transactionCount: counts.get(a.id) ?? 0,
     };
   });
 
-  const availableCents = accounts
-    .filter((a) => !a.isCard)
-    .reduce((acc, a) => acc + a.balanceCents, 0);
-  const cardOwedCents = accounts.filter((a) => a.isCard).reduce((acc, a) => acc + a.balanceCents, 0);
+  const availableCents = accounts.reduce((acc, a) => acc + a.balanceCents, 0);
   const debtBalanceCents = Number(debtRows[0]?.total ?? 0);
 
   return {
     accounts,
     availableCents,
-    cardOwedCents,
     savedInGoalsCents: savedInGoals,
     debtBalanceCents,
     netWorthCents: netWorth({
       availableCents,
       savedInGoalsCents: savedInGoals,
-      cardOwedCents,
       debtBalanceCents,
     }),
     needsOpeningBalance: accounts.some(
-      (a) => !a.isCard && a.openingBalanceCents === 0 && a.openingBalanceDate === null,
+      (a) => a.openingBalanceCents === 0 && a.openingBalanceDate === null,
     ),
   };
 }

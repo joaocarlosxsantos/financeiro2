@@ -225,13 +225,13 @@ export default async function DashboardPage({
           <Card>
             <CardHeader
               title={`Gastos no cartão em ${monthLabel(ref)}`}
-              subtitle="Demonstrativo — essas compras já saíram do resumo acima para não contar duas vezes. Elas só entram nos totais quando você paga a fatura."
+              subtitle="Demonstrativo — essas compras nunca entram no resumo acima. O que realmente saiu da conta é o que você importa do extrato do banco."
               action={
                 <Link
-                  href="/faturas"
+                  href="/lancamentos?acc=CARD"
                   className="text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
                 >
-                  Ver faturas
+                  Ver lançamentos do cartão
                 </Link>
               }
             />

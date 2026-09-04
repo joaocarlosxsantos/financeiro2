@@ -38,9 +38,6 @@ export default async function AccountsPage() {
     );
   }
 
-  const comuns = overview.accounts.filter((a) => !a.isCard);
-  const cartoes = overview.accounts.filter((a) => a.isCard);
-
   return (
     <>
       <PageHeader
@@ -67,7 +64,7 @@ export default async function AccountsPage() {
               </p>
             </div>
             <AccountList
-              accounts={comuns.map((a) => ({
+              accounts={overview.accounts.map((a) => ({
                 id: a.id,
                 name: a.name,
                 type: a.type,
@@ -81,38 +78,9 @@ export default async function AccountsPage() {
                 incomeCents: a.incomeCents,
                 expenseCents: a.expenseCents,
                 transactionCount: a.transactionCount,
-                isCard: false,
               }))}
             />
           </Card>
-
-          {cartoes.length ? (
-            <Card className="p-0">
-              <div className="border-b px-5 py-4">
-                <h2 className="text-[0.9375rem] font-semibold tracking-tight">Cartões</h2>
-                <p className="muted mt-0.5 text-[0.8125rem]">
-                  Aqui o número é o que você <strong>deve</strong>: compras menos estornos menos os
-                  pagamentos de fatura registrados.
-                </p>
-              </div>
-              <AccountList
-                accounts={cartoes.map((a) => ({
-                  id: a.id,
-                  name: a.name,
-                  type: a.type,
-                  institution: a.institution,
-                  color: a.color,
-                  balanceCents: a.balanceCents,
-                  openingBalanceCents: a.openingBalanceCents,
-                  openingBalanceDate: null,
-                  incomeCents: a.incomeCents,
-                  expenseCents: a.expenseCents,
-                  transactionCount: a.transactionCount,
-                  isCard: true,
-                }))}
-              />
-            </Card>
-          ) : null}
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
@@ -136,7 +104,6 @@ export default async function AccountsPage() {
             <ul className="space-y-2.5 text-[0.8125rem]">
               <Row label="Disponível em contas" value={overview.availableCents} />
               <Row label="Guardado em metas" value={overview.savedInGoalsCents} />
-              <Row label="Devido em cartões" value={-overview.cardOwedCents} negative />
               <Row label="Dívidas" value={-overview.debtBalanceCents} negative />
             </ul>
 

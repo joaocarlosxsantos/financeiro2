@@ -142,7 +142,6 @@ export async function setTransactionTransfer(id: string, isTransfer: boolean) {
     .set({ isTransfer, updatedAt: new Date() })
     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
   refresh();
-  revalidatePath("/faturas");
   revalidatePath("/orcamento");
 }
 

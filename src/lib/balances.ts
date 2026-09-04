@@ -22,28 +22,15 @@ export function accountBalance({ openingCents, incomeCents, expenseCents }: Bala
 }
 
 /**
- * Cartão de crédito: o "saldo" é o quanto você DEVE.
- * Compras aumentam a dívida; estornos e pagamentos de fatura registrados a diminuem.
- */
-export function cardOwed(input: {
-  purchasesCents: number;
-  creditsCents: number;
-  invoicePaymentsCents: number;
-}): number {
-  return Math.max(0, input.purchasesCents - input.creditsCents - input.invoicePaymentsCents);
-}
-
-/**
  * Patrimônio líquido simples: o que você tem menos o que você deve.
  * Não entra bem material (carro, imóvel) — só o que o sistema conhece.
+ * Cartão de crédito não entra aqui: é só demonstrativo, sem saldo devedor
+ * próprio — o que saiu de verdade já está refletido nas contas do extrato.
  */
 export function netWorth(input: {
   availableCents: number;
   savedInGoalsCents: number;
-  cardOwedCents: number;
   debtBalanceCents: number;
 }): number {
-  return (
-    input.availableCents + input.savedInGoalsCents - input.cardOwedCents - input.debtBalanceCents
-  );
+  return input.availableCents + input.savedInGoalsCents - input.debtBalanceCents;
 }

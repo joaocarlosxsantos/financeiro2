@@ -22,7 +22,6 @@ type Account = {
   incomeCents: number;
   expenseCents: number;
   transactionCount: number;
-  isCard: boolean;
 };
 
 const ICONS: Record<string, LucideIcon> = {
@@ -60,7 +59,7 @@ function Row({ account }: { account: Account }) {
   const [pending, start] = useTransition();
   const Icon = ICONS[account.type] ?? Wallet;
 
-  const negativo = !account.isCard && account.balanceCents < 0;
+  const negativo = account.balanceCents < 0;
 
   return (
     <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
@@ -87,50 +86,37 @@ function Row({ account }: { account: Account }) {
         <div className="text-right">
           <p
             className="tnum text-[1.0625rem] font-semibold tracking-tight"
-            style={
-              account.isCard
-                ? { color: account.balanceCents > 0 ? "var(--text-out)" : undefined }
-                : negativo
-                  ? { color: "var(--text-out)" }
-                  : undefined
-            }
+            style={negativo ? { color: "var(--text-out)" } : undefined}
           >
             {formatCents(account.balanceCents)}
           </p>
-          <p className="muted text-xs">{account.isCard ? "em aberto" : "saldo atual"}</p>
+          <p className="muted text-xs">saldo atual</p>
         </div>
       </div>
 
-      {!account.isCard ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span className="muted">
-            Inicial {formatCents(account.openingBalanceCents)}
-            {account.openingBalanceDate ? ` em ${formatDate(account.openingBalanceDate)}` : ""}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <span className="muted">
+          Inicial {formatCents(account.openingBalanceCents)}
+          {account.openingBalanceDate ? ` em ${formatDate(account.openingBalanceDate)}` : ""}
+        </span>
+        <span className="muted">
+          + {formatCents(account.incomeCents)} entraram · − {formatCents(account.expenseCents)}{" "}
+          saíram
+        </span>
+        {saved ? (
+          <span className="inline-flex items-center gap-1 text-[var(--text-in)]">
+            <Check className="size-3.5" />
+            salvo
           </span>
-          <span className="muted">
-            + {formatCents(account.incomeCents)} entraram · − {formatCents(account.expenseCents)}{" "}
-            saíram
-          </span>
-          {saved ? (
-            <span className="inline-flex items-center gap-1 text-[var(--text-in)]">
-              <Check className="size-3.5" />
-              salvo
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setEditing((v) => !v)}
-            className="ml-auto cursor-pointer font-medium text-brand-600 hover:underline dark:text-brand-300"
-          >
-            {editing ? "Fechar" : "Ajustar saldo inicial"}
-          </button>
-        </div>
-      ) : (
-        <p className="muted mt-3 text-xs">
-          {formatCents(account.expenseCents)} em compras · {formatCents(account.incomeCents)} em
-          estornos
-        </p>
-      )}
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setEditing((v) => !v)}
+          className="ml-auto cursor-pointer font-medium text-brand-600 hover:underline dark:text-brand-300"
+        >
+          {editing ? "Fechar" : "Ajustar saldo inicial"}
+        </button>
+      </div>
 
       {editing ? (
         <form

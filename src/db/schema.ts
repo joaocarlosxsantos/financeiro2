@@ -89,10 +89,6 @@ export const accounts = pgTable(
     openingBalanceCents: integer("opening_balance_cents").notNull().default(0),
     /** Data do saldo inicial. Lançamentos anteriores a ela não entram na conta. */
     openingBalanceDate: timestamp("opening_balance_date", { withTimezone: true }),
-    /** Cartão de crédito: dia em que a fatura fecha. */
-    closingDay: integer("closing_day"),
-    /** Cartão de crédito: dia do vencimento da fatura. */
-    dueDay: integer("due_day"),
     archived: boolean("archived").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -262,46 +258,6 @@ export const debtPayments = pgTable(
 );
 
 /**
- * Pagamento de uma fatura de cartão.
- *
- * A fatura em si não é uma tabela: ela é calculada a partir das compras do
- * cartão e do ciclo (dia de fechamento/vencimento). Só o pagamento vira
- * registro — é o único fato novo que o sistema precisa guardar.
- *
- * A fatura é identificada pelo mês do VENCIMENTO.
- */
-export const cardInvoicePayments = pgTable(
-  "card_invoice_payments",
-  {
-    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
-    userId: varchar("user_id", { length: 32 })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    /** O cartão. */
-    accountId: varchar("account_id", { length: 32 })
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-    /** Conta de onde saiu o dinheiro (opcional). */
-    paidFromAccountId: varchar("paid_from_account_id", { length: 32 }).references(
-      () => accounts.id,
-      { onDelete: "set null" },
-    ),
-
-    dueYear: integer("due_year").notNull(),
-    dueMonth: integer("due_month").notNull(),
-    paidAmountCents: integer("paid_amount_cents").notNull(),
-    paidAt: timestamp("paid_at", { withTimezone: true }).notNull().defaultNow(),
-    note: text("note"),
-
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    index("card_invoice_payments_user_idx").on(t.userId),
-    uniqueIndex("card_invoice_payments_key").on(t.userId, t.accountId, t.dueYear, t.dueMonth),
-  ],
-);
-
-/**
  * Regra de lançamento recorrente (aluguel, assinatura, salário).
  * A regra é um molde: os lançamentos do mês são gerados a partir dela, com um
  * clique, e passam a viver como qualquer outro lançamento. Nada é criado sem o
@@ -421,12 +377,6 @@ export const debtPaymentsRelations = relations(debtPayments, ({ one }) => ({
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
   user: one(users, { fields: [accounts.userId], references: [users.id] }),
   transactions: many(transactions),
-  invoicePayments: many(cardInvoicePayments),
-}));
-
-export const cardInvoicePaymentsRelations = relations(cardInvoicePayments, ({ one }) => ({
-  user: one(users, { fields: [cardInvoicePayments.userId], references: [users.id] }),
-  card: one(accounts, { fields: [cardInvoicePayments.accountId], references: [accounts.id] }),
 }));
 
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
@@ -485,6 +435,5 @@ export type Transaction = typeof transactions.$inferSelect;
 export type Goal = typeof goals.$inferSelect;
 export type Budget = typeof budgets.$inferSelect;
 export type RecurringRule = typeof recurringRules.$inferSelect;
-export type CardInvoicePayment = typeof cardInvoicePayments.$inferSelect;
 export type Debt = typeof debts.$inferSelect;
 export type DebtKind = (typeof debtKind.enumValues)[number];
