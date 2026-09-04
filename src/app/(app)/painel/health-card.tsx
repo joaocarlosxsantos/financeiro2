@@ -3,6 +3,15 @@ import type { HealthResult } from "@/lib/finance";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
+/**
+ * A nota "Reserva de emergência" aqui é o mesmo runway/meta do card grande
+ * "Reserva de emergência" mais abaixo na página, só que reescalado pra 0-35
+ * pontos em vez de 0-100%. Mostrar duas barras de progresso quase idênticas
+ * lado a lado confundia mais do que ajudava — por isso essa linha vira um
+ * link pro card com os números completos em R$, em vez de repetir a barra.
+ */
+const LINKED_PART_LABEL = "Reserva de emergência";
+
 /** Cor da barra (marca) e cor do texto (escurecida para 4.5:1). */
 const toneColor: Record<HealthResult["tone"], string> = {
   danger: "var(--color-money-out)",
@@ -50,23 +59,48 @@ export function HealthCard({ health }: { health: HealthResult }) {
       </div>
 
       <ul className="space-y-4">
-        {health.parts.map((part) => (
-          <li key={part.label}>
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className="text-[0.8125rem] font-medium">{part.label}</span>
-              <span className="tnum muted text-xs">
-                {part.score}/{part.max}
-              </span>
-            </div>
-            <Progress
-              label={part.label}
-              value={(part.score / part.max) * 100}
-              color={color}
-              height={6}
-            />
-            <p className="muted mt-1.5 text-xs leading-snug">{part.hint}</p>
-          </li>
-        ))}
+        {health.parts.map((part) => {
+          const isReserve = part.label === LINKED_PART_LABEL;
+          return (
+            <li key={part.label}>
+              <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                {isReserve ? (
+                  <a
+                    href="#reserva-emergencia"
+                    className="text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                  >
+                    {part.label}
+                  </a>
+                ) : (
+                  <span className="text-[0.8125rem] font-medium">{part.label}</span>
+                )}
+                <span className="tnum muted text-xs">
+                  {part.score}/{part.max}
+                </span>
+              </div>
+              {isReserve ? (
+                <p className="muted text-xs leading-snug">
+                  Contribui {part.score} de {part.max} pontos pra nota. Progresso completo em R$ no
+                  card{" "}
+                  <a href="#reserva-emergencia" className="font-medium text-brand-600 underline dark:text-brand-300">
+                    Reserva de emergência
+                  </a>{" "}
+                  abaixo.
+                </p>
+              ) : (
+                <>
+                  <Progress
+                    label={part.label}
+                    value={(part.score / part.max) * 100}
+                    color={color}
+                    height={6}
+                  />
+                  <p className="muted mt-1.5 text-xs leading-snug">{part.hint}</p>
+                </>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );

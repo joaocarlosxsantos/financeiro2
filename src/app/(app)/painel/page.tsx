@@ -265,7 +265,7 @@ export default async function DashboardPage({
       <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <BudgetCard overview={budget} monthRef={ref} />
 
-        <Card>
+        <Card id="reserva-emergencia" className="scroll-mt-20">
           <CardHeader
             title="Reserva de emergência"
             subtitle={`Meta de ${user.emergencyMonths} meses de custo de vida.`}

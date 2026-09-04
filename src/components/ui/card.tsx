@@ -4,11 +4,17 @@ import type { ReactNode } from "react";
 export function Card({
   className,
   children,
+  id,
 }: {
   className?: string;
   children: ReactNode;
+  id?: string;
 }) {
-  return <div className={cn("card p-5", className)}>{children}</div>;
+  return (
+    <div id={id} className={cn("card p-5", className)}>
+      {children}
+    </div>
+  );
 }
 
 export function CardHeader({
