@@ -403,6 +403,27 @@ export async function getTotalSavedCents(userId: string): Promise<number> {
   return Number(row?.total ?? 0);
 }
 
+/**
+ * Só o saldo guardado na meta de reserva de emergência (kind = EMERGENCY_FUND) —
+ * diferente de `getTotalSavedCents`, que soma TODAS as metas. Usado onde o
+ * número precisa representar especificamente "quanto já tenho de colchão", não
+ * o total guardado em tudo (reserva + viagem + o que for). Misturar os dois
+ * infla a reserva com dinheiro que já tem outro destino.
+ */
+export async function getEmergencyFundSavedCents(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`coalesce(sum(${goalsTable.savedCents}), 0)::int` })
+    .from(goalsTable)
+    .where(
+      and(
+        eq(goalsTable.userId, userId),
+        eq(goalsTable.archived, false),
+        eq(goalsTable.kind, "EMERGENCY_FUND"),
+      ),
+    );
+  return Number(row?.total ?? 0);
+}
+
 // ---------------------------------------------------------------- orçamento
 
 export type BudgetStatus = "sem-limite" | "ok" | "atencao" | "estourou";

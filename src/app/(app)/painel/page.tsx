@@ -13,6 +13,7 @@ import {
   getDebtOverview,
   getCardCategoryBreakdown,
   getCategoryBreakdown,
+  getEmergencyFundSavedCents,
   getMonthSummary,
   getMonthlySeries,
   getRecurringStatus,
@@ -54,29 +55,46 @@ export default async function DashboardPage({
   const { m } = await searchParams;
   const ref = monthRefFromParam(m);
 
-  const [user, summary, series, breakdown, cardBreakdown, avgCost, saved, budget, recurring, debts] =
-    await Promise.all([
-      getUser(userId),
-      // "cash": o resumo principal do painel é o retrato do dinheiro que
-      // realmente entrou e saiu de uma conta de verdade — compra no cartão
-      // vira demonstrativo (tem gráfico próprio abaixo) e nunca entra aqui;
-      // o que sai do cartão só conta quando aparece no extrato importado.
-      getMonthSummary(userId, ref, { cardMode: "cash" }),
-      getMonthlySeries(userId, 6, ref, { cardMode: "cash" }),
-      getCategoryBreakdown(userId, ref, { cardMode: "cash" }),
-      getCardCategoryBreakdown(userId, ref),
-      getAvgMonthlyCostCents(userId, 3),
-      getTotalSavedCents(userId),
-      getBudgetOverview(userId, ref),
-      getRecurringStatus(userId, ref),
-      getDebtOverview(userId),
-    ]);
+  const [
+    user,
+    summary,
+    series,
+    breakdown,
+    cardBreakdown,
+    avgCost,
+    saved,
+    emergencySaved,
+    budget,
+    recurring,
+    debts,
+  ] = await Promise.all([
+    getUser(userId),
+    // "cash": o resumo principal do painel é o retrato do dinheiro que
+    // realmente entrou e saiu de uma conta de verdade — compra no cartão
+    // vira demonstrativo (tem gráfico próprio abaixo) e nunca entra aqui;
+    // o que sai do cartão só conta quando aparece no extrato importado.
+    getMonthSummary(userId, ref, { cardMode: "cash" }),
+    getMonthlySeries(userId, 6, ref, { cardMode: "cash" }),
+    getCategoryBreakdown(userId, ref, { cardMode: "cash" }),
+    getCardCategoryBreakdown(userId, ref),
+    getAvgMonthlyCostCents(userId, 3),
+    // Total guardado em TODAS as metas — só usado no valor do tile "Guardado
+    // em metas" abaixo. Reserva de emergência usa `emergencySaved`, não este.
+    getTotalSavedCents(userId),
+    getEmergencyFundSavedCents(userId),
+    getBudgetOverview(userId, ref),
+    getRecurringStatus(userId, ref),
+    getDebtOverview(userId),
+  ]);
 
   const sobrou = balanceCents(summary);
   const rate = savingsRate(summary);
   const costBase = avgCost > 0 ? avgCost : Math.round(user.monthlyIncomeCents * 0.7);
   const emergencyTarget = emergencyTargetCents(costBase, user.emergencyMonths);
-  const runway = monthsOfRunway(saved, costBase);
+  // Quantos meses de renda a reserva cobre — precisa ser só o que está
+  // guardado NA meta de reserva, senão dinheiro de outra meta (uma viagem,
+  // por exemplo) infla a sensação de colchão de segurança.
+  const runway = monthsOfRunway(emergencySaved, costBase);
   const split = fiftyThirtyTwenty(user.monthlyIncomeCents || summary.incomeCents);
 
   const fixedShare = user.monthlyIncomeCents
@@ -90,7 +108,10 @@ export default async function DashboardPage({
     fixedShareOfIncomePct: fixedShare,
   });
 
-  const hasData = summary.incomeCents > 0 || summary.expenseCents > 0;
+  // Considera também gasto no cartão: sem isso, um mês só com compra no
+  // cartão (nada na conta corrente ainda) mostra "nenhum lançamento" bem em
+  // cima da seção "Gastos no cartão" logo abaixo — contradição na mesma tela.
+  const hasData = summary.incomeCents > 0 || summary.expenseCents > 0 || cardBreakdown.length > 0;
 
   return (
     <>
@@ -258,12 +279,12 @@ export default async function DashboardPage({
             }
           />
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="tnum text-2xl font-semibold">{formatCents(saved)}</span>
+            <span className="tnum text-2xl font-semibold">{formatCents(emergencySaved)}</span>
             <span className="muted tnum text-[0.8125rem]">de {formatCents(emergencyTarget)}</span>
           </div>
           <Progress
             label="Progresso da reserva de emergência"
-            value={emergencyTarget ? (saved / emergencyTarget) * 100 : 0}
+            value={emergencyTarget ? (emergencySaved / emergencyTarget) * 100 : 0}
             color="var(--color-save)"
             height={10}
           />
@@ -275,7 +296,7 @@ export default async function DashboardPage({
             <Hint tone={runway >= user.emergencyMonths ? "good" : "info"}>
               {runway >= user.emergencyMonths
                 ? "Reserva completa. A partir daqui, o excedente pode ir para investimentos de prazo maior."
-                : `Hoje você aguenta ${runway} ${runway === 1 ? "mês" : "meses"} sem renda. Faltam ${formatCents(Math.max(0, emergencyTarget - saved))} para chegar na meta.`}
+                : `Hoje você aguenta ${runway} ${runway === 1 ? "mês" : "meses"} sem renda. Faltam ${formatCents(Math.max(0, emergencyTarget - emergencySaved))} para chegar na meta.`}
             </Hint>
           </div>
         </Card>
