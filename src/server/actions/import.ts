@@ -8,6 +8,7 @@ import { requireUserId } from "@/lib/auth";
 import { parseStatement } from "@/lib/parsers";
 import { fingerprint, suggestCategoryId } from "@/lib/categorize";
 import { resolveImportDate } from "@/lib/import-dates";
+import { isInvoicePaymentLine } from "@/lib/import-filters";
 import { formatDate, monthLabel, monthRange, monthRefFromParam, type MonthRef } from "@/lib/dates";
 
 export type PreviewRow = {
@@ -111,6 +112,20 @@ export async function previewImport(input: {
     };
   }
 
+  // Fatura de cartão traz linha de confirmação de pagamento (o banco
+  // avisando que a fatura anterior foi paga) — não é gasto, e com o cartão
+  // sem dívida/fatura própria no sistema não tem pra onde essa linha ir.
+  // Tirada automaticamente, só em conta de cartão (numa conta corrente pode
+  // ser um boleto de verdade, aí quem decide é o usuário).
+  const parsedRows = isCard ? parsed.rows.filter((r) => !isInvoicePaymentLine(r.description)) : parsed.rows;
+  const paymentLinesSkipped = parsed.rows.length - parsedRows.length;
+  if (!parsedRows.length) {
+    return {
+      error: "Todas as linhas desse arquivo eram confirmação de pagamento da fatura — nada para importar.",
+      warnings: parsed.warnings,
+    };
+  }
+
   const cats = await db
     .select({
       id: categories.id,
@@ -127,7 +142,7 @@ export async function previewImport(input: {
   const prints = new Set<string>();
   const warnings = [...parsed.warnings];
 
-  const rows: PreviewRow[] = parsed.rows.map((r) => {
+  const rows: PreviewRow[] = parsedRows.map((r) => {
     const kind: "INCOME" | "EXPENSE" = r.amountCents >= 0 ? "INCOME" : "EXPENSE";
     const amountCents = Math.abs(r.amountCents);
     const printedDate = new Date(`${r.date}T12:00:00.000Z`);
@@ -174,6 +189,11 @@ export async function previewImport(input: {
   if (isCard && invoiceRef) {
     warnings.push(
       `Fatura de ${monthLabel(invoiceRef)}: todas as ${rows.length} linha(s) foram gravadas nesse mês, independente da data de compra que veio no arquivo — é assim que cada parcela cai no mês certo.`,
+    );
+  }
+  if (paymentLinesSkipped > 0) {
+    warnings.push(
+      `${paymentLinesSkipped} linha(s) de confirmação de pagamento da fatura foram identificadas e não entram na importação — não são gasto, são o pagamento que você já fez.`,
     );
   }
 
@@ -345,7 +365,7 @@ export async function commitImport(input: {
           fingerprint: r.fingerprint,
           installmentNumber: r.installmentNumber,
           installmentTotal: r.installmentTotal,
-          notes: r.dateAdjusted && r.originalDate ? `Compra original em ${formatDate(r.originalDate)}` : null,
+          notes: r.dateAdjusted && r.originalDate ? `Compra realizada em ${formatDate(r.originalDate)}` : null,
         })),
       )
       .onConflictDoNothing()

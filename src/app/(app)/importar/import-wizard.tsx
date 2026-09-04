@@ -309,9 +309,9 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                       {row.dateAdjusted ? (
                         <span
                           className="mt-0.5 flex items-center gap-1 text-[0.6875rem] font-medium text-amber-700 dark:text-amber-300"
-                          title={`Compra original em ${formatDate(row.originalDate!)} — reposicionada`}
+                          title={`Compra realizada em ${formatDate(row.originalDate!)} — gravada na fatura do mês escolhido`}
                         >
-                          era {formatDate(row.originalDate!)}
+                          compra realizada em {formatDate(row.originalDate!)}
                         </span>
                       ) : null}
                     </td>
