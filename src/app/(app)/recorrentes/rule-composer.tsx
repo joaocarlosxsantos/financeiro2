@@ -103,7 +103,14 @@ export function RuleComposer({
         </Select>
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/*
+        Empilhados em vez de lado a lado: o seletor nativo de mês
+        (`<input type="month">`) segue o idioma do navegador, não o do site —
+        "setembro de 2026" (ou "September 2026") não cabe numa coluna de
+        metade da largura deste painel e o texto corta. Uma coluna só dá
+        espaço de sobra pros dois, em qualquer idioma.
+      */}
+      <div className="space-y-3">
         <Field label="Começa em">
           <Input name="startMonth" type="month" required defaultValue={monthRefToParam(monthRef)} />
         </Field>
