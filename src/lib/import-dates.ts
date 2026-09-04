@@ -3,15 +3,21 @@
  * sem banco, para poder ser testada isolada (e reaproveitada pela ação de
  * importação em src/server/actions/import.ts).
  *
- * O motivo de isso existir: a data de um lançamento não é só "quando
- * aconteceu" — é o que decide em qual mês ele aparece nos relatórios. Uma
- * compra parcelada tem N linhas no arquivo do banco, mas só a primeira
- * parcela realmente pertence ao mês da compra; as outras têm que "acontecer"
- * um mês depois de cada vez — é assim que o parcelamento manual dentro do
- * app já funciona (veja src/server/installments.ts). Importar sem corrigir
- * isso empilha as N parcelas todas no mesmo mês.
+ * Para cartão de crédito, a importação é por fatura: o usuário escolhe o mês
+ * de referência daquela fatura, e é esse mês que decide onde cada linha cai
+ * — nunca a data impressa no arquivo (que normalmente é a data da compra
+ * original, não o mês da parcela atual; tentar calcular isso por aritmética
+ * a partir do texto "N/T" já se mostrou frágil demais, porque o arquivo não
+ * diz o suficiente pra saber com certeza). O dia do mês é preservado da linha
+ * original só por estética (agrupamento na lista); o mês e o ano vêm sempre
+ * do que o usuário escolheu. Vale para toda linha da fatura, parcelada ou
+ * não — é o mesmo período de cobrança.
+ *
+ * Conta que não é cartão nunca tem a data mexida: extrato bancário tem data
+ * real de cada movimento, e essa data importa.
  */
-import { addMonthsKeepingDay, parseInstallmentMarker, type InstallmentMarker } from "./installments";
+import { dateForMonth, parseInstallmentMarker, type InstallmentMarker } from "./installments";
+import type { MonthRef } from "./dates";
 
 export type ResolvedImportDate = {
   date: Date;
@@ -22,18 +28,13 @@ export type ResolvedImportDate = {
 export function resolveImportDate(
   printedDate: Date,
   description: string,
-  opts: { isCard: boolean },
+  opts: { isCard: boolean; invoiceRef?: MonthRef },
 ): ResolvedImportDate {
   const marker = parseInstallmentMarker(description);
 
-  if (marker && marker.number > 1 && opts.isCard) {
-    // Só dá para saber o mês certo da parcela N pela aritmética
-    // (mês da compra + N-1), porque o arquivo não diz mais nada além disso.
-    return {
-      date: addMonthsKeepingDay(printedDate, marker.number - 1),
-      adjusted: true,
-      marker,
-    };
+  if (opts.isCard && opts.invoiceRef) {
+    const date = dateForMonth(opts.invoiceRef, printedDate.getUTCDate());
+    return { date, adjusted: date.getTime() !== printedDate.getTime(), marker };
   }
 
   return { date: printedDate, adjusted: false, marker };

@@ -8,15 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { formatCents } from "@/lib/money";
-import { formatDate } from "@/lib/dates";
+import { formatDate, monthLabel, monthRefFromParam } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 
 type Account = { id: string; name: string; type: string };
 type Category = { id: string; name: string; kind: "INCOME" | "EXPENSE"; nature: "FIXED" | "VARIABLE"; color: string };
 
+function currentMonthValue(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export function ImportWizard({ accounts, categories }: { accounts: Account[]; categories: Category[] }) {
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [invertSign, setInvertSign] = useState(false);
+  const [invoiceMonth, setInvoiceMonth] = useState(currentMonthValue);
   const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<PreviewRow[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -30,6 +36,8 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isCard = accounts.find((a) => a.id === accountId)?.type === "CREDIT_CARD";
+
   async function handleFile(file: File) {
     setError(null);
     setSavedCount(null);
@@ -38,11 +46,21 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       setError("Cadastre uma conta em Configurações antes de importar um extrato.");
       return;
     }
+    if (isCard && !invoiceMonth) {
+      setError("Escolha o mês de referência da fatura antes de importar.");
+      return;
+    }
     const content = await file.text();
     setFileName(file.name);
 
     start(async () => {
-      const result = await previewImport({ fileName: file.name, content, accountId, invertSign });
+      const result = await previewImport({
+        fileName: file.name,
+        content,
+        accountId,
+        invertSign,
+        invoiceMonth: isCard ? invoiceMonth : undefined,
+      });
       if (result.error) {
         setError(result.error);
         setRows(null);
@@ -92,6 +110,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
         accountId,
         source: fileName.toLowerCase().endsWith(".ofx") ? "OFX" : "CSV",
         rows,
+        invoiceMonth: isCard ? invoiceMonth : undefined,
         replacePeriod: existingInPeriod > 0 ? replacePeriod : false,
       });
       if (result.error) {
@@ -116,7 +135,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       <Card>
         <CardHeader title="1. Escolha a conta e o arquivo" />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={cn("grid grid-cols-1 gap-4", isCard ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           <Field label="Conta que vai receber os lançamentos">
             <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
               {accounts.map((a) => (
@@ -126,6 +145,20 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
               ))}
             </Select>
           </Field>
+
+          {isCard ? (
+            <Field
+              label="Mês de referência da fatura"
+              hint="Toda linha do arquivo é gravada nesse mês — é o que faz cada parcela cair no mês certo."
+            >
+              <input
+                type="month"
+                value={invoiceMonth}
+                onChange={(e) => setInvoiceMonth(e.target.value)}
+                className="input-base h-[42px]"
+              />
+            </Field>
+          ) : null}
 
           <Field label="Ajuste de sinal" hint="Use quando a prévia mostrar gastos como entradas.">
             <label className="flex h-[42px] cursor-pointer items-center gap-2.5 rounded-xl border bg-[var(--surface-2)] px-3.5">
@@ -143,7 +176,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
         <label
           className={cn(
             "mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors hover:bg-[var(--surface-2)]",
-            (pending || !accountId) && "pointer-events-none opacity-60",
+            (pending || !accountId || (isCard && !invoiceMonth)) && "pointer-events-none opacity-60",
           )}
         >
           <input
@@ -151,7 +184,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
             type="file"
             accept=".csv,.ofx,.txt,text/csv"
             className="sr-only"
-            disabled={!accountId}
+            disabled={!accountId || (isCard && !invoiceMonth)}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void handleFile(file);
@@ -166,8 +199,9 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
             {fileName ?? "Clique para escolher o arquivo"}
           </p>
           <p className="muted mt-1 text-[0.8125rem]">
-            Aceita CSV e OFX de extrato ou fatura — parcela de cartão (ex.: “2/12”) é detectada pelo
-            texto e reposicionada automaticamente para o mês certo.
+            {isCard
+              ? `Todas as linhas do arquivo entram como lançamentos de ${monthLabel(monthRefFromParam(invoiceMonth))} — parcela (ex.: “2/12”) é detectada pelo texto só para mostrar o selo, a data sempre vem do mês escolhido acima.`
+              : "Aceita CSV e OFX de extrato bancário — cada linha entra com a própria data do arquivo."}
           </p>
         </label>
       </Card>

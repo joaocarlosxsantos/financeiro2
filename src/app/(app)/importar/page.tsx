@@ -75,7 +75,10 @@ export default async function ImportPage() {
           </Card>
 
           <Hint tone="info" title="Fatura de cartão">
-            Na fatura, os valores costumam vir positivos mesmo sendo gastos. Marque a opção{" "}
+            Ao escolher uma conta de cartão, escolha também o mês da fatura — todas as linhas do
+            arquivo (parceladas ou não) são gravadas nesse mês, é assim que cada parcela cai no mês
+            certo. Reimportar o mesmo mês substitui o que já tinha sido importado nele. Os valores
+            também costumam vir positivos mesmo sendo gastos: marque{" "}
             <strong>&quot;inverter sinal&quot;</strong> se a prévia mostrar tudo como entrada.
           </Hint>
 

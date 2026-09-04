@@ -8,7 +8,7 @@ import { requireUserId } from "@/lib/auth";
 import { parseStatement } from "@/lib/parsers";
 import { fingerprint, suggestCategoryId } from "@/lib/categorize";
 import { resolveImportDate } from "@/lib/import-dates";
-import { formatDate } from "@/lib/dates";
+import { formatDate, monthLabel, monthRange, monthRefFromParam, type MonthRef } from "@/lib/dates";
 
 export type PreviewRow = {
   /** Data que vai para o banco — já ajustada quando necessário (parcela de cartão). */
@@ -64,6 +64,19 @@ function periodRangeFor(rows: { date: string }[]): { start: string; end: string 
 }
 
 /**
+ * Período de uma fatura de cartão: o mês inteiro escolhido pelo usuário, não
+ * o intervalo das datas resultantes. É isso que faz "substituir esse
+ * período" funcionar como atualização de verdade — se a fatura antiga tinha
+ * um lançamento no dia 28 e a nova só vai até o dia 15, o do dia 28 tem que
+ * sumir do mesmo jeito, senão fica um lançamento fantasma da fatura anterior.
+ */
+function invoicePeriodRange(ref: MonthRef): { start: string; end: string } {
+  const { start, end } = monthRange(ref);
+  const lastDay = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  return { start: start.toISOString().slice(0, 10), end: lastDay.toISOString().slice(0, 10) };
+}
+
+/**
  * Lê o arquivo, sugere categoria para cada linha e marca duplicatas.
  * Nada é gravado aqui — o usuário confere antes.
  */
@@ -72,6 +85,8 @@ export async function previewImport(input: {
   content: string;
   accountId: string;
   invertSign?: boolean;
+  /** Mês/ano da fatura, formato "AAAA-MM". Obrigatório quando a conta é cartão. */
+  invoiceMonth?: string;
 }): Promise<PreviewResult> {
   const userId = await requireUserId();
 
@@ -81,6 +96,12 @@ export async function previewImport(input: {
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!account) return { error: "Escolha uma conta válida para receber os lançamentos." };
+
+  const isCard = account.type === "CREDIT_CARD";
+  const invoiceRef = isCard && input.invoiceMonth ? monthRefFromParam(input.invoiceMonth) : undefined;
+  if (isCard && !invoiceRef) {
+    return { error: "Escolha o mês de referência da fatura antes de importar." };
+  }
 
   const parsed = parseStatement(input.fileName, input.content, { invertSign: input.invertSign });
   if (!parsed.rows.length) {
@@ -102,7 +123,6 @@ export async function previewImport(input: {
     .where(and(eq(categories.userId, userId), eq(categories.archived, false)));
 
   const natureById = new Map(cats.map((c) => [c.id, c.nature]));
-  const isCard = account.type === "CREDIT_CARD";
 
   const prints = new Set<string>();
   const warnings = [...parsed.warnings];
@@ -112,7 +132,7 @@ export async function previewImport(input: {
     const amountCents = Math.abs(r.amountCents);
     const printedDate = new Date(`${r.date}T12:00:00.000Z`);
 
-    const resolved = resolveImportDate(printedDate, r.description, { isCard });
+    const resolved = resolveImportDate(printedDate, r.description, { isCard, invoiceRef });
 
     const fp = fingerprint({
       accountId: input.accountId,
@@ -151,10 +171,9 @@ export async function previewImport(input: {
     };
   });
 
-  const adjustedCount = rows.filter((r) => r.dateAdjusted).length;
-  if (adjustedCount > 0) {
+  if (isCard && invoiceRef) {
     warnings.push(
-      `${adjustedCount} linha(s) de parcela tinham a data da compra original — foram reposicionadas para o mês de cada parcela.`,
+      `Fatura de ${monthLabel(invoiceRef)}: todas as ${rows.length} linha(s) foram gravadas nesse mês, independente da data de compra que veio no arquivo — é assim que cada parcela cai no mês certo.`,
     );
   }
 
@@ -189,8 +208,9 @@ export async function previewImport(input: {
   // errados junto dos novos, detectamos o que já foi importado antes nesse
   // mesmo período pra oferecer substituir tudo de uma vez (ver commitImport).
   // Só conta o que veio de importação (importBatchId preenchido) — o que você
-  // digitou à mão nunca é tocado.
-  const period = periodRangeFor(rows);
+  // digitou à mão nunca é tocado. Fatura de cartão usa o mês inteiro
+  // escolhido (não o intervalo das linhas) — ver invoicePeriodRange.
+  const period = isCard && invoiceRef ? invoicePeriodRange(invoiceRef) : periodRangeFor(rows);
   let existingInPeriod = 0;
   if (period) {
     const [{ count }] = await db
@@ -230,6 +250,8 @@ export async function commitImport(input: {
   accountId: string;
   source: "CSV" | "OFX";
   rows: PreviewRow[];
+  /** Mês/ano da fatura, formato "AAAA-MM". Obrigatório quando a conta é cartão. */
+  invoiceMonth?: string;
   /**
    * Reimportar o mesmo período? Por padrão troca tudo: apaga os lançamentos
    * que vieram de importação anterior nesse mesmo período e grava os novos
@@ -243,17 +265,23 @@ export async function commitImport(input: {
   const userId = await requireUserId();
 
   const [account] = await db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, type: accounts.type })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!account) return { error: "Conta inválida." };
 
+  const isCard = account.type === "CREDIT_CARD";
+  const invoiceRef = isCard && input.invoiceMonth ? monthRefFromParam(input.invoiceMonth) : undefined;
+  if (isCard && !invoiceRef) {
+    return { error: "Escolha o mês de referência da fatura antes de importar." };
+  }
+
   const rows = input.rows.filter((r) => !r.duplicate && r.amountCents > 0);
   if (!rows.length) return { error: "Nenhuma linha selecionada para importar." };
 
   const replacePeriod = input.replacePeriod ?? true;
-  const period = periodRangeFor(rows);
+  const period = isCard && invoiceRef ? invoicePeriodRange(invoiceRef) : periodRangeFor(rows);
 
   const result = await db.transaction(async (tx) => {
     let replaced = 0;
