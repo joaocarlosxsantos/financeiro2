@@ -42,6 +42,25 @@ export async function getAccounts(userId: string) {
     .orderBy(asc(accountsTable.createdAt));
 }
 
+export type OnboardingChecklist = {
+  hasAccount: boolean;
+  hasTransaction: boolean;
+};
+
+/**
+ * Base do onboarding guiado do Painel: a calibragem de renda/metas em
+ * /onboarding já existe e roda uma vez só; isso aqui cobre o que falta
+ * depois dela — criar conta e lançar os primeiros dados — e alguém pode
+ * revisitar quantas vezes precisar até fazer os dois.
+ */
+export async function getOnboardingChecklist(userId: string): Promise<OnboardingChecklist> {
+  const [account, tx] = await Promise.all([
+    db.select({ id: accountsTable.id }).from(accountsTable).where(eq(accountsTable.userId, userId)).limit(1),
+    db.select({ id: txTable.id }).from(txTable).where(eq(txTable.userId, userId)).limit(1),
+  ]);
+  return { hasAccount: account.length > 0, hasTransaction: tx.length > 0 };
+}
+
 /**
  * Todas as contas do usuário — ativas e arquivadas — com quantos lançamentos
  * e recorrências cada uma tem. Usado na tela de configurações, que precisa

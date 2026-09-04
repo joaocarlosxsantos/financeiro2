@@ -17,6 +17,7 @@ import {
   getGoals,
   getMonthSummary,
   getMonthlySeries,
+  getOnboardingChecklist,
   getRecurringStatus,
   getTotalSavedCents,
   getUser,
@@ -46,6 +47,7 @@ import { HealthCard } from "./health-card";
 import { BudgetCard } from "./budget-card";
 import { DebtCard } from "./debt-card";
 import { AlertsCard } from "./alerts-card";
+import { OnboardingCard } from "./onboarding-card";
 
 export const metadata = { title: "Painel — Financeiro 2.0" };
 
@@ -71,6 +73,7 @@ export default async function DashboardPage({
     recurring,
     debts,
     goals,
+    onboarding,
   ] = await Promise.all([
     getUser(userId),
     // "cash": o resumo principal do painel é o retrato do dinheiro que
@@ -91,6 +94,7 @@ export default async function DashboardPage({
     getDebtOverview(userId),
     // Só para a central de avisos abaixo (meta que passou do prazo).
     getGoals(userId),
+    getOnboardingChecklist(userId),
   ]);
 
   const alerts = [...buildBudgetAlerts(budget.rows), ...buildGoalAlerts(goals)];
@@ -128,6 +132,8 @@ export default async function DashboardPage({
         description="Este é o retrato do seu mês. Comece de cima: o que entrou, o que saiu e o que sobrou."
         action={<MonthSwitcher value={ref} />}
       />
+
+      <OnboardingCard checklist={onboarding} />
 
       <RecurringBanner
         monthRef={ref}
