@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { and, asc, desc, eq, gte, ilike, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts as accountsTable,
@@ -104,6 +104,45 @@ export async function getMonthSummary(
   }
 
   return { incomeCents, expenseCents, fixedCents, variableCents };
+}
+
+export type CardTotals = { incomeCents: number; expenseCents: number };
+
+/**
+ * Quanto do "Entrou/Saiu" do mês (calculado em modo accrual, sem
+ * cardMode: "cash") veio de contas de cartão de crédito. Usado só para
+ * destacar visualmente esse valor na tela de Lançamentos — ele já está
+ * somado dentro de getMonthSummary, isso aqui não soma de novo.
+ */
+export async function getMonthCardTotals(userId: string, ref: MonthRef): Promise<CardTotals> {
+  const { start, end } = monthRange(ref);
+
+  const rows = await db
+    .select({
+      kind: txTable.kind,
+      total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
+    })
+    .from(txTable)
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .where(
+      and(
+        eq(txTable.userId, userId),
+        eq(txTable.isTransfer, false),
+        eq(accountsTable.type, "CREDIT_CARD"),
+        gte(txTable.date, start),
+        lt(txTable.date, end),
+      ),
+    )
+    .groupBy(txTable.kind);
+
+  let incomeCents = 0;
+  let expenseCents = 0;
+  for (const r of rows) {
+    const total = Number(r.total);
+    if (r.kind === "INCOME") incomeCents += total;
+    else expenseCents += total;
+  }
+  return { incomeCents, expenseCents };
 }
 
 export type SeriesPoint = {
@@ -307,6 +346,8 @@ export type TransactionFilters = {
   kind?: "INCOME" | "EXPENSE";
   nature?: "FIXED" | "VARIABLE";
   search?: string;
+  /** Só lançamentos sem categoria definida. Ignora categoryId quando ativo. */
+  uncategorized?: boolean;
 };
 
 export async function getTransactions(userId: string, filters: TransactionFilters, take = 300) {
@@ -316,7 +357,8 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     const { start, end } = monthRange(filters.ref);
     conditions.push(gte(txTable.date, start), lt(txTable.date, end));
   }
-  if (filters.categoryId) conditions.push(eq(txTable.categoryId, filters.categoryId));
+  if (filters.uncategorized) conditions.push(isNull(txTable.categoryId));
+  else if (filters.categoryId) conditions.push(eq(txTable.categoryId, filters.categoryId));
   if (filters.accountId) conditions.push(eq(txTable.accountId, filters.accountId));
   if (filters.accountKind === "CARD") conditions.push(eq(accountsTable.type, "CREDIT_CARD"));
   else if (filters.accountKind === "OTHER") conditions.push(sql`${accountsTable.type} <> 'CREDIT_CARD'`);

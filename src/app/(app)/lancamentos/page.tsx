@@ -1,8 +1,9 @@
-import { Receipt } from "lucide-react";
+import { CreditCard, Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
   getAccounts,
   getCategories,
+  getMonthCardTotals,
   getMonthSummary,
   getRecurringStatus,
   getTransactions,
@@ -37,18 +38,20 @@ export default async function TransactionsPage({
   const sp = await searchParams;
   const ref = monthRefFromParam(sp.m);
 
-  const [accounts, categories, transactions, summary, recurring] = await Promise.all([
+  const [accounts, categories, transactions, summary, cardTotals, recurring] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
     getTransactions(userId, {
       ref,
-      categoryId: sp.cat || undefined,
+      categoryId: sp.cat && sp.cat !== "NONE" ? sp.cat : undefined,
+      uncategorized: sp.cat === "NONE",
       accountKind: sp.acc === "CARD" || sp.acc === "OTHER" ? sp.acc : undefined,
       kind: sp.kind === "INCOME" || sp.kind === "EXPENSE" ? sp.kind : undefined,
       nature: sp.nature === "FIXED" || sp.nature === "VARIABLE" ? sp.nature : undefined,
       search: sp.q || undefined,
     }),
     getMonthSummary(userId, ref),
+    getMonthCardTotals(userId, ref),
     getRecurringStatus(userId, ref),
   ]);
 
@@ -133,14 +136,34 @@ export default async function TransactionsPage({
             <ul className="mb-4 space-y-2 border-b pb-4 text-[0.8125rem]">
               <li className="flex items-baseline justify-between gap-3">
                 <span className="muted">Entrou</span>
-                <span className="tnum font-semibold text-[var(--text-in)]">
-                  {formatCents(summary.incomeCents)}
+                <span className="text-right">
+                  <span className="tnum block font-semibold text-[var(--text-in)]">
+                    {formatCents(summary.incomeCents)}
+                  </span>
+                  {cardTotals.incomeCents > 0 ? (
+                    <span
+                      className="tnum block text-[0.6875rem] font-medium text-amber-700 dark:text-amber-300"
+                      title="Incluso no total acima, mas veio de conta de cartão"
+                    >
+                      {formatCents(cardTotals.incomeCents)} no cartão
+                    </span>
+                  ) : null}
                 </span>
               </li>
               <li className="flex items-baseline justify-between gap-3">
                 <span className="muted">Saiu</span>
-                <span className="tnum font-semibold text-[var(--text-out)]">
-                  {formatCents(summary.expenseCents)}
+                <span className="text-right">
+                  <span className="tnum block font-semibold text-[var(--text-out)]">
+                    {formatCents(summary.expenseCents)}
+                  </span>
+                  {cardTotals.expenseCents > 0 ? (
+                    <span
+                      className="tnum block text-[0.6875rem] font-medium text-amber-700 dark:text-amber-300"
+                      title="Incluso no total acima, mas é compra no cartão — só sai da sua conta quando a fatura é paga"
+                    >
+                      {formatCents(cardTotals.expenseCents)} no cartão
+                    </span>
+                  ) : null}
                 </span>
               </li>
               <li className="flex items-baseline justify-between gap-3">
@@ -149,6 +172,13 @@ export default async function TransactionsPage({
                   {formatCents(summary.incomeCents - summary.expenseCents)}
                 </span>
               </li>
+              {cardTotals.incomeCents > 0 || cardTotals.expenseCents > 0 ? (
+                <li className="muted flex items-start gap-1.5 pt-1 text-[0.6875rem] leading-snug text-amber-700 dark:text-amber-300">
+                  <CreditCard className="mt-0.5 size-3 shrink-0" />
+                  Os valores em amarelo são de cartão e não deveriam entrar direto nessa conta —
+                  eles só afetam seu saldo de fato quando a fatura é paga.
+                </li>
+              ) : null}
             </ul>
             <TransactionComposer categories={plainCategories} accounts={plainAccounts} />
           </Card>

@@ -75,6 +75,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         className="input-base h-9 w-auto cursor-pointer py-0 text-[0.8125rem]"
       >
         <option value="">Todas as categorias</option>
+        <option value="NONE">Sem categoria</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
