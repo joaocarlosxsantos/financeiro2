@@ -41,7 +41,7 @@ export default async function RecurringPage({
         action={<MonthSwitcher value={ref} />}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           {status.pending.length ? (
             <PendingPanel

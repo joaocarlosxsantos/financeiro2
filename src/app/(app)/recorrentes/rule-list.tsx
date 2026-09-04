@@ -5,6 +5,7 @@ import { Pause, Play, Trash2 } from "lucide-react";
 import { deleteRecurringRule, toggleRecurringRule } from "@/server/actions/recurring";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/cn";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import type { MonthRef } from "@/lib/dates";
 
 type Rule = {
@@ -56,6 +57,7 @@ function statusOf(rule: Rule): { label: string; className: string } {
 
 function Row({ rule }: { rule: Rule }) {
   const [pending, start] = useTransition();
+  const confirm = useConfirm();
   const status = statusOf(rule);
 
   return (
@@ -95,7 +97,7 @@ function Row({ rule }: { rule: Rule }) {
         title={rule.active ? "Pausar" : "Retomar"}
         disabled={pending}
         onClick={() => start(async () => void (await toggleRecurringRule(rule.id, !rule.active)))}
-        className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface-2)]"
+        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)]"
       >
         {rule.active ? <Pause className="size-4" /> : <Play className="size-4" />}
       </button>
@@ -104,16 +106,17 @@ function Row({ rule }: { rule: Rule }) {
         type="button"
         aria-label={`Excluir ${rule.description}`}
         disabled={pending}
-        onClick={() => {
-          if (
-            !confirm(
-              `Excluir a recorrência "${rule.description}"? Os lançamentos já criados continuam no histórico.`,
-            )
-          )
-            return;
+        onClick={async () => {
+          const ok = await confirm({
+            title: `Excluir a recorrência "${rule.description}"?`,
+            description: "Os lançamentos já criados continuam no histórico.",
+            confirmLabel: "Excluir",
+            tone: "danger",
+          });
+          if (!ok) return;
           start(async () => void (await deleteRecurringRule(rule.id)));
         }}
-        className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
       >
         <Trash2 className="size-4" />
       </button>

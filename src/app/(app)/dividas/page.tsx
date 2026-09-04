@@ -38,7 +38,7 @@ export default async function DebtsPage() {
       />
 
       {!overview.debts.length ? (
-        <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
           <Card className="p-0">
             <EmptyState
               icon={TrendingDown}
@@ -52,14 +52,14 @@ export default async function DebtsPage() {
           </Card>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
           <div className="space-y-4">
             <Card>
               <CardHeader
                 title="O tamanho do buraco"
                 subtitle="O primeiro passo é enxergar o número real."
               />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Metric
                   label="Saldo devedor"
                   value={formatCents(overview.totalBalanceCents)}

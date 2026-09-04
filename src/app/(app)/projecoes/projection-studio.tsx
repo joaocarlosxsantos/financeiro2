@@ -62,7 +62,7 @@ export function ProjectionStudio({
   const earnings = realistic - invested;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
       <div className="space-y-4">
         <Card>
           <CardHeader title="Seus números" subtitle="Preenchemos com o que já sabemos sobre você." />
@@ -113,7 +113,7 @@ export function ProjectionStudio({
           />
         </Card>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {finals.map((f) => (
             <Card key={f.key}>
               <div className="mb-2 flex items-center gap-2">
@@ -129,7 +129,7 @@ export function ProjectionStudio({
 
         <Card>
           <CardHeader title="Decompondo o cenário realista" subtitle="Quanto veio de você e quanto veio do juro." />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Metric label="Você depositou" value={formatCents(invested)} />
             <Metric label="Juros acumulados" value={formatCents(Math.max(0, earnings))} />
             <Metric

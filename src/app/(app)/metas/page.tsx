@@ -42,7 +42,7 @@ export default async function GoalsPage() {
         description="Primeiro o colchão de segurança, depois os sonhos. Cada meta mostra quanto falta e em quanto tempo você chega no ritmo atual."
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <EmergencyPanel
             target={emergencyTarget}

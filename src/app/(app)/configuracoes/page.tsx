@@ -31,7 +31,7 @@ export default async function SettingsPage() {
         description="Ajuste a sua renda, as contas onde o dinheiro circula e as categorias que organizam os gastos."
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader
             title="Perfil financeiro"

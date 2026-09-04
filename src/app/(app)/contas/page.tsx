@@ -45,7 +45,7 @@ export default async function AccountsPage() {
         description="Onde o seu dinheiro está agora, e quanto dele já tem dono. O sistema só conhece o que você lançou — por isso o saldo parte de um valor inicial que você informa."
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           {overview.needsOpeningBalance ? (
             <Hint tone="tip" title="Informe o saldo inicial">

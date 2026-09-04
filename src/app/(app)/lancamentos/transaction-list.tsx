@@ -10,6 +10,7 @@ import {
 import { formatCents } from "@/lib/money";
 import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import type { PlainAccount, PlainCategory, PlainTransaction } from "./types";
 
 export function TransactionList({
@@ -52,6 +53,7 @@ export function TransactionList({
 
 function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCategory[] }) {
   const [pending, start] = useTransition();
+  const confirm = useConfirm();
   const options = categories.filter((c) => c.kind === tx.kind);
 
   return (
@@ -99,7 +101,7 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
           {tx.isCard && !tx.isTransfer ? (
             <span
               className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 dark:bg-amber-500/12 dark:text-amber-300"
-              title="Compra no cartão — demonstrativo, fora do resumo do painel até a fatura ser paga"
+              title="Compra no cartão — demonstrativo, nunca entra no resumo do painel"
             >
               <CreditCard className="size-3" />
               demonstrativo
@@ -158,7 +160,7 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
           })
         }
         className={cn(
-          "shrink-0 cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-[var(--surface-2)]",
+          "shrink-0 cursor-pointer rounded-lg p-2.5 transition-colors hover:bg-[var(--surface-2)]",
           tx.isTransfer ? "text-cyan-600 dark:text-cyan-300" : "muted",
         )}
       >
@@ -169,13 +171,18 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
         type="button"
         aria-label={`Excluir ${tx.description}`}
         disabled={pending}
-        onClick={() => {
-          if (!confirm(`Excluir "${tx.description}"?`)) return;
+        onClick={async () => {
+          const ok = await confirm({
+            title: `Excluir "${tx.description}"?`,
+            confirmLabel: "Excluir",
+            tone: "danger",
+          });
+          if (!ok) return;
           start(async () => {
             await deleteTransaction(tx.id);
           });
         }}
-        className="muted shrink-0 cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
       >
         <Trash2 className="size-4" />
       </button>

@@ -22,7 +22,7 @@ export function MonthSwitcher({ value: current }: { value: MonthRef }) {
         type="button"
         onClick={() => go(-1)}
         aria-label="Mês anterior"
-        className="inline-flex size-8 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
       >
         <ChevronLeft className="size-4" />
       </button>
@@ -33,7 +33,7 @@ export function MonthSwitcher({ value: current }: { value: MonthRef }) {
         type="button"
         onClick={() => go(1)}
         aria-label="Próximo mês"
-        className="inline-flex size-8 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
       >
         <ChevronRight className="size-4" />
       </button>

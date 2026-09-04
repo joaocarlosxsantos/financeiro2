@@ -90,7 +90,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
           </span>
         ) : null}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <span className="tnum text-[0.875rem] font-semibold">{formatCents(row.spentCents)}</span>
           <span className="muted text-[0.8125rem]">de</span>
           <div className="relative">
@@ -107,7 +107,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
               inputMode="decimal"
               placeholder="sem limite"
               aria-label={`Limite mensal de ${row.name}`}
-              className="input-base tnum h-9 w-32 py-0 pl-8 text-right text-[0.8125rem]"
+              className="input-base tnum h-9 w-24 py-0 pl-8 text-right text-[0.8125rem] sm:w-32"
             />
           </div>
           <span className="w-4 shrink-0">

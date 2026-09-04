@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { deleteImportBatch } from "@/server/actions/import";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Batch = {
   id: string;
@@ -25,14 +26,16 @@ export function ImportHistory({ batches }: { batches: Batch[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, start] = useTransition();
+  const confirm = useConfirm();
 
-  function remove(batch: Batch) {
-    if (
-      !confirm(
-        `Apagar a importação "${batch.fileName}"? Os ${batch.savedRows} lançamento(s) que vieram dela serão excluídos. Isso não pode ser desfeito.`,
-      )
-    )
-      return;
+  async function remove(batch: Batch) {
+    const ok = await confirm({
+      title: `Apagar a importação "${batch.fileName}"?`,
+      description: `Os ${batch.savedRows} lançamento(s) que vieram dela serão excluídos. Isso não pode ser desfeito.`,
+      confirmLabel: "Apagar",
+      tone: "danger",
+    });
+    if (!ok) return;
     setError(null);
     setPendingId(batch.id);
     start(async () => {
@@ -66,9 +69,9 @@ export function ImportHistory({ batches }: { batches: Batch[] }) {
               title="Apagar esta importação e os lançamentos que vieram dela"
               disabled={pendingId === b.id}
               onClick={() => remove(b)}
-              className="muted mt-0.5 shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+              className="muted mt-0.5 shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
             >
-              <Trash2 className="size-3.5" />
+              <Trash2 className="size-4" />
             </button>
           </li>
         ))}

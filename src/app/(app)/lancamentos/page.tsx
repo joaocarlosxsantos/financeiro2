@@ -100,7 +100,7 @@ export default async function TransactionsPage({
         expenseCents={recurring.pendingExpenseCents}
       />
 
-      <div className="mb-5 grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <Filters categories={plainCategories} />
 

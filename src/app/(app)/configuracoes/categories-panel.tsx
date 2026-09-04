@@ -5,6 +5,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { createCategory, deleteCategory, updateCategory, type ActionState } from "@/server/actions/settings";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Button, SubmitButton } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const initial: ActionState = {};
 
@@ -23,6 +24,18 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [, start] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
+  const confirm = useConfirm();
+
+  async function remove(id: string, name: string) {
+    const ok = await confirm({
+      title: `Arquivar a categoria "${name}"?`,
+      description: "Os lançamentos existentes continuam salvos.",
+      confirmLabel: "Arquivar",
+      tone: "danger",
+    });
+    if (!ok) return;
+    start(async () => void (await deleteCategory(id)));
+  }
 
   useEffect(() => {
     if (state.ok) {
@@ -38,26 +51,26 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Group
           title="Entradas"
           items={income}
           editingId={editingId}
-          onDelete={(id, name) => remove(id, name, start)}
+          onDelete={(id, name) => void remove(id, name)}
           onToggleEdit={toggleEdit}
         />
         <Group
           title="Saídas"
           items={expense}
           editingId={editingId}
-          onDelete={(id, name) => remove(id, name, start)}
+          onDelete={(id, name) => void remove(id, name)}
           onToggleEdit={toggleEdit}
         />
       </div>
 
       {open ? (
         <form ref={ref} action={formAction} className="space-y-3 rounded-xl border bg-[var(--surface-2)] p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Nome">
               <Input name="name" required placeholder="Ex.: Pet" />
             </Field>
@@ -101,11 +114,6 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
   );
 }
 
-function remove(id: string, name: string, start: (cb: () => void) => void) {
-  if (!confirm(`Arquivar a categoria "${name}"? Os lançamentos existentes continuam salvos.`)) return;
-  start(async () => void (await deleteCategory(id)));
-}
-
 function Group({
   title,
   items,
@@ -144,7 +152,7 @@ function Group({
                 type="button"
                 aria-label={`Editar ${c.name}`}
                 onClick={() => onToggleEdit(c.id)}
-                className="muted cursor-pointer rounded-lg p-1.5 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
               >
                 <Pencil className="size-4" />
               </button>
@@ -152,7 +160,7 @@ function Group({
                 type="button"
                 aria-label={`Arquivar ${c.name}`}
                 onClick={() => onDelete(c.id, c.name)}
-                className="muted cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -185,7 +193,7 @@ function EditForm({ category, onDone }: { category: Cat; onDone: () => void }) {
       className="mt-3 space-y-3 rounded-xl border bg-[var(--surface-2)] p-3"
     >
       <input type="hidden" name="id" value={category.id} />
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Nome">
           <Input name="name" required defaultValue={category.name} />
         </Field>

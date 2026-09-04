@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/field";
 import { formatCents, pct } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const KIND_LABEL: Record<string, string> = {
   EMERGENCY_FUND: "Reserva",
@@ -39,6 +40,7 @@ export function GoalCard({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const confirm = useConfirm();
   const progress = goal.targetCents ? (goal.savedCents / goal.targetCents) * 100 : 0;
   const done = goal.savedCents >= goal.targetCents;
 
@@ -63,11 +65,16 @@ export function GoalCard({
         <button
           type="button"
           aria-label={`Excluir meta ${goal.name}`}
-          onClick={() => {
-            if (!confirm(`Excluir a meta "${goal.name}"?`)) return;
+          onClick={async () => {
+            const ok = await confirm({
+              title: `Excluir a meta "${goal.name}"?`,
+              confirmLabel: "Excluir",
+              tone: "danger",
+            });
+            if (!ok) return;
             start(async () => void (await deleteGoal(goal.id)));
           }}
-          className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
         >
           <Trash2 className="size-4" />
         </button>

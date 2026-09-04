@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/field";
 import { formatCents, formatCentsPlain } from "@/lib/money";
 import { DEBT_KIND_LABEL, annualRateFromMonthly, formatRate } from "@/lib/debts";
 import { cn } from "@/lib/cn";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Debt = {
   id: string;
@@ -35,6 +36,7 @@ export function DebtList({ debts }: { debts: Debt[] }) {
 function Row({ debt }: { debt: Debt }) {
   const [pending, start] = useTransition();
   const [paying, setPaying] = useState(false);
+  const confirm = useConfirm();
 
   return (
     <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
@@ -59,17 +61,22 @@ function Row({ debt }: { debt: Debt }) {
           type="button"
           aria-label={`Excluir ${debt.name}`}
           disabled={pending}
-          onClick={() => {
-            if (!confirm(`Excluir a dívida "${debt.name}"?`)) return;
+          onClick={async () => {
+            const ok = await confirm({
+              title: `Excluir a dívida "${debt.name}"?`,
+              confirmLabel: "Excluir",
+              tone: "danger",
+            });
+            if (!ok) return;
             start(async () => void (await deleteDebt(debt.id)));
           }}
-          className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
         >
           <Trash2 className="size-4" />
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <EditableField
           label="Saldo devedor"
           value={formatCentsPlain(debt.balanceCents)}

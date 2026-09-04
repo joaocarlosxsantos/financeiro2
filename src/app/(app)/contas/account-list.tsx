@@ -120,7 +120,7 @@ function Row({ account }: { account: Account }) {
 
       {editing ? (
         <form
-          className="mt-3 grid gap-3 rounded-xl border bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="mt-3 grid grid-cols-1 gap-3 rounded-xl border bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
           action={(formData) => {
             start(async () => {
               await saveOpeningBalance({

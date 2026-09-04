@@ -42,7 +42,7 @@ export function OnboardingForm({
           />
         </Field>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
             label="Meses de reserva de emergência"
             hint="CLT estável: 6 meses. Autônomo ou renda variável: 9 a 12."
@@ -74,13 +74,13 @@ export function OnboardingForm({
             Com essa renda, aqui está o seu ponto de partida
           </h2>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SplitCard label="Essenciais (50%)" value={split.necessitiesCents} color="#6366f1" desc="Moradia, contas, mercado, transporte" />
             <SplitCard label="Estilo de vida (30%)" value={split.wantsCents} color="#f59e0b" desc="Lazer, assinaturas, extras" />
             <SplitCard label="Futuro (20%)" value={split.futureCents} color="#059669" desc="Reserva, investimentos, quitar dívida" />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border p-4">
               <p className="muted text-xs">Meta de reserva estimada</p>
               <p className="tnum mt-1 text-xl font-semibold">{formatCents(emergencyEstimate)}</p>

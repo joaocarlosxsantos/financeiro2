@@ -58,8 +58,9 @@ export default async function DashboardPage({
     await Promise.all([
       getUser(userId),
       // "cash": o resumo principal do painel é o retrato do dinheiro que
-      // realmente entrou e saiu — compra no cartão vira demonstrativo (tem
-      // gráfico próprio abaixo) e o que conta aqui é a fatura paga.
+      // realmente entrou e saiu de uma conta de verdade — compra no cartão
+      // vira demonstrativo (tem gráfico próprio abaixo) e nunca entra aqui;
+      // o que sai do cartão só conta quando aparece no extrato importado.
       getMonthSummary(userId, ref, { cardMode: "cash" }),
       getMonthlySeries(userId, 6, ref, { cardMode: "cash" }),
       getCategoryBreakdown(userId, ref, { cardMode: "cash" }),
@@ -135,7 +136,7 @@ export default async function DashboardPage({
         </Card>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Entrou no mês"
           cents={summary.incomeCents}
@@ -170,7 +171,7 @@ export default async function DashboardPage({
         />
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-3">
+      <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <HealthCard health={health} />
 
         <Card className="lg:col-span-2">
@@ -182,7 +183,7 @@ export default async function DashboardPage({
         </Card>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-5">
+      <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader
             title={`Para onde foi o dinheiro em ${monthLabel(ref)}`}
@@ -240,7 +241,7 @@ export default async function DashboardPage({
         </section>
       ) : null}
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-3">
+      <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <BudgetCard overview={budget} monthRef={ref} />
 
         <Card>

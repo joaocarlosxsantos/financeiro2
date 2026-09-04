@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { createAccount, deleteAccount, type ActionState } from "@/server/actions/settings";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Button, SubmitButton } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const initial: ActionState = {};
 
@@ -17,6 +18,7 @@ export function AccountsPanel({
   const [open, setOpen] = useState(false);
   const [, start] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (state.ok) {
@@ -41,11 +43,17 @@ export function AccountsPanel({
             <button
               type="button"
               aria-label={`Arquivar ${a.name}`}
-              onClick={() => {
-                if (!confirm(`Arquivar a conta "${a.name}"? Os lançamentos continuam salvos.`)) return;
+              onClick={async () => {
+                const ok = await confirm({
+                  title: `Arquivar a conta "${a.name}"?`,
+                  description: "Os lançamentos continuam salvos.",
+                  confirmLabel: "Arquivar",
+                  tone: "danger",
+                });
+                if (!ok) return;
                 start(async () => void (await deleteAccount(a.id)));
               }}
-              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+              className="muted cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
             >
               <Trash2 className="size-4" />
             </button>
@@ -61,7 +69,7 @@ export function AccountsPanel({
           <Field label="Nome">
             <Input name="name" required placeholder="Ex.: Nubank" />
           </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Tipo">
               <Select name="type" defaultValue="CHECKING">
                 <option value="CHECKING">Conta corrente</option>

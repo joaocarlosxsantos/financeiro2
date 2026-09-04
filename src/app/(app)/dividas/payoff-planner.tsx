@@ -77,7 +77,7 @@ export function PayoffPlanner({
             trocar a dívida cara por uma mais barata (portabilidade, empréstimo com garantia).
           </Hint>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StrategyCard
               title="Avalanche"
               subtitle="Ataca a dívida de maior juros"
@@ -148,7 +148,7 @@ export function PayoffPlanner({
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-2 grid gap-3 lg:grid-cols-2">
+          <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2">
             <Hint tone={interestSavedCents > 0 ? "info" : "good"}>
               {interestSavedCents > 0 ? (
                 <>
