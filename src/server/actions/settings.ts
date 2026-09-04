@@ -236,4 +236,73 @@ export async function deleteAccount(id: string) {
     .set({ archived: true })
     .where(and(eq(accounts.id, id), eq(accounts.userId, userId)));
   revalidatePath("/configuracoes");
+  revalidatePath("/contas");
+  revalidatePath("/importar");
+}
+
+export async function updateAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const userId = await requireUserId();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Conta não encontrada." };
+
+  const parsed = accountSchema.safeParse({
+    name: formData.get("name"),
+    type: formData.get("type"),
+    institution: formData.get("institution") || undefined,
+    color: formData.get("color") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
+
+  const [existing] = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
+    .limit(1);
+  if (!existing) return { error: "Conta não encontrada." };
+
+  await db
+    .update(accounts)
+    .set({
+      name: parsed.data.name,
+      type: parsed.data.type,
+      institution: parsed.data.institution || null,
+      color: parsed.data.color || "#6366f1",
+    })
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)));
+
+  revalidatePath("/configuracoes");
+  revalidatePath("/contas");
+  revalidatePath("/importar");
+  revalidatePath("/lancamentos");
+  return { ok: true };
+}
+
+/** Reverte o arquivamento — a conta volta a aparecer em todo o sistema. */
+export async function restoreAccount(id: string) {
+  const userId = await requireUserId();
+  await db
+    .update(accounts)
+    .set({ archived: false })
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId)));
+  revalidatePath("/configuracoes");
+  revalidatePath("/contas");
+  revalidatePath("/importar");
+}
+
+/**
+ * Apaga a conta de vez — só funciona em conta já arquivada (o `where` exige
+ * `archived = true`, então mesmo uma chamada indevida não apaga uma conta em
+ * uso). Por causa do `onDelete: "cascade"` no schema, isso também apaga para
+ * sempre os lançamentos, recorrências e lotes de importação daquela conta —
+ * a UI precisa avisar isso antes de chamar.
+ */
+export async function deleteAccountPermanently(id: string) {
+  const userId = await requireUserId();
+  await db
+    .delete(accounts)
+    .where(and(eq(accounts.id, id), eq(accounts.userId, userId), eq(accounts.archived, true)));
+  revalidatePath("/configuracoes");
+  revalidatePath("/contas");
+  revalidatePath("/painel");
+  revalidatePath("/lancamentos");
 }

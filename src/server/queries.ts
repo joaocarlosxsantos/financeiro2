@@ -41,6 +41,45 @@ export async function getAccounts(userId: string) {
     .orderBy(asc(accountsTable.createdAt));
 }
 
+/**
+ * Todas as contas do usuário — ativas e arquivadas — com quantos lançamentos
+ * e recorrências cada uma tem. Usado na tela de configurações, que precisa
+ * mostrar as arquivadas separadas e avisar o tanto de coisa que some junto
+ * se a conta for excluída de vez (a exclusão em cascata leva lançamentos,
+ * recorrências e lotes de importação daquela conta).
+ */
+export async function getAccountsWithStats(userId: string) {
+  const rows = await db
+    .select()
+    .from(accountsTable)
+    .where(eq(accountsTable.userId, userId))
+    .orderBy(asc(accountsTable.archived), asc(accountsTable.createdAt));
+
+  if (!rows.length) return [];
+
+  const [txCounts, recurringCounts] = await Promise.all([
+    db
+      .select({ accountId: txTable.accountId, count: sql<number>`count(*)::int` })
+      .from(txTable)
+      .where(eq(txTable.userId, userId))
+      .groupBy(txTable.accountId),
+    db
+      .select({ accountId: recurringRulesTable.accountId, count: sql<number>`count(*)::int` })
+      .from(recurringRulesTable)
+      .where(eq(recurringRulesTable.userId, userId))
+      .groupBy(recurringRulesTable.accountId),
+  ]);
+
+  const txMap = new Map(txCounts.map((c) => [c.accountId, Number(c.count)]));
+  const recurringMap = new Map(recurringCounts.map((c) => [c.accountId, Number(c.count)]));
+
+  return rows.map((a) => ({
+    ...a,
+    transactionCount: txMap.get(a.id) ?? 0,
+    recurringCount: recurringMap.get(a.id) ?? 0,
+  }));
+}
+
 export async function getCategories(userId: string) {
   return db
     .select()

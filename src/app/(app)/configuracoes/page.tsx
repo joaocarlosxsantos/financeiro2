@@ -1,5 +1,5 @@
 import { requireUserId } from "@/lib/auth";
-import { getAccounts, getCategories, getUser } from "@/server/queries";
+import { getAccountsWithStats, getCategories, getUser } from "@/server/queries";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
 import { ProfileForm } from "./profile-form";
@@ -8,19 +8,11 @@ import { CategoriesPanel } from "./categories-panel";
 
 export const metadata = { title: "Configurações — Financeiro 2.0" };
 
-const TYPE_LABEL: Record<string, string> = {
-  CHECKING: "Conta corrente",
-  SAVINGS: "Poupança",
-  CREDIT_CARD: "Cartão de crédito",
-  CASH: "Dinheiro",
-  INVESTMENT: "Investimento",
-};
-
 export default async function SettingsPage() {
   const userId = await requireUserId();
   const [user, accounts, categories] = await Promise.all([
     getUser(userId),
-    getAccounts(userId),
+    getAccountsWithStats(userId),
     getCategories(userId),
   ]);
 
@@ -56,9 +48,12 @@ export default async function SettingsPage() {
             accounts={accounts.map((a) => ({
               id: a.id,
               name: a.name,
-              type: TYPE_LABEL[a.type] ?? a.type,
+              type: a.type,
               color: a.color,
               institution: a.institution,
+              archived: a.archived,
+              transactionCount: a.transactionCount,
+              recurringCount: a.recurringCount,
             }))}
           />
         </Card>
