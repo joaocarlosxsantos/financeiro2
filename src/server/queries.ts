@@ -3,6 +3,11 @@ import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, sql } from "drizzl
 import { db } from "@/db";
 import {
   accounts as accountsTable,
+  billGroupings as billGroupingsTable,
+  billParticipants as billParticipantsTable,
+  billRuleParticipants as billRuleParticipantsTable,
+  billRules as billRulesTable,
+  bills as billsTable,
   budgets as budgetsTable,
   categories as categoriesTable,
   debtPayments,
@@ -1072,4 +1077,184 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       (a) => a.openingBalanceCents === 0 && a.openingBalanceDate === null,
     ),
   };
+}
+
+// ---------------------------------------------------------------- contas a pagar
+
+export type BillGroupingRow = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export async function getBillGroupings(userId: string): Promise<BillGroupingRow[]> {
+  return db
+    .select({ id: billGroupingsTable.id, name: billGroupingsTable.name, color: billGroupingsTable.color })
+    .from(billGroupingsTable)
+    .where(and(eq(billGroupingsTable.userId, userId), eq(billGroupingsTable.archived, false)))
+    .orderBy(asc(billGroupingsTable.name));
+}
+
+export type BillRuleParticipantRow = { id: string; name: string; phone: string | null };
+
+export type BillRuleRow = {
+  id: string;
+  name: string;
+  type: "INDIVIDUAL" | "GROUP";
+  active: boolean;
+  groupingId: string | null;
+  groupingName: string | null;
+  participants: BillRuleParticipantRow[];
+  /** Já existe uma conta gerada desta regra no mês consultado? */
+  generated: boolean;
+};
+
+export type BillRulesStatus = {
+  rules: BillRuleRow[];
+  pending: BillRuleRow[];
+};
+
+/**
+ * Regras de conta recorrente ("Conta de luz", "Assinatura X") e se já geraram
+ * a conta deste mês — mesmo espírito de `getRecurringStatus`/
+ * `getGoalRecurringStatus`, mas sem valor fixo (o valor de uma conta varia
+ * todo mês, então não tem "amountCents" pendente pra somar) e sem janela de
+ * início/fim (só ativa/pausada — ver `src/lib/bills.ts` pra divisão de valor).
+ */
+export async function getBillRulesStatus(userId: string, ref: MonthRef): Promise<BillRulesStatus> {
+  const [rules, participants, generated] = await Promise.all([
+    db
+      .select({
+        id: billRulesTable.id,
+        name: billRulesTable.name,
+        type: billRulesTable.type,
+        active: billRulesTable.active,
+        groupingId: billRulesTable.groupingId,
+        groupingName: billGroupingsTable.name,
+      })
+      .from(billRulesTable)
+      .leftJoin(billGroupingsTable, eq(billGroupingsTable.id, billRulesTable.groupingId))
+      .where(eq(billRulesTable.userId, userId))
+      .orderBy(asc(billRulesTable.name)),
+
+    db
+      .select({
+        id: billRuleParticipantsTable.id,
+        ruleId: billRuleParticipantsTable.ruleId,
+        name: billRuleParticipantsTable.name,
+        phone: billRuleParticipantsTable.phone,
+      })
+      .from(billRuleParticipantsTable)
+      .innerJoin(billRulesTable, eq(billRulesTable.id, billRuleParticipantsTable.ruleId))
+      .where(eq(billRulesTable.userId, userId)),
+
+    db
+      .selectDistinct({ ruleId: billsTable.ruleId })
+      .from(billsTable)
+      .where(
+        and(
+          eq(billsTable.userId, userId),
+          eq(billsTable.year, ref.year),
+          eq(billsTable.month, ref.month),
+        ),
+      ),
+  ]);
+
+  const participantsByRule = new Map<string, BillRuleParticipantRow[]>();
+  for (const p of participants) {
+    const list = participantsByRule.get(p.ruleId) ?? [];
+    list.push({ id: p.id, name: p.name, phone: p.phone });
+    participantsByRule.set(p.ruleId, list);
+  }
+
+  const generatedIds = new Set(generated.map((g) => g.ruleId).filter(Boolean) as string[]);
+
+  const rows: BillRuleRow[] = rules.map((r) => ({
+    ...r,
+    type: r.type as "INDIVIDUAL" | "GROUP",
+    participants: participantsByRule.get(r.id) ?? [],
+    generated: generatedIds.has(r.id),
+  }));
+
+  return {
+    rules: rows,
+    pending: rows.filter((r) => r.active && !r.generated),
+  };
+}
+
+export type BillParticipantRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  amountCents: number;
+  paid: boolean;
+};
+
+export type BillRow = {
+  id: string;
+  ruleId: string | null;
+  name: string;
+  type: "INDIVIDUAL" | "GROUP";
+  year: number;
+  month: number;
+  totalCents: number;
+  paid: boolean;
+  note: string | null;
+  groupingId: string | null;
+  groupingName: string | null;
+  participants: BillParticipantRow[];
+};
+
+/** Todas as contas (recorrentes já geradas + avulsas) de um mês. */
+export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<BillRow[]> {
+  const [rows, participants] = await Promise.all([
+    db
+      .select({
+        id: billsTable.id,
+        ruleId: billsTable.ruleId,
+        name: billsTable.name,
+        type: billsTable.type,
+        year: billsTable.year,
+        month: billsTable.month,
+        totalCents: billsTable.totalCents,
+        paid: billsTable.paid,
+        note: billsTable.note,
+        groupingId: billsTable.groupingId,
+        groupingName: billGroupingsTable.name,
+      })
+      .from(billsTable)
+      .leftJoin(billGroupingsTable, eq(billGroupingsTable.id, billsTable.groupingId))
+      .where(
+        and(eq(billsTable.userId, userId), eq(billsTable.year, ref.year), eq(billsTable.month, ref.month)),
+      )
+      .orderBy(asc(billsTable.name)),
+
+    db
+      .select({
+        id: billParticipantsTable.id,
+        billId: billParticipantsTable.billId,
+        name: billParticipantsTable.name,
+        phone: billParticipantsTable.phone,
+        amountCents: billParticipantsTable.amountCents,
+        paid: billParticipantsTable.paid,
+      })
+      .from(billParticipantsTable)
+      .innerJoin(billsTable, eq(billsTable.id, billParticipantsTable.billId))
+      .where(
+        and(eq(billsTable.userId, userId), eq(billsTable.year, ref.year), eq(billsTable.month, ref.month)),
+      ),
+  ]);
+
+  const participantsByBill = new Map<string, BillParticipantRow[]>();
+  for (const p of participants) {
+    const list = participantsByBill.get(p.billId) ?? [];
+    list.push({ id: p.id, name: p.name, phone: p.phone, amountCents: p.amountCents, paid: p.paid });
+    participantsByBill.set(p.billId, list);
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    type: r.type as "INDIVIDUAL" | "GROUP",
+    participants: participantsByBill.get(r.id) ?? [],
+  }));
 }

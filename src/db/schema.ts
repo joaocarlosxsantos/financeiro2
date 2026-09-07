@@ -50,6 +50,8 @@ export const debtKind = pgEnum("debt_kind", [
   "OTHER",
 ]);
 export const importStatus = pgEnum("import_status", ["PENDING", "COMMITTED", "DISCARDED"]);
+/** Conta individual (só anotar/controlar) ou em grupo (dividir entre pessoas). */
+export const billType = pgEnum("bill_type", ["INDIVIDUAL", "GROUP"]);
 
 // ---------------------------------------------------------------- tables
 
@@ -412,6 +414,134 @@ export const importBatches = pgTable(
   ],
 );
 
+/**
+ * Agrupamento de contas a pagar — só uma pasta pra organizar (ex.: "Casa",
+ * "Assinaturas"), sem lógica própria. Uma conta (individual ou em grupo) pode
+ * opcionalmente viver dentro de um agrupamento; não é obrigatório.
+ */
+export const billGroupings = pgTable(
+  "bill_groupings",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: varchar("color", { length: 9 }).notNull().default("#64748b"),
+    archived: boolean("archived").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("bill_groupings_user_idx").on(t.userId)],
+);
+
+/**
+ * Molde de uma conta a pagar recorrente (ex.: "Conta de luz", "Assinatura
+ * YouTube Premium"). Só existe para contas que se repetem todo mês — uma
+ * conta avulsa ("única daquele mês") não tem regra, é gravada direto em
+ * `bills` com `ruleId` nulo. O valor NÃO mora aqui: cada mês varia (a conta de
+ * luz não é sempre o mesmo valor), então o valor é preenchido a cada geração,
+ * na linha de `bills` daquele mês.
+ */
+export const billRules = pgTable(
+  "bill_rules",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    groupingId: varchar("grouping_id", { length: 32 }).references(() => billGroupings.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    type: billType("type").notNull().default("INDIVIDUAL"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("bill_rules_user_idx").on(t.userId)],
+);
+
+/**
+ * "Elenco" de pessoas de uma regra de conta em grupo (nome + telefone) — só
+ * pra não redigitar todo mês. Copiado para `bill_participants` a cada geração
+ * mensal; editar aqui não muda meses já gerados.
+ */
+export const billRuleParticipants = pgTable(
+  "bill_rule_participants",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    ruleId: varchar("rule_id", { length: 32 })
+      .notNull()
+      .references(() => billRules.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("bill_rule_participants_rule_idx").on(t.ruleId)],
+);
+
+/**
+ * Uma conta a pagar de um mês específico — a unidade real que aparece na
+ * tela. Nasce de duas formas: gerada a partir de uma `bill_rules` (recorrente,
+ * `ruleId` preenchido) ou criada direto pelo usuário como avulsa ("única
+ * daquele mês", `ruleId` nulo). Fica inteiramente fora dos lançamentos e
+ * relatórios financeiros — é só organização e controle, por decisão do João.
+ */
+export const bills = pgTable(
+  "bills",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Nulo = conta avulsa. Preenchido = nasceu de uma regra recorrente. */
+    ruleId: varchar("rule_id", { length: 32 }).references(() => billRules.id, { onDelete: "set null" }),
+    groupingId: varchar("grouping_id", { length: 32 }).references(() => billGroupings.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    type: billType("type").notNull().default("INDIVIDUAL"),
+    year: integer("year").notNull(),
+    month: integer("month").notNull(),
+    totalCents: integer("total_cents").notNull().default(0),
+    /** Só usado quando `type` = INDIVIDUAL — conta em grupo usa o status por pessoa. */
+    paid: boolean("paid").notNull().default(false),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("bills_user_period_idx").on(t.userId, t.year, t.month),
+    // Uma geração por regra por mês — Postgres trata NULL como distinto num
+    // índice único, então contas avulsas (ruleId nulo) nunca conflitam entre
+    // si; só protege contra gerar a mesma regra duas vezes no mesmo mês.
+    uniqueIndex("bills_rule_period_key").on(t.ruleId, t.year, t.month),
+  ],
+);
+
+/**
+ * Uma pessoa dentro de uma conta em grupo, com o quanto ela deve pagar
+ * daquele mês e se já pagou. A soma de `amountCents` de todos os
+ * participantes de uma conta sempre deve bater exatamente com `bills.totalCents`
+ * — validado na ação do servidor, não aqui (Drizzle/Postgres não expressam
+ * essa regra entre linhas de tabelas diferentes com uma constraint simples).
+ */
+export const billParticipants = pgTable(
+  "bill_participants",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    billId: varchar("bill_id", { length: 32 })
+      .notNull()
+      .references(() => bills.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    amountCents: integer("amount_cents").notNull().default(0),
+    paid: boolean("paid").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("bill_participants_bill_idx").on(t.billId)],
+);
+
 // ---------------------------------------------------------------- relations
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -423,6 +553,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   recurringRules: many(recurringRules),
   goalRecurringRules: many(goalRecurringRules),
   debts: many(debts),
+  billGroupings: many(billGroupings),
+  billRules: many(billRules),
+  bills: many(bills),
 }));
 
 export const debtsRelations = relations(debts, ({ one, many }) => ({
@@ -492,6 +625,34 @@ export const importBatchesRelations = relations(importBatches, ({ one }) => ({
   account: one(accounts, { fields: [importBatches.accountId], references: [accounts.id] }),
 }));
 
+export const billGroupingsRelations = relations(billGroupings, ({ one, many }) => ({
+  user: one(users, { fields: [billGroupings.userId], references: [users.id] }),
+  rules: many(billRules),
+  bills: many(bills),
+}));
+
+export const billRulesRelations = relations(billRules, ({ one, many }) => ({
+  user: one(users, { fields: [billRules.userId], references: [users.id] }),
+  grouping: one(billGroupings, { fields: [billRules.groupingId], references: [billGroupings.id] }),
+  participants: many(billRuleParticipants),
+  bills: many(bills),
+}));
+
+export const billRuleParticipantsRelations = relations(billRuleParticipants, ({ one }) => ({
+  rule: one(billRules, { fields: [billRuleParticipants.ruleId], references: [billRules.id] }),
+}));
+
+export const billsRelations = relations(bills, ({ one, many }) => ({
+  user: one(users, { fields: [bills.userId], references: [users.id] }),
+  rule: one(billRules, { fields: [bills.ruleId], references: [billRules.id] }),
+  grouping: one(billGroupings, { fields: [bills.groupingId], references: [billGroupings.id] }),
+  participants: many(billParticipants),
+}));
+
+export const billParticipantsRelations = relations(billParticipants, ({ one }) => ({
+  bill: one(bills, { fields: [billParticipants.billId], references: [bills.id] }),
+}));
+
 // ---------------------------------------------------------------- tipos
 
 export type CategoryKind = (typeof categoryKind.enumValues)[number];
@@ -509,3 +670,9 @@ export type RecurringRule = typeof recurringRules.$inferSelect;
 export type GoalRecurringRule = typeof goalRecurringRules.$inferSelect;
 export type Debt = typeof debts.$inferSelect;
 export type DebtKind = (typeof debtKind.enumValues)[number];
+export type BillType = (typeof billType.enumValues)[number];
+export type BillGrouping = typeof billGroupings.$inferSelect;
+export type BillRule = typeof billRules.$inferSelect;
+export type BillRuleParticipant = typeof billRuleParticipants.$inferSelect;
+export type Bill = typeof bills.$inferSelect;
+export type BillParticipant = typeof billParticipants.$inferSelect;
