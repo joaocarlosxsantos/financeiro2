@@ -15,6 +15,7 @@ import {
   Repeat,
   PiggyBank,
   Settings,
+  Sparkles,
   Target,
   TrendingUp,
   X,
@@ -25,6 +26,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const nav = [
   { href: "/painel", label: "Painel", icon: LayoutDashboard },
+  { href: "/insights", label: "Insights", icon: Sparkles },
   { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
   { href: "/contas", label: "Contas", icon: Wallet },
   { href: "/recorrentes", label: "Recorrentes", icon: Repeat },

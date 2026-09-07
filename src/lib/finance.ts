@@ -181,3 +181,76 @@ export function monthsToTarget(
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
+
+// ------------------------------------------------------------------ insights
+
+export type SpendingPace = {
+  /** Média de gasto por dia, considerando só os dias já passados do mês. */
+  dailyAvgCents: number;
+  /** Projeção de fechamento do mês, no ritmo atual. */
+  projectedCents: number;
+};
+
+/**
+ * Ritmo de gasto do mês corrente: quanto já saiu, dividido pelos dias já
+ * passados, projetado para o mês inteiro. Só faz sentido para o mês atual —
+ * quem chama decide isso (comparando o `MonthRef` com `currentMonthRef()`).
+ */
+export function spendingPace(expenseSoFarCents: number, dayOfMonth: number, daysInMonth: number): SpendingPace {
+  if (dayOfMonth <= 0) return { dailyAvgCents: 0, projectedCents: expenseSoFarCents };
+  const dailyAvgCents = Math.round(expenseSoFarCents / dayOfMonth);
+  return { dailyAvgCents, projectedCents: Math.round(dailyAvgCents * daysInMonth) };
+}
+
+export type CategoryAmount = {
+  id: string;
+  name: string;
+  color: string;
+  nature: "FIXED" | "VARIABLE";
+  totalCents: number;
+};
+
+export type CategoryDelta = CategoryAmount & {
+  previousCents: number;
+  deltaCents: number;
+  /** null = categoria não existia no mês anterior (não dá pra falar em "%"). */
+  deltaPct: number | null;
+};
+
+/**
+ * Compara o gasto por categoria de dois meses, categoria a categoria.
+ * Ordenado pela maior variação em módulo — é o que mais importa mostrar
+ * primeiro, pra cima ou pra baixo. Categoria que zerou este mês (mas gastou
+ * no anterior) também aparece, com totalCents = 0.
+ */
+export function categoryDeltas(current: CategoryAmount[], previous: CategoryAmount[]): CategoryDelta[] {
+  const prevMap = new Map(previous.map((p) => [p.id, p.totalCents]));
+  const seen = new Set<string>();
+
+  const rows: CategoryDelta[] = current.map((c) => {
+    seen.add(c.id);
+    const previousCents = prevMap.get(c.id) ?? 0;
+    return {
+      ...c,
+      previousCents,
+      deltaCents: c.totalCents - previousCents,
+      deltaPct: previousCents > 0 ? Math.round(((c.totalCents - previousCents) / previousCents) * 1000) / 10 : null,
+    };
+  });
+
+  for (const p of previous) {
+    if (seen.has(p.id)) continue;
+    rows.push({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      nature: p.nature,
+      totalCents: 0,
+      previousCents: p.totalCents,
+      deltaCents: -p.totalCents,
+      deltaPct: -100,
+    });
+  }
+
+  return rows.sort((a, b) => Math.abs(b.deltaCents) - Math.abs(a.deltaCents));
+}

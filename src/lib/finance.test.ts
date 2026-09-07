@@ -2,6 +2,7 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 import {
   balanceCents,
+  categoryDeltas,
   emergencyTargetCents,
   fiftyThirtyTwenty,
   financialHealth,
@@ -9,6 +10,7 @@ import {
   monthsToTarget,
   projectBalance,
   savingsRate,
+  spendingPace,
 } from "./finance";
 
 const mes = (income: number, expense: number, fixed = 0) => ({
@@ -121,4 +123,42 @@ test("prazo para alcançar um alvo", () => {
     null,
     "não alcançável dentro do horizonte consultado",
   );
+});
+
+test("ritmo de gasto: projeta o mês pelo que já foi gasto até agora", () => {
+  // R$ 900 gastos em 9 dias, mês de 30 dias -> R$ 100/dia -> projeta R$ 3.000
+  const pace = spendingPace(90000, 9, 30);
+  assert.equal(pace.dailyAvgCents, 10000);
+  assert.equal(pace.projectedCents, 300000);
+});
+
+test("ritmo de gasto: dia zero não divide por zero", () => {
+  const pace = spendingPace(5000, 0, 30);
+  assert.equal(pace.dailyAvgCents, 0);
+  assert.equal(pace.projectedCents, 5000);
+});
+
+test("comparativo por categoria: ordena pela maior variação em módulo", () => {
+  const atual = [
+    { id: "mercado", name: "Mercado", color: "#111", nature: "VARIABLE" as const, totalCents: 50000 },
+    { id: "lazer", name: "Lazer", color: "#222", nature: "VARIABLE" as const, totalCents: 12000 },
+    { id: "nova", name: "Categoria nova", color: "#333", nature: "VARIABLE" as const, totalCents: 3000 },
+  ];
+  const anterior = [
+    { id: "mercado", name: "Mercado", color: "#111", nature: "VARIABLE" as const, totalCents: 30000 },
+    { id: "lazer", name: "Lazer", color: "#222", nature: "VARIABLE" as const, totalCents: 12500 },
+    { id: "assinatura", name: "Assinatura", color: "#444", nature: "VARIABLE" as const, totalCents: 4000 },
+  ];
+
+  const deltas = categoryDeltas(atual, anterior);
+  assert.equal(deltas[0].id, "mercado", "maior variação em módulo vem primeiro");
+  assert.equal(deltas[0].deltaCents, 20000);
+  assert.equal(deltas[0].deltaPct, 66.7);
+
+  const nova = deltas.find((d) => d.id === "nova");
+  assert.equal(nova?.deltaPct, null, "categoria sem histórico não tem %");
+
+  const sumiu = deltas.find((d) => d.id === "assinatura");
+  assert.equal(sumiu?.totalCents, 0, "categoria que zerou este mês aparece com total 0");
+  assert.equal(sumiu?.deltaCents, -4000);
 });

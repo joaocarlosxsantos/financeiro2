@@ -323,6 +323,52 @@ export async function getCardCategoryBreakdown(userId: string, ref: MonthRef): P
     .sort((a, b) => b.totalCents - a.totalCents);
 }
 
+export type TopExpense = {
+  id: string;
+  date: Date;
+  description: string;
+  amountCents: number;
+  categoryName: string | null;
+  categoryColor: string | null;
+  accountName: string;
+};
+
+/**
+ * Os maiores gastos individuais do mês (cartão incluso — aqui o interesse é
+ * "qual foi a compra mais pesada", não bater com o resumo em dinheiro do
+ * Painel, que separa cartão pra não contar a fatura duas vezes).
+ */
+export async function getTopExpenses(userId: string, ref: MonthRef, limit = 6): Promise<TopExpense[]> {
+  const { start, end } = monthRange(ref);
+
+  const rows = await db
+    .select({
+      id: txTable.id,
+      date: txTable.date,
+      description: txTable.description,
+      amountCents: txTable.amountCents,
+      categoryName: categoriesTable.name,
+      categoryColor: categoriesTable.color,
+      accountName: accountsTable.name,
+    })
+    .from(txTable)
+    .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .where(
+      and(
+        eq(txTable.userId, userId),
+        eq(txTable.kind, "EXPENSE"),
+        eq(txTable.isTransfer, false),
+        gte(txTable.date, start),
+        lt(txTable.date, end),
+      ),
+    )
+    .orderBy(desc(txTable.amountCents))
+    .limit(limit);
+
+  return rows;
+}
+
 /** Custo de vida médio dos últimos N meses que já tiveram gasto lançado. */
 export async function getAvgMonthlyCostCents(userId: string, months = 3): Promise<number> {
   const series = await getMonthlySeries(userId, months);
