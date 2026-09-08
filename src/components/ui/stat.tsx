@@ -18,18 +18,18 @@ export function StatTile({
   className?: string;
 }) {
   return (
-    <div className={cn("card p-5", className)}>
-      <div className="mb-3 flex items-center justify-between">
+    <div
+      className={cn("card p-5 border-l-[3px]", className)}
+      style={{ borderLeftColor: color }}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p className="muted text-[0.8125rem] font-medium">{label}</p>
-        <span
-          className="flex size-8 items-center justify-center rounded-lg"
-          style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
-        >
-          <Icon className="size-4" />
-        </span>
+        <Icon className="size-4 shrink-0 opacity-35" style={{ color }} />
       </div>
-      <p className="tnum text-2xl font-semibold tracking-tight">{formatCents(cents)}</p>
-      {caption ? <p className="muted mt-1.5 text-xs leading-snug">{caption}</p> : null}
+      <p className="tnum text-[1.75rem] leading-none font-bold tracking-tight">
+        {formatCents(cents)}
+      </p>
+      {caption ? <p className="muted mt-2 text-xs leading-snug">{caption}</p> : null}
     </div>
   );
 }

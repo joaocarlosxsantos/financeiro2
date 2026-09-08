@@ -9,7 +9,7 @@ import { formatCents, parseMoneyToCents } from "@/lib/money";
 import { projectBalance } from "@/lib/finance";
 
 const SCENARIOS = [
-  { key: "conservador", name: "Conservador", rate: 6, color: "#6366f1", desc: "Renda fixa pós-fixada em ano de juro baixo" },
+  { key: "conservador", name: "Conservador", rate: 6, color: "var(--text-brand)", desc: "Renda fixa pós-fixada em ano de juro baixo" },
   { key: "realista", name: "Realista", rate: 10, color: "#0d9488", desc: "Carteira equilibrada ao longo do tempo" },
   { key: "otimista", name: "Otimista", rate: 14, color: "#d95926", desc: "Cenário favorável, com mais risco envolvido" },
 ] as const;

@@ -75,7 +75,7 @@ export function OnboardingForm({
           </h2>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <SplitCard label="Essenciais (50%)" value={split.necessitiesCents} color="#6366f1" desc="Moradia, contas, mercado, transporte" />
+            <SplitCard label="Essenciais (50%)" value={split.necessitiesCents} color="var(--text-brand)" desc="Moradia, contas, mercado, transporte" />
             <SplitCard label="Estilo de vida (30%)" value={split.wantsCents} color="#f59e0b" desc="Lazer, assinaturas, extras" />
             <SplitCard label="Futuro (20%)" value={split.futureCents} color="#059669" desc="Reserva, investimentos, quitar dívida" />
           </div>

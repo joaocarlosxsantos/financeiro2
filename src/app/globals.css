@@ -6,12 +6,14 @@
 
 /* ------------------------------------------------------------------
    Financeiro 2.0 — design tokens
-   Paleta calma, com verde para "entrou", rosa para "saiu" e índigo
-   como cor de ação. Contraste conferido para leitura confortável.
+   Paleta calma, com verde para "entrou", rosa para "saiu" e um grafite
+   petróleo discreto como cor de ação. Contraste conferido para leitura
+   confortável.
 ------------------------------------------------------------------- */
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --color-ink-50: #f6f7f9;
   --color-ink-100: #eceff3;
@@ -25,25 +27,30 @@
   --color-ink-900: #1b2130;
   --color-ink-950: #11151f;
 
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
+  /* Grafite/petróleo — cor de ação e identidade, no lugar do índigo padrão de
+     template. Usada só na navegação ativa, botões primários e links; nunca
+     como decoração. */
+  --color-brand-50: #eef3f4;
+  --color-brand-100: #dde7ea;
+  --color-brand-200: #b9ccd1;
+  --color-brand-300: #8fa9b0;
+  --color-brand-400: #62838c;
+  --color-brand-500: #3f6570;
+  --color-brand-600: #294f59;
+  --color-brand-700: #1c3941;
+  --color-brand-800: #16292f;
+  --color-brand-900: #101d21;
 
   --color-money-in: #0d9488;
   --color-money-in-soft: #ccfbf1;
   --color-money-out: #f43f5e;
   --color-money-out-soft: #ffe4e6;
   --color-save: #0891b2;
-  --color-fixed: #6366f1;
+  --color-fixed: #294f59;
   --color-variable: #d95926;
   --color-save-soft: #cffafe;
 
-  --radius-xl2: 1.25rem;
+  --radius-xl2: 0.875rem;
 }
 
 :root {
@@ -53,7 +60,7 @@
   --border: #e5e8ef;
   --text: #1b2130;
   --text-muted: #586373;
-  --shadow-card: 0 1px 2px rgba(17, 21, 31, 0.04), 0 8px 24px -12px rgba(17, 21, 31, 0.12);
+  --shadow-card: 0 1px 2px rgba(17, 21, 31, 0.05);
 
   /* ------------------------------------------------------------------
      Cores de TEXTO com o mesmo significado das cores de gráfico, porém
@@ -64,7 +71,7 @@
   --text-in: #0f766e;
   --text-out: #be123c;
   --text-warn: #b4451d;
-  --text-brand: #4f46e5;
+  --text-brand: #294f59;
 }
 
 /* Botões preenchidos: o contraste é do texto branco contra o próprio botão,
@@ -85,8 +92,8 @@
   --text-in: #2dd4bf;
   --text-out: #fb7185;
   --text-warn: #fb923c;
-  --text-brand: #a5b4fc;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --text-brand: #8fa9b0;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -169,9 +176,11 @@ body {
   transform: translateY(0);
 }
 
-/* Números monetários alinhados */
+/* Números monetários alinhados, em uma tipografia mono dedicada — assina os
+   valores como um produto financeiro sério, não como texto comum. */
 .tnum {
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
 
 ::-webkit-scrollbar {

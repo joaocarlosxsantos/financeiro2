@@ -192,7 +192,7 @@ export default async function DashboardPage({
           label="Sobrou"
           cents={sobrou}
           icon={Wallet}
-          color={sobrou >= 0 ? "#6366f1" : "#f43f5e"}
+          color={sobrou >= 0 ? "var(--text-brand)" : "#f43f5e"}
           caption={
             sobrou >= 0
               ? `Taxa de economia: ${rate}% da renda`
@@ -328,7 +328,7 @@ export default async function DashboardPage({
               hint="Moradia, contas, mercado, transporte, saúde"
               target={split.necessitiesCents}
               actual={summary.fixedCents}
-              color="#6366f1"
+              color="var(--text-brand)"
               share={50}
             />
             <SplitRow

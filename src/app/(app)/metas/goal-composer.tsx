@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/ui/button";
 const initial: ActionState = {};
 
 const KINDS = [
-  { value: "PURCHASE", label: "Compra", color: "#6366f1" },
+  { value: "PURCHASE", label: "Compra", color: "var(--text-brand)" },
   { value: "TRIP", label: "Viagem", color: "#0891b2" },
   { value: "DEBT_PAYOFF", label: "Quitar dívida", color: "#f43f5e" },
   { value: "INVESTMENT", label: "Investimento", color: "#0d9488" },
