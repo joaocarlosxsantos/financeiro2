@@ -377,6 +377,44 @@ export async function updateBillAmount(_prev: ActionState, formData: FormData): 
   return { ok: true };
 }
 
+/**
+ * Move (ou tira) uma conta de um agrupamento. Se a conta veio de uma regra
+ * recorrente, a regra também é atualizada — senão o mês que vem geraria a
+ * conta de volta no agrupamento antigo (a regra é quem decide o agrupamento
+ * das próximas gerações; ver comentário em `billRules` no schema).
+ */
+export async function updateBillGrouping(billId: string, groupingId: string | null): Promise<ActionState> {
+  const userId = await requireUserId();
+  const [bill] = await db
+    .select({ id: bills.id, ruleId: bills.ruleId })
+    .from(bills)
+    .where(and(eq(bills.id, billId), eq(bills.userId, userId)))
+    .limit(1);
+  if (!bill) return { error: "Conta não encontrada." };
+
+  if (groupingId) {
+    const [grouping] = await db
+      .select({ id: billGroupings.id })
+      .from(billGroupings)
+      .where(and(eq(billGroupings.id, groupingId), eq(billGroupings.userId, userId)))
+      .limit(1);
+    if (!grouping) return { error: "Agrupamento não encontrado." };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(bills).set({ groupingId, updatedAt: new Date() }).where(eq(bills.id, billId));
+    if (bill.ruleId) {
+      await tx
+        .update(billRules)
+        .set({ groupingId, updatedAt: new Date() })
+        .where(eq(billRules.id, bill.ruleId));
+    }
+  });
+
+  refresh();
+  return { ok: true };
+}
+
 export async function toggleBillPaid(id: string) {
   const userId = await requireUserId();
   const [bill] = await db

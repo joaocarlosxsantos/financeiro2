@@ -8,8 +8,9 @@ import {
   removeBillParticipant,
   toggleBillPaid,
   toggleParticipantPaid,
+  updateBillGrouping,
 } from "@/server/actions/bills";
-import { Input } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatCents } from "@/lib/money";
@@ -41,6 +42,7 @@ export function BillItem({
   bill,
   monthLabel,
   allBills,
+  groupings,
 }: {
   bill: PlainBillRow;
   /** Rótulo do mês pronto (ex. "setembro de 2026"), pra mensagem do WhatsApp. */
@@ -49,6 +51,8 @@ export function BillItem({
    * outras contas em grupo do MESMO agrupamento na hora de montar a mensagem
    * consolidada do WhatsApp (ver `shareLinkFor` abaixo). */
   allBills: PlainBillRow[];
+  /** Agrupamentos existentes, para o seletor de "mover de agrupamento". */
+  groupings: { id: string; name: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -161,6 +165,24 @@ export function BillItem({
 
       {open ? (
         <div className="space-y-3 px-4 pb-4">
+          <label className="flex items-center gap-2 text-[0.8125rem]">
+            <span className="muted shrink-0">Agrupamento</span>
+            <Select
+              value={bill.groupingId ?? ""}
+              onChange={(e) =>
+                start(async () => void (await updateBillGrouping(bill.id, e.target.value || null)))
+              }
+              className="h-8 flex-1 text-[0.8125rem]"
+            >
+              <option value="">Sem agrupamento</option>
+              {groupings.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+
           {bill.type === "GROUP" ? (
             <div className="space-y-1.5 rounded-xl border p-3">
               {bill.participants.map((p) => (
