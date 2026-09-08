@@ -1,6 +1,6 @@
 "use client";
 
-import { BillItem, type PlainBillRow } from "./bill-item";
+import { BillItem, type PlainBillRow, type PlainGroupingOption } from "./bill-item";
 
 export type { PlainBillRow };
 
@@ -12,7 +12,7 @@ export function BillList({
 }: {
   bills: PlainBillRow[];
   monthLabel: string;
-  groupings: { id: string; name: string }[];
+  groupings: PlainGroupingOption[];
 }) {
   const groups = new Map<string, { name: string; items: PlainBillRow[] }>();
   for (const b of bills) {

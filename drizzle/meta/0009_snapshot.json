@@ -230,13 +230,6 @@
           "notNull": true,
           "default": 0
         },
-        "paid": {
-          "name": "paid",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -526,13 +519,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "paid": {
-          "name": "paid",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "note": {
           "name": "note",

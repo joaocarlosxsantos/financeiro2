@@ -415,31 +415,6 @@ export async function updateBillGrouping(billId: string, groupingId: string | nu
   return { ok: true };
 }
 
-export async function toggleBillPaid(id: string) {
-  const userId = await requireUserId();
-  const [bill] = await db
-    .select({ paid: bills.paid })
-    .from(bills)
-    .where(and(eq(bills.id, id), eq(bills.userId, userId)))
-    .limit(1);
-  if (!bill) return;
-  await db.update(bills).set({ paid: !bill.paid, updatedAt: new Date() }).where(eq(bills.id, id));
-  refresh();
-}
-
-export async function toggleParticipantPaid(participantId: string) {
-  const userId = await requireUserId();
-  const [row] = await db
-    .select({ id: billParticipants.id, paid: billParticipants.paid })
-    .from(billParticipants)
-    .innerJoin(bills, eq(bills.id, billParticipants.billId))
-    .where(and(eq(billParticipants.id, participantId), eq(bills.userId, userId)))
-    .limit(1);
-  if (!row) return;
-  await db.update(billParticipants).set({ paid: !row.paid }).where(eq(billParticipants.id, participantId));
-  refresh();
-}
-
 export async function deleteBill(id: string) {
   const userId = await requireUserId();
   await db.delete(bills).where(and(eq(bills.id, id), eq(bills.userId, userId)));

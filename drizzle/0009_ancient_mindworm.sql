@@ -14,7 +14,6 @@ CREATE TABLE "bill_participants" (
 	"name" text NOT NULL,
 	"phone" text,
 	"amount_cents" integer DEFAULT 0 NOT NULL,
-	"paid" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -47,7 +46,6 @@ CREATE TABLE "bills" (
 	"year" integer NOT NULL,
 	"month" integer NOT NULL,
 	"total_cents" integer DEFAULT 0 NOT NULL,
-	"paid" boolean DEFAULT false NOT NULL,
 	"note" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL

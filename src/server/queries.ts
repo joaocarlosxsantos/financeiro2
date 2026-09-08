@@ -1187,7 +1187,6 @@ export type BillParticipantRow = {
   name: string;
   phone: string | null;
   amountCents: number;
-  paid: boolean;
 };
 
 export type BillRow = {
@@ -1198,7 +1197,6 @@ export type BillRow = {
   year: number;
   month: number;
   totalCents: number;
-  paid: boolean;
   note: string | null;
   groupingId: string | null;
   groupingName: string | null;
@@ -1217,7 +1215,6 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
         year: billsTable.year,
         month: billsTable.month,
         totalCents: billsTable.totalCents,
-        paid: billsTable.paid,
         note: billsTable.note,
         groupingId: billsTable.groupingId,
         groupingName: billGroupingsTable.name,
@@ -1236,7 +1233,6 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
         name: billParticipantsTable.name,
         phone: billParticipantsTable.phone,
         amountCents: billParticipantsTable.amountCents,
-        paid: billParticipantsTable.paid,
       })
       .from(billParticipantsTable)
       .innerJoin(billsTable, eq(billsTable.id, billParticipantsTable.billId))
@@ -1248,7 +1244,7 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
   const participantsByBill = new Map<string, BillParticipantRow[]>();
   for (const p of participants) {
     const list = participantsByBill.get(p.billId) ?? [];
-    list.push({ id: p.id, name: p.name, phone: p.phone, amountCents: p.amountCents, paid: p.paid });
+    list.push({ id: p.id, name: p.name, phone: p.phone, amountCents: p.amountCents });
     participantsByBill.set(p.billId, list);
   }
 

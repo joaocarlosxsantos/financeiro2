@@ -2,14 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { ChevronDown, ChevronUp, MessageCircle, Phone, Repeat, Trash2, UserPlus } from "lucide-react";
-import {
-  addBillParticipant,
-  deleteBill,
-  removeBillParticipant,
-  toggleBillPaid,
-  toggleParticipantPaid,
-  updateBillGrouping,
-} from "@/server/actions/bills";
+import { addBillParticipant, deleteBill, removeBillParticipant, updateBillGrouping } from "@/server/actions/bills";
 import { Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -22,7 +15,6 @@ export type PlainBillParticipant = {
   name: string;
   phone: string | null;
   amountCents: number;
-  paid: boolean;
 };
 
 export type PlainBill = {
@@ -31,12 +23,13 @@ export type PlainBill = {
   name: string;
   type: "INDIVIDUAL" | "GROUP";
   totalCents: number;
-  paid: boolean;
   participants: PlainBillParticipant[];
 };
 
 /** Uma conta com o agrupamento junto — é o formato que a lista do mês inteiro usa (ver `bill-list.tsx`). */
 export type PlainBillRow = PlainBill & { groupingId: string | null; groupingName: string | null };
+
+export type PlainGroupingOption = { id: string; name: string; color: string };
 
 export function BillItem({
   bill,
@@ -52,13 +45,13 @@ export function BillItem({
    * consolidada do WhatsApp (ver `shareLinkFor` abaixo). */
   allBills: PlainBillRow[];
   /** Agrupamentos existentes, para o seletor de "mover de agrupamento". */
-  groupings: { id: string; name: string }[];
+  groupings: PlainGroupingOption[];
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const confirm = useConfirm();
 
-  const paidCount = bill.participants.filter((p) => p.paid).length;
+  const currentGrouping = groupings.find((g) => g.id === bill.groupingId);
 
   /**
    * Link do WhatsApp com a mensagem já pronta pra essa pessoa. Se a conta tem
@@ -114,33 +107,16 @@ export function BillItem({
   return (
     <li className={pending ? "opacity-60" : undefined}>
       <div className="flex items-center gap-3 px-4 py-3">
-        {bill.type === "INDIVIDUAL" ? (
-          <button
-            type="button"
-            title={bill.paid ? "Marcar como pendente" : "Marcar como paga"}
-            onClick={() => start(async () => void (await toggleBillPaid(bill.id)))}
-            className={`flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-[0.625rem] font-bold ${
-              bill.paid
-                ? "border-emerald-500 bg-emerald-500 text-white"
-                : "border-[var(--border)] text-transparent"
-            }`}
-          >
-            ✓
-          </button>
-        ) : null}
-
         <div className="min-w-0 flex-1">
           <p className="truncate text-[0.875rem] font-medium">
             {bill.name}
             {bill.ruleId ? <Repeat className="muted ml-1.5 inline size-3 align-middle" /> : null}
           </p>
-          <p className="muted text-xs">
-            {bill.type === "GROUP" && bill.participants.length
-              ? `${paidCount} de ${bill.participants.length} pagaram`
-              : bill.paid
-                ? "paga"
-                : "pendente"}
-          </p>
+          {bill.type === "GROUP" && bill.participants.length ? (
+            <p className="muted text-xs">
+              {bill.participants.length} pessoa{bill.participants.length > 1 ? "s" : ""}
+            </p>
+          ) : null}
         </div>
 
         <span className="tnum text-[0.875rem] font-semibold">{formatCents(bill.totalCents)}</span>
@@ -164,91 +140,102 @@ export function BillItem({
       </div>
 
       {open ? (
-        <div className="space-y-3 px-4 pb-4">
-          <label className="flex items-center gap-2 text-[0.8125rem]">
-            <span className="muted shrink-0">Agrupamento</span>
-            <Select
-              value={bill.groupingId ?? ""}
-              onChange={(e) =>
-                start(async () => void (await updateBillGrouping(bill.id, e.target.value || null)))
-              }
-              className="h-8 flex-1 text-[0.8125rem]"
-            >
-              <option value="">Sem agrupamento</option>
-              {groupings.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          {bill.type === "GROUP" ? (
-            <div className="space-y-1.5 rounded-xl border p-3">
-              {bill.participants.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 text-[0.8125rem]">
-                  <button
-                    type="button"
-                    title={p.paid ? "Marcar como pendente" : "Marcar como pago"}
-                    onClick={() => start(async () => void (await toggleParticipantPaid(p.id)))}
-                    className={`flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-[0.5625rem] font-bold ${
-                      p.paid
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : "border-[var(--border)] text-transparent"
-                    }`}
-                  >
-                    ✓
-                  </button>
-                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                  {p.phone ? (
-                    <span className="muted flex shrink-0 items-center gap-1 text-xs">
-                      <Phone className="size-3" />
-                      {p.phone}
-                    </span>
-                  ) : null}
-                  <span className="tnum shrink-0 font-medium">{formatCents(p.amountCents)}</span>
-                  {(() => {
-                    const link = shareLinkFor(p);
-                    return (
-                      <a
-                        href={link ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={link ? `Enviar no WhatsApp para ${p.name}` : `Sem telefone válido para ${p.name}`}
-                        title={link ? "Enviar a parte dele no WhatsApp" : "Cadastre um telefone pra habilitar o WhatsApp"}
-                        onClick={(e) => {
-                          if (!link) e.preventDefault();
-                        }}
-                        className={`shrink-0 rounded-lg p-1 ${
-                          link
-                            ? "cursor-pointer text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
-                            : "muted cursor-not-allowed opacity-40"
-                        }`}
-                      >
-                        <MessageCircle className="size-3.5" />
-                      </a>
-                    );
-                  })()}
-                  <button
-                    type="button"
-                    aria-label={`Remover ${p.name}`}
-                    onClick={() => start(async () => void (await removeBillParticipant(p.id)))}
-                    className="muted shrink-0 cursor-pointer rounded-lg p-1 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                </div>
-              ))}
-              <AddParticipantForm billId={bill.id} />
+        <div className="space-y-4 border-t px-4 pt-3 pb-4">
+          {groupings.length ? (
+            <div>
+              <p className="muted mb-1.5 text-xs font-semibold tracking-wide uppercase">Agrupamento</p>
+              <div className="relative">
+                <span
+                  className={`pointer-events-none absolute top-1/2 left-3 size-2 -translate-y-1/2 rounded-full ${
+                    currentGrouping ? "" : "border-2 border-[var(--border)]"
+                  }`}
+                  style={currentGrouping ? { background: currentGrouping.color } : undefined}
+                />
+                <Select
+                  aria-label="Agrupamento"
+                  value={bill.groupingId ?? ""}
+                  onChange={(e) =>
+                    start(async () => void (await updateBillGrouping(bill.id, e.target.value || null)))
+                  }
+                  className="pl-7"
+                >
+                  <option value="">Sem agrupamento</option>
+                  {groupings.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           ) : null}
 
-          <BillAmountEditor
-            billId={bill.id}
-            totalCents={bill.totalCents}
-            participants={bill.participants.map((p) => ({ id: p.id, name: p.name, amountCents: p.amountCents }))}
-            onDone={() => setOpen(false)}
-          />
+          {bill.type === "GROUP" ? (
+            <div>
+              <p className="muted mb-1.5 text-xs font-semibold tracking-wide uppercase">Quem divide</p>
+              <div className="divide-y rounded-xl border">
+                {bill.participants.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 text-[0.8125rem]">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{p.name}</p>
+                      {p.phone ? (
+                        <p className="muted flex items-center gap-1 text-xs">
+                          <Phone className="size-3" />
+                          {p.phone}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="tnum shrink-0 font-medium">{formatCents(p.amountCents)}</span>
+                    {(() => {
+                      const link = shareLinkFor(p);
+                      return (
+                        <a
+                          href={link ?? undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={
+                            link ? `Enviar no WhatsApp para ${p.name}` : `Sem telefone válido para ${p.name}`
+                          }
+                          title={link ? "Enviar a parte dele no WhatsApp" : "Cadastre um telefone pra habilitar o WhatsApp"}
+                          onClick={(e) => {
+                            if (!link) e.preventDefault();
+                          }}
+                          className={`shrink-0 rounded-lg p-1.5 ${
+                            link
+                              ? "cursor-pointer text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                              : "muted cursor-not-allowed opacity-40"
+                          }`}
+                        >
+                          <MessageCircle className="size-3.5" />
+                        </a>
+                      );
+                    })()}
+                    <button
+                      type="button"
+                      aria-label={`Remover ${p.name}`}
+                      onClick={() => start(async () => void (await removeBillParticipant(p.id)))}
+                      className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <div className="bg-[var(--surface-2)] px-3 py-2">
+                  <AddParticipantForm billId={bill.id} />
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <p className="muted mb-1.5 text-xs font-semibold tracking-wide uppercase">Valor</p>
+            <BillAmountEditor
+              billId={bill.id}
+              totalCents={bill.totalCents}
+              participants={bill.participants.map((p) => ({ id: p.id, name: p.name, amountCents: p.amountCents }))}
+              onDone={() => setOpen(false)}
+            />
+          </div>
         </div>
       ) : null}
     </li>
@@ -261,7 +248,7 @@ function AddParticipantForm({ billId }: { billId: string }) {
   const [pending, start] = useTransition();
 
   return (
-    <div className="flex items-center gap-2 pt-1">
+    <div className="flex items-center gap-2">
       <Input
         placeholder="Nome"
         value={name}

@@ -504,8 +504,6 @@ export const bills = pgTable(
     year: integer("year").notNull(),
     month: integer("month").notNull(),
     totalCents: integer("total_cents").notNull().default(0),
-    /** Só usado quando `type` = INDIVIDUAL — conta em grupo usa o status por pessoa. */
-    paid: boolean("paid").notNull().default(false),
     note: text("note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -521,10 +519,12 @@ export const bills = pgTable(
 
 /**
  * Uma pessoa dentro de uma conta em grupo, com o quanto ela deve pagar
- * daquele mês e se já pagou. A soma de `amountCents` de todos os
- * participantes de uma conta sempre deve bater exatamente com `bills.totalCents`
- * — validado na ação do servidor, não aqui (Drizzle/Postgres não expressam
- * essa regra entre linhas de tabelas diferentes com uma constraint simples).
+ * daquele mês. A soma de `amountCents` de todos os participantes de uma
+ * conta sempre deve bater exatamente com `bills.totalCents` — validado na
+ * ação do servidor, não aqui (Drizzle/Postgres não expressam essa regra
+ * entre linhas de tabelas diferentes com uma constraint simples). Sem
+ * controle de "pago" por decisão do João — o objetivo aqui é só saber a
+ * parte de cada um e mandar a mensagem no WhatsApp, não cobrar.
  */
 export const billParticipants = pgTable(
   "bill_participants",
@@ -536,7 +536,6 @@ export const billParticipants = pgTable(
     name: text("name").notNull(),
     phone: text("phone"),
     amountCents: integer("amount_cents").notNull().default(0),
-    paid: boolean("paid").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("bill_participants_bill_idx").on(t.billId)],
