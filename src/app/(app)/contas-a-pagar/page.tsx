@@ -43,7 +43,7 @@ export default async function BillsPage({
         <div className="space-y-4">
           <Card className="p-0">
             {bills.length ? (
-              <BillList bills={bills} monthRef={ref} />
+              <BillList bills={bills} monthLabel={monthLabel(ref)} />
             ) : (
               <EmptyState
                 icon={Wallet}

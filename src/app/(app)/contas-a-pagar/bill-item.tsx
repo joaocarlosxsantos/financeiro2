@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, Phone, Repeat, Trash2, UserPlus } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageCircle, Phone, Repeat, Trash2, UserPlus } from "lucide-react";
 import {
   addBillParticipant,
   deleteBill,
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { formatCents } from "@/lib/money";
+import { buildBillShareMessage, buildWhatsAppLink } from "@/lib/whatsapp";
 import { BillAmountEditor } from "./bill-amount-editor";
 
 export type PlainBillParticipant = {
@@ -33,12 +34,67 @@ export type PlainBill = {
   participants: PlainBillParticipant[];
 };
 
-export function BillItem({ bill }: { bill: PlainBill }) {
+/** Uma conta com o agrupamento junto — é o formato que a lista do mês inteiro usa (ver `bill-list.tsx`). */
+export type PlainBillRow = PlainBill & { groupingId: string | null; groupingName: string | null };
+
+export function BillItem({
+  bill,
+  monthLabel,
+  allBills,
+}: {
+  bill: PlainBillRow;
+  /** Rótulo do mês pronto (ex. "setembro de 2026"), pra mensagem do WhatsApp. */
+  monthLabel: string;
+  /** Todas as contas do mês (mesmo de outros agrupamentos) — usado só pra achar
+   * outras contas em grupo do MESMO agrupamento na hora de montar a mensagem
+   * consolidada do WhatsApp (ver `shareLinkFor` abaixo). */
+  allBills: PlainBillRow[];
+}) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const confirm = useConfirm();
 
   const paidCount = bill.participants.filter((p) => p.paid).length;
+
+  /**
+   * Link do WhatsApp com a mensagem já pronta pra essa pessoa. Se a conta tem
+   * agrupamento, junta com as outras contas EM GRUPO do mesmo agrupamento onde
+   * uma pessoa de mesmo nome (comparação sem acento de maiúscula/minúscula)
+   * também participa — é o que o João pediu: mandar tudo num só texto, não uma
+   * mensagem por conta. Contas individuais do agrupamento ficam de fora (não
+   * têm "parte" de ninguém pra listar).
+   *
+   * O telefone usado é o dessa pessoa NESTA conta, mas se ela não tiver
+   * telefone cadastrado aqui, buscamos em outra conta do mesmo agrupamento
+   * onde ela tenha — assim não é preciso recadastrar o telefone em toda
+   * conta pra habilitar o botão.
+   */
+  function shareLinkFor(participant: PlainBillParticipant): string | null {
+    const siblings = bill.groupingId
+      ? allBills.filter((b) => b.groupingId === bill.groupingId && b.type === "GROUP")
+      : [bill];
+
+    const perSibling = siblings.map((b) => ({
+      bill: b,
+      match: b.participants.find((p) => p.name.trim().toLowerCase() === participant.name.trim().toLowerCase()),
+    }));
+
+    const entries = perSibling
+      .filter((s) => s.match)
+      .map((s) => ({ billName: s.bill.name, amountCents: s.match!.amountCents }));
+
+    if (!entries.length) entries.push({ billName: bill.name, amountCents: participant.amountCents });
+
+    const phone = participant.phone ?? perSibling.find((s) => s.match?.phone)?.match?.phone ?? null;
+
+    const message = buildBillShareMessage({
+      participantName: participant.name,
+      monthLabel,
+      groupingName: bill.groupingName,
+      entries,
+    });
+    return buildWhatsAppLink(phone, message);
+  }
 
   async function remove() {
     const ok = await confirm({
@@ -129,6 +185,28 @@ export function BillItem({ bill }: { bill: PlainBill }) {
                     </span>
                   ) : null}
                   <span className="tnum shrink-0 font-medium">{formatCents(p.amountCents)}</span>
+                  {(() => {
+                    const link = shareLinkFor(p);
+                    return (
+                      <a
+                        href={link ?? undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={link ? `Enviar no WhatsApp para ${p.name}` : `Sem telefone válido para ${p.name}`}
+                        title={link ? "Enviar a parte dele no WhatsApp" : "Cadastre um telefone pra habilitar o WhatsApp"}
+                        onClick={(e) => {
+                          if (!link) e.preventDefault();
+                        }}
+                        className={`shrink-0 rounded-lg p-1 ${
+                          link
+                            ? "cursor-pointer text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                            : "muted cursor-not-allowed opacity-40"
+                        }`}
+                      >
+                        <MessageCircle className="size-3.5" />
+                      </a>
+                    );
+                  })()}
                   <button
                     type="button"
                     aria-label={`Remover ${p.name}`}

@@ -1,12 +1,11 @@
 "use client";
 
-import { BillItem, type PlainBill } from "./bill-item";
-import type { MonthRef } from "@/lib/dates";
+import { BillItem, type PlainBillRow } from "./bill-item";
 
-export type PlainBillRow = PlainBill & { groupingId: string | null; groupingName: string | null };
+export type { PlainBillRow };
 
 /** Lista as contas do mês, agrupadas pelo agrupamento escolhido (ou "Sem agrupamento"). */
-export function BillList({ bills }: { bills: PlainBillRow[]; monthRef: MonthRef }) {
+export function BillList({ bills, monthLabel }: { bills: PlainBillRow[]; monthLabel: string }) {
   const groups = new Map<string, { name: string; items: PlainBillRow[] }>();
   for (const b of bills) {
     const key = b.groupingId ?? "__none__";
@@ -24,7 +23,7 @@ export function BillList({ bills }: { bills: PlainBillRow[]; monthRef: MonthRef 
           </p>
           <ul className="divide-y">
             {group.items.map((bill) => (
-              <BillItem key={bill.id} bill={bill} />
+              <BillItem key={bill.id} bill={bill} monthLabel={monthLabel} allBills={bills} />
             ))}
           </ul>
         </div>
