@@ -13,10 +13,13 @@ export type PlainGrouping = { id: string; name: string; color: string };
 
 /**
  * Um único formulário para os dois jeitos de criar conta: recorrente (vira
- * regra, sem valor — o valor de cada mês é preenchido depois) ou avulsa
- * ("única deste mês", já nasce presa a este mês). Conta em grupo mostra as
- * linhas de pessoa (nome + telefone); o valor e a divisão vêm só depois,
- * editando a conta já criada.
+ * regra, sem valor — regra não tem dinheiro próprio, cada mês tem o seu, só
+ * dá pra preencher depois que a conta do mês existir) ou avulsa ("única deste
+ * mês", já nasce presa a este mês — essa já pode receber o valor na hora,
+ * pra não obrigar a criar e já ter que abrir de novo só pra digitar quanto é).
+ * Conta em grupo mostra as linhas de pessoa (nome + telefone); se um valor for
+ * informado na criação, ele já nasce dividido igualmente entre elas (dá pra
+ * trocar pra divisão manual depois, editando a conta já criada).
  */
 export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[]; monthRef: MonthRef }) {
   const [state, formAction] = useActionState(createBill, initial);
@@ -63,6 +66,24 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
           </Select>
         </Field>
       </div>
+
+      {!recurring ? (
+        <Field
+          label="Valor total"
+          hint={
+            type === "GROUP"
+              ? "Opcional — se preencher, começa dividido igualmente entre as pessoas abaixo. Dá pra ajustar depois."
+              : "Opcional — dá pra deixar em branco e preencher depois, abrindo a conta na lista."
+          }
+        >
+          <Input name="total" inputMode="decimal" placeholder="0,00" />
+        </Field>
+      ) : (
+        <p className="muted -mt-1 text-xs leading-relaxed">
+          Conta recorrente não tem valor fixo — depois que a conta deste mês for gerada (veja o
+          aviso no topo da lista), o valor é preenchido mês a mês, abrindo a conta na lista.
+        </p>
+      )}
 
       {groupings.length ? (
         <Field label="Agrupamento" hint="Opcional — só para organizar.">

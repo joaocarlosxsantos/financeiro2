@@ -217,7 +217,14 @@ const oneOffSchema = z.object({
   month: z.coerce.number().int().min(1).max(12),
 });
 
-/** Conta "única daquele mês" — sem regra recorrente por trás. */
+/**
+ * Conta "única daquele mês" — sem regra recorrente por trás. O valor total é
+ * opcional na criação (dá pra deixar em branco e preencher depois, igual à
+ * regra recorrente) — mas como essa já nasce presa a um mês, não custa deixar
+ * preencher de uma vez. Em grupo, um valor informado aqui já nasce dividido
+ * igualmente entre as pessoas — é só o ponto de partida, dá pra trocar pra
+ * divisão manual depois editando a conta.
+ */
 export async function createOneOffBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
   const parsed = oneOffSchema.safeParse({
@@ -235,6 +242,9 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
     return { error: "Informe ao menos uma pessoa para dividir a conta." };
   }
 
+  const totalCents = Math.abs(parseMoneyToCents(formData.get("total") as string | null));
+  const shares = totalCents > 0 && participants.length ? splitBillEqually(totalCents, participants.length) : null;
+
   await db.transaction(async (tx) => {
     const [bill] = await tx
       .insert(bills)
@@ -246,14 +256,19 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
         type: d.type,
         year: d.year,
         month: d.month,
-        totalCents: 0,
+        totalCents,
       })
       .returning({ id: bills.id });
 
     if (participants.length) {
-      await tx
-        .insert(billParticipants)
-        .values(participants.map((p) => ({ billId: bill.id, name: p.name, phone: p.phone, amountCents: 0 })));
+      await tx.insert(billParticipants).values(
+        participants.map((p, i) => ({
+          billId: bill.id,
+          name: p.name,
+          phone: p.phone,
+          amountCents: shares ? shares[i] : 0,
+        })),
+      );
     }
   });
 
