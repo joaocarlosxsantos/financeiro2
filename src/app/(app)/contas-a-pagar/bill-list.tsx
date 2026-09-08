@@ -1,6 +1,7 @@
 "use client";
 
 import { BillItem, type PlainBillRow, type PlainGroupingOption } from "./bill-item";
+import { formatCents } from "@/lib/money";
 
 export type { PlainBillRow };
 
@@ -24,24 +25,28 @@ export function BillList({
 
   return (
     <div className="divide-y">
-      {[...groups.entries()].map(([key, group]) => (
-        <div key={key}>
-          <p className="muted bg-[var(--surface-2)] px-4 py-2 text-xs font-semibold tracking-wide uppercase">
-            {group.name}
-          </p>
-          <ul className="divide-y">
-            {group.items.map((bill) => (
-              <BillItem
-                key={bill.id}
-                bill={bill}
-                monthLabel={monthLabel}
-                allBills={bills}
-                groupings={groupings}
-              />
-            ))}
-          </ul>
-        </div>
-      ))}
+      {[...groups.entries()].map(([key, group]) => {
+        const groupTotalCents = group.items.reduce((sum, b) => sum + b.totalCents, 0);
+        return (
+          <div key={key}>
+            <div className="muted flex items-center justify-between gap-3 bg-[var(--surface-2)] px-4 py-2">
+              <p className="text-xs font-semibold tracking-wide uppercase">{group.name}</p>
+              <p className="tnum text-xs font-semibold">{formatCents(groupTotalCents)}</p>
+            </div>
+            <ul className="divide-y">
+              {group.items.map((bill) => (
+                <BillItem
+                  key={bill.id}
+                  bill={bill}
+                  monthLabel={monthLabel}
+                  allBills={bills}
+                  groupings={groupings}
+                />
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }
