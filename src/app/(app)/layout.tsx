@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ConfirmProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen flex-col lg:flex-row">
         <a href="#conteudo" className="skip-link">
           Pular para o conteúdo
         </a>
