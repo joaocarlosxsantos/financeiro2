@@ -144,6 +144,13 @@ body {
   .input-base::placeholder {
     color: var(--text-muted);
   }
+  /* select usa .input-base mas nunca quebra linha — sem isso, uma opção
+     comprida corta no meio da palavra em vez de reticenciar. */
+  select.input-base {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* ------------------------------------------------------------------
