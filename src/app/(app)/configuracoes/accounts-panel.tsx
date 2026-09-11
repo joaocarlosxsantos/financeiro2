@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { ArchiveRestore, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArchiveRestore, Pencil, Plus, Trash2, Wallet } from "lucide-react";
 import {
   createAccount,
   deleteAccount,
@@ -11,6 +11,7 @@ import {
   type ActionState,
 } from "@/server/actions/settings";
 import { Field, Input, Select } from "@/components/ui/field";
+import { EmptyState } from "@/components/ui/empty";
 import { Button, SubmitButton } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -122,7 +123,13 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
           </li>
         ))}
         {!active.length ? (
-          <li className="muted px-4 py-6 text-center text-[0.8125rem]">Nenhuma conta cadastrada.</li>
+          <li>
+            <EmptyState
+              icon={Wallet}
+              title="Nenhuma conta cadastrada"
+              description="Toda movimentação precisa estar em uma conta. Crie a primeira abaixo — pode ser sua conta corrente, um cartão ou até dinheiro em espécie."
+            />
+          </li>
         ) : null}
       </ul>
 
