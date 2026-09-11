@@ -137,6 +137,13 @@ body {
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
+  /* Sinaliza "isto é editável" antes do clique — sem isso, um valor dentro
+     de uma linha de dados (ex.: saldo devedor em Dívidas, limite em
+     Orçamento) só se revela clicável ao focar, tarde demais para quem só
+     passou o mouse por cima. */
+  .input-base:hover:not(:disabled):not(:focus) {
+    border-color: var(--color-brand-300);
+  }
   .input-base:focus {
     border-color: var(--color-brand-400);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 18%, transparent);
