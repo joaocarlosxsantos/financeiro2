@@ -65,9 +65,25 @@ const CSV_HEADERS: (keyof ExportRow)[] = [
   "Observação",
 ];
 
-/** Escapa um campo para CSV: aspas duplas quando tem vírgula, aspas ou quebra de linha. */
+/** Início de fórmula que Excel/Sheets podem executar ao abrir o CSV
+ * ("CSV/Formula injection" — ver OWASP). Só entra aqui texto livre (nome,
+ * descrição, observação); o valor em dinheiro é sempre `number`, nunca passa
+ * por essa checagem. */
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+
+/**
+ * Escapa um campo para CSV: aspas duplas quando tem vírgula, aspas, ";" ou
+ * quebra de linha, e neutraliza (prefixando com `'`) texto que comece com
+ * `=`, `+`, `-`, `@`, tab ou retorno de carro — sem isso, uma descrição ou
+ * observação digitada (ou vinda de um extrato importado) começando com um
+ * desses caracteres pode ser interpretada como fórmula ao abrir o arquivo no
+ * Excel/Google Sheets.
+ */
 function csvField(value: string | number): string {
-  const s = String(value);
+  let s = String(value);
+  if (typeof value === "string" && FORMULA_TRIGGER.test(s)) {
+    s = `'${s}`;
+  }
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

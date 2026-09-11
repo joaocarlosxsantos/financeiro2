@@ -44,3 +44,23 @@ test("csv usa ; como separador e escapa vírgula/aspas no valor", () => {
   assert.equal(lines[0].split(";")[0], "Data");
   assert.match(lines[1], /"Loja ""Boa, Rápida"""/);
 });
+
+test("texto começando com =, +, -, @ vira neutralizado no CSV (evita fórmula ao abrir no Excel/Sheets)", () => {
+  const rows = buildExportRows([
+    { ...base, description: "=SOMA(1;2)" },
+    { ...base, notes: "+cmd|' /c calc'!A1" },
+    { ...base, categoryName: "@SUM(A1)" },
+  ]);
+  const csv = rowsToCsv(rows);
+  const lines = csv.replace(/^﻿/, "").split("\r\n").slice(1);
+  assert.match(lines[0], /"'=SOMA\(1;2\)"/);
+  assert.match(lines[1], /'\+cmd/);
+  assert.match(lines[2], /'@SUM\(A1\)/);
+});
+
+test("valor negativo continua número puro no CSV, sem virar texto neutralizado", () => {
+  const rows = buildExportRows([base]); // despesa -> "Valor (R$)" negativo
+  const csv = rowsToCsv(rows);
+  const cols = csv.replace(/^﻿/, "").split("\r\n")[1].split(";");
+  assert.equal(cols[6], "-123.45");
+});
