@@ -28,6 +28,22 @@ function refresh() {
   revalidatePath("/contas-a-pagar");
 }
 
+/**
+ * Confere que o agrupamento pertence mesmo a quem está criando a conta —
+ * mesma checagem que `updateBillGrouping` já faz ao mover uma conta existente,
+ * só que também na criação (sem isso, dava pra criar uma conta apontando para
+ * o `groupingId` de outra pessoa, vazando o nome/cor do agrupamento dela).
+ */
+async function verifyGroupingOwnership(userId: string, groupingId: string | null): Promise<string | null> {
+  if (!groupingId) return null;
+  const [grouping] = await db
+    .select({ id: billGroupings.id })
+    .from(billGroupings)
+    .where(and(eq(billGroupings.id, groupingId), eq(billGroupings.userId, userId)))
+    .limit(1);
+  return grouping ? null : "Agrupamento não encontrado.";
+}
+
 // ---------------------------------------------------------------- agrupamentos
 
 const groupingSchema = z.object({
@@ -111,6 +127,9 @@ export async function createBillRule(_prev: ActionState, formData: FormData): Pr
   if (d.type === "GROUP" && !participants.length) {
     return { error: "Informe ao menos uma pessoa para dividir a conta." };
   }
+
+  const groupingError = await verifyGroupingOwnership(userId, d.groupingId || null);
+  if (groupingError) return { error: groupingError };
 
   await db.transaction(async (tx) => {
     const [rule] = await tx
@@ -241,6 +260,9 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
   if (d.type === "GROUP" && !participants.length) {
     return { error: "Informe ao menos uma pessoa para dividir a conta." };
   }
+
+  const groupingError = await verifyGroupingOwnership(userId, d.groupingId || null);
+  if (groupingError) return { error: groupingError };
 
   const totalCents = Math.abs(parseMoneyToCents(formData.get("total") as string | null));
   const shares = totalCents > 0 && participants.length ? splitBillEqually(totalCents, participants.length) : null;

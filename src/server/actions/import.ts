@@ -338,8 +338,19 @@ export async function commitImport(input: {
     return { error: "Escolha o mês de referência da fatura antes de importar." };
   }
 
-  const rows = input.rows.filter((r) => !r.duplicate && r.amountCents > 0);
-  if (!rows.length) return { error: "Nenhuma linha selecionada para importar." };
+  const filteredRows = input.rows.filter((r) => !r.duplicate && r.amountCents > 0);
+  if (!filteredRows.length) return { error: "Nenhuma linha selecionada para importar." };
+
+  // As linhas da prévia voltam do navegador (o usuário confere/edita antes de
+  // confirmar), então o `categoryId` de cada uma não é confiável por si só —
+  // sem essa checagem, seria possível gravar um lançamento seu apontando para
+  // a categoria de outra pessoa (o nome/cor dela vazaria pro seu extrato via
+  // JOIN). Categoria que não é do usuário vira "sem categoria" em vez de
+  // travar a importação inteira.
+  const ownCategoryIds = new Set(
+    (await db.select({ id: categories.id }).from(categories).where(eq(categories.userId, userId))).map((c) => c.id),
+  );
+  const rows = filteredRows.map((r) => (r.categoryId && !ownCategoryIds.has(r.categoryId) ? { ...r, categoryId: null } : r));
 
   const replacePeriod = input.replacePeriod ?? true;
   const period = isCard && invoiceRef ? invoicePeriodRange(invoiceRef) : periodRangeFor(rows);

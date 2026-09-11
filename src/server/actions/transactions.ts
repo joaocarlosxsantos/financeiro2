@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, transactions } from "@/db/schema";
+import { accounts, categories, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents } from "@/lib/money";
 import { fingerprint } from "@/lib/categorize";
@@ -44,6 +44,37 @@ function refresh() {
   revalidatePath("/painel");
 }
 
+/**
+ * Confere que a conta (e a categoria, se informada) pertencem mesmo a quem
+ * está fazendo a gravação — sem isso, alguém poderia gravar um lançamento seu
+ * apontando para o `accountId`/`categoryId` de outra pessoa (o nome/cor da
+ * conta ou categoria de outro usuário vazaria pro seu próprio extrato via
+ * JOIN). Mesmo padrão de checagem já usado no resto do código.
+ */
+async function verifyAccountAndCategory(
+  userId: string,
+  accountId: string,
+  categoryId: string | null,
+): Promise<string | null> {
+  const [account] = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+    .limit(1);
+  if (!account) return "Conta inválida.";
+
+  if (categoryId) {
+    const [category] = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)))
+      .limit(1);
+    if (!category) return "Categoria inválida.";
+  }
+
+  return null;
+}
+
 export async function createTransaction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
   const parsed = readForm(formData);
@@ -52,6 +83,9 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
   const d = parsed.data;
   const amountCents = Math.abs(parseMoneyToCents(d.amount));
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
+
+  const ownershipError = await verifyAccountAndCategory(userId, d.accountId, d.categoryId || null);
+  if (ownershipError) return { error: ownershipError };
 
   const date = new Date(`${d.date}T12:00:00.000Z`);
   const installments = d.installments ?? 1;
@@ -104,6 +138,9 @@ export async function updateTransaction(id: string, formData: FormData): Promise
   const d = parsed.data;
   const amountCents = Math.abs(parseMoneyToCents(d.amount));
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
+
+  const ownershipError = await verifyAccountAndCategory(userId, d.accountId, d.categoryId || null);
+  if (ownershipError) return { error: ownershipError };
 
   await db
     .update(transactions)
