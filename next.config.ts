@@ -15,6 +15,23 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/exportar/relatorio": ["./node_modules/pdfkit/**/*"],
   },
+  // Cabeçalhos de segurança que o app não tinha (a Vercel já garante HTTPS,
+  // mas nenhum deles vem por padrão do Next.js): impedem o site de ser
+  // carregado dentro de um <iframe> em outro site (clickjacking), impedem o
+  // navegador de "adivinhar" o tipo de um arquivo servido (MIME sniffing), e
+  // reduzem a URL enviada como referrer para fora do próprio site.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
