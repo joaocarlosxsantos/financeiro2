@@ -83,7 +83,7 @@ export const accounts = pgTable(
     name: text("name").notNull(),
     type: accountType("type").notNull().default("CHECKING"),
     institution: text("institution"),
-    color: varchar("color", { length: 9 }).notNull().default("#6366f1"),
+    color: varchar("color", { length: 9 }).notNull().default("#294f59"),
     /**
      * Quanto havia nesta conta no dia em que você começou a usar o sistema.
      * Sem isso não dá para saber o saldo — o app só conhece os lançamentos.

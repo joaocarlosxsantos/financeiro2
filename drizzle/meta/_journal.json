@@ -71,6 +71,13 @@
       "when": 1788794491822,
       "tag": "0009_ancient_mindworm",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789089355782,
+      "tag": "0010_update_account_default_color",
+      "breakpoints": true
     }
   ]
 }

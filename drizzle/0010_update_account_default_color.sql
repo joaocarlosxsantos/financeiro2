@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ALTER COLUMN "color" SET DEFAULT '#294f59';

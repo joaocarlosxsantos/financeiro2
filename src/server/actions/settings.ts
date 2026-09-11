@@ -89,7 +89,7 @@ export async function createAccount(_prev: ActionState, formData: FormData): Pro
     name: parsed.data.name,
     type: parsed.data.type,
     institution: parsed.data.institution || null,
-    color: parsed.data.color || "#6366f1",
+    color: parsed.data.color || "#294f59",
   });
 
   revalidatePath("/configuracoes");
@@ -266,7 +266,7 @@ export async function updateAccount(_prev: ActionState, formData: FormData): Pro
       name: parsed.data.name,
       type: parsed.data.type,
       institution: parsed.data.institution || null,
-      color: parsed.data.color || "#6366f1",
+      color: parsed.data.color || "#294f59",
     })
     .where(and(eq(accounts.id, id), eq(accounts.userId, userId)));
 

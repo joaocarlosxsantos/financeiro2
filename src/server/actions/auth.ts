@@ -48,7 +48,7 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   // Categorias e contas prontas para o usuário começar a usar hoje.
   await db.insert(categories).values(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id })));
   await db.insert(accounts).values([
-    { userId: user.id, name: "Conta corrente", type: "CHECKING" as const, color: "#6366f1" },
+    { userId: user.id, name: "Conta corrente", type: "CHECKING" as const, color: "#294f59" },
     { userId: user.id, name: "Cartão de crédito", type: "CREDIT_CARD" as const, color: "#f43f5e" },
   ]);
 

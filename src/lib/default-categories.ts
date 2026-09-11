@@ -20,7 +20,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { name: "Rendimentos", kind: "INCOME", nature: "VARIABLE", color: "#14b8a6", icon: "trending-up", keywords: ["rendimento", "juros", "dividendo", "cdb", "tesouro", "resgate"] },
 
   // ---------------- gastos fixos
-  { name: "Moradia", kind: "EXPENSE", nature: "FIXED", color: "#6366f1", icon: "home", keywords: ["aluguel", "condominio", "condomínio", "iptu", "financiamento imovel"] },
+  { name: "Moradia", kind: "EXPENSE", nature: "FIXED", color: "#3b82f6", icon: "home", keywords: ["aluguel", "condominio", "condomínio", "iptu", "financiamento imovel"] },
   { name: "Contas de casa", kind: "EXPENSE", nature: "FIXED", color: "#8b5cf6", icon: "plug", keywords: ["energia", "luz", "enel", "cemig", "copel", "agua", "água", "sabesp", "gas", "gás", "internet", "vivo", "claro", "tim", "oi"] },
   { name: "Educação", kind: "EXPENSE", nature: "FIXED", color: "#0ea5e9", icon: "graduation-cap", keywords: ["escola", "faculdade", "curso", "mensalidade", "udemy", "alura"] },
   { name: "Saúde", kind: "EXPENSE", nature: "FIXED", color: "#06b6d4", icon: "heart-pulse", keywords: ["plano de saude", "unimed", "amil", "farmacia", "farmácia", "drogaria", "consulta", "dentista"] },
