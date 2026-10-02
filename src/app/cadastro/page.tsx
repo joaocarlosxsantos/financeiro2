@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChartPie } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { RegisterForm } from "./register-form";
 
@@ -14,21 +13,23 @@ export default async function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-            <ChartPie className="size-4.5" />
+          <div className="flex size-8 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-brand)]">
+            <span className="font-display text-base font-bold leading-none">F</span>
           </div>
-          <span className="text-[0.9375rem] font-semibold tracking-tight">Financeiro 2.0</span>
+          <span className="font-display text-base font-medium tracking-tight text-[var(--text)]">
+            Financeiro <span className="text-xs font-normal text-[var(--text-muted)]">2.0</span>
+          </span>
         </Link>
 
         <div className="card p-7">
-          <h1 className="text-xl font-semibold tracking-tight">Criar sua conta</h1>
-          <p className="muted mt-1 mb-6 text-[0.8125rem]">
-            Leva um minuto. Já deixamos categorias e contas prontas para você.
+          <h1 className="font-display text-xl font-medium tracking-tight">Criar conta</h1>
+          <p className="muted mt-1 mb-6 text-xs">
+            Categorias e contas iniciais prontas para uso.
           </p>
           <RegisterForm />
         </div>
 
-        <p className="muted mt-6 text-center text-[0.8125rem]">
+        <p className="muted mt-6 text-center text-xs">
           Já tem conta?{" "}
           <Link href="/login" className="font-medium text-brand-600 hover:underline dark:text-brand-300">
             Entrar

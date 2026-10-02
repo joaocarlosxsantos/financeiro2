@@ -29,6 +29,41 @@ export function formatCents(cents: number): string {
   return BRL.format(noNegativeZero((cents ?? 0) / 100));
 }
 
+export interface MoneyParts {
+  negative: boolean;
+  currency: string;
+  integer: string;
+  decimal: string;
+  fraction: string;
+}
+
+export function formatCentsParts(cents: number): MoneyParts {
+  const safe = noNegativeZero(cents ?? 0);
+  const negative = safe < 0;
+  const absValue = Math.abs(safe) / 100;
+  const parts = BRL.formatToParts(absValue);
+
+  let currency = "R$";
+  let integer = "";
+  let decimal = ",";
+  let fraction = "00";
+
+  for (const p of parts) {
+    if (p.type === "currency") currency = p.value;
+    else if (p.type === "integer" || p.type === "group") integer += p.value;
+    else if (p.type === "decimal") decimal = p.value;
+    else if (p.type === "fraction") fraction = p.value;
+  }
+
+  return {
+    negative,
+    currency,
+    integer: integer || "0",
+    decimal,
+    fraction,
+  };
+}
+
 export function formatCentsCompact(cents: number): string {
   const v = noNegativeZero((cents ?? 0) / 100);
   return Math.abs(v) >= 10000 ? BRL_COMPACT.format(v) : BRL.format(v);

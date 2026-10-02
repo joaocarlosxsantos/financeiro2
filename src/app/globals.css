@@ -6,94 +6,209 @@
 
 /* ------------------------------------------------------------------
    Financeiro 2.0 — design tokens
-   Paleta calma, com verde para "entrou", rosa para "saiu" e um grafite
-   petróleo discreto como cor de ação. Contraste conferido para leitura
-   confortável.
+   Direção visual: "caderno de contas" (papel de livro-caixa com tinta).
+   Paleta clara e escura com contraste WCAG AA rigoroso em ambos os temas.
 ------------------------------------------------------------------- */
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-instrument-sans), var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  --color-ink-50: #f6f7f9;
-  --color-ink-100: #eceff3;
-  --color-ink-200: #dbe0e8;
-  --color-ink-300: #b9c2d0;
-  --color-ink-400: #8d99ab;
-  --color-ink-500: #68748a;
-  --color-ink-600: #4e5a6e;
-  --color-ink-700: #3c4557;
-  --color-ink-800: #2a3140;
-  --color-ink-900: #1b2130;
-  --color-ink-950: #11151f;
+  /* Escala tipográfica fixa (5 tamanhos em tokens) */
+  --font-size-caption: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-title: 1.25rem;
+  --font-size-hero: 1.75rem;
 
-  /* Grafite/petróleo — cor de ação e identidade, no lugar do índigo padrão de
-     template. Usada só na navegação ativa, botões primários e links; nunca
-     como decoração. */
-  --color-brand-50: #eef3f4;
-  --color-brand-100: #dde7ea;
-  --color-brand-200: #b9ccd1;
-  --color-brand-300: #8fa9b0;
-  --color-brand-400: #62838c;
-  --color-brand-500: #3f6570;
-  --color-brand-600: #294f59;
-  --color-brand-700: #1c3941;
-  --color-brand-800: #16292f;
-  --color-brand-900: #101d21;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-sub: 0.875rem;
+  --text-sub--line-height: 1.25rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.75rem;
+  --text-display: 1.75rem;
+  --text-display--line-height: 2.125rem;
 
-  --color-money-in: #0d9488;
-  --color-money-in-soft: #ccfbf1;
-  --color-money-out: #f43f5e;
-  --color-money-out-soft: #ffe4e6;
-  --color-save: #0891b2;
-  --color-fixed: #294f59;
-  --color-variable: #d95926;
-  --color-save-soft: #cffafe;
+  /* Escala de tinta quente derivada de papel #F4EFE6 e texto #1E1A16 */
+  --color-ink-50: #FBF8F2;
+  --color-ink-100: #F4EFE6;
+  --color-ink-200: #E8E0D1;
+  --color-ink-300: #D9D0BF;
+  --color-ink-400: #A89E90;
+  --color-ink-500: #6B6256;
+  --color-ink-600: #524A40;
+  --color-ink-700: #3C352D;
+  --color-ink-800: #2B251F;
+  --color-ink-900: #1E1A16;
+  --color-ink-950: #14110E;
 
-  --radius-xl2: 0.875rem;
+  /* Tinta de marca — Azul Nanquim (#1F3A5F) e nanquim claro (#8FB0DD) */
+  --color-brand-50: #F1F5FA;
+  --color-brand-100: #DEE8F4;
+  --color-brand-200: #BFD3EC;
+  --color-brand-300: #8FB0DD;
+  --color-brand-400: #547EAE;
+  --color-brand-500: #294D7B;
+  --color-brand-600: #1F3A5F;
+  --color-brand-700: #162943;
+  --color-brand-800: #0F1D30;
+  --color-brand-900: #0A1320;
+
+  /* Cores semânticas financeiras da nova paleta */
+  --color-money-in: #2F6B4F;
+  --color-money-in-soft: #E3EDE7;
+  --color-money-out: #B4412F;
+  --color-money-out-soft: #FBECE9;
+  --color-save: #1F3A5F;
+  --color-fixed: #1F3A5F;
+  --color-variable: #BA7F16;
+  --color-save-soft: #E2EAF3;
+  --color-warn-soft: #FAF3E0;
+
+  /* Tokens semânticos diretos do caderno de contas */
+  --color-paper: #F4EFE6;
+  --color-surface: #FBF8F2;
+  --color-line: #D9D0BF;
+  --color-nanquim: #1F3A5F;
+  --color-nanquim-light: #8FB0DD;
+  --color-entrou: #2F6B4F;
+  --color-saiu: #B4412F;
+  --color-atencao: #BA7F16;
+  --color-acento: #C2571A;
+
+  /* Raios 4-6px */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-xl2: 6px;
 }
 
 :root {
-  --bg: #f5f6f9;
-  --surface: #ffffff;
-  --surface-2: #fafbfd;
-  --border: #e5e8ef;
-  --text: #1b2130;
-  --text-muted: #586373;
-  --shadow-card: 0 1px 2px rgba(17, 21, 31, 0.05);
+  /* Paleta clara */
+  --bg: #F4EFE6;
+  --surface: #FBF8F2;
+  --surface-2: #FAF5EB;
+  --border: #D9D0BF;
+  --text: #1E1A16;
+  --text-muted: #6B6256;
+  --shadow-card: 0 1px 2px rgba(30, 26, 22, 0.04);
+  --shadow-sm: 0 1px 2px rgba(30, 26, 22, 0.03);
 
-  /* ------------------------------------------------------------------
-     Cores de TEXTO com o mesmo significado das cores de gráfico, porém
-     escurecidas até passar 4.5:1 (WCAG AA para texto normal).
-     As cores de marca (--color-money-*) continuam valendo para barras,
-     pontos e preenchimentos, onde o mínimo é 3:1.
-  ------------------------------------------------------------------- */
-  --text-in: #0f766e;
-  --text-out: #be123c;
-  --text-warn: #b4451d;
-  --text-brand: #294f59;
+  /* Cores de texto/glifo com contraste WCAG AA garantido (>= 4.5:1) */
+  --text-in: #2F6B4F;      /* 5.94:1 sobre #FBF8F2, 5.49:1 sobre #F4EFE6 */
+  --text-out: #B4412F;     /* 5.30:1 sobre #FBF8F2, 4.91:1 sobre #F4EFE6 */
+  --text-warn: #8C5E0B;    /* 5.32:1 sobre #FBF8F2, 4.93:1 sobre #F4EFE6 */
+  --text-brand: #1F3A5F;   /* 10.83:1 sobre #FBF8F2, 10.03:1 sobre #F4EFE6 */
+  --text-accent: #9E3E0A;  /* 6.29:1 sobre #FBF8F2, 5.83:1 sobre #F4EFE6 */
+
+  /* Aliases de compatibilidade */
+  --warning: var(--text-warn);
+  --danger: var(--text-out);
+
+  /* Cores financeiras no tema claro */
+  --color-money-in: #2F6B4F;
+  --color-money-in-soft: #E3EDE7;
+  --color-money-out: #B4412F;
+  --color-money-out-soft: #FBECE9;
+  --color-save: #1F3A5F;
+  --color-save-soft: #E2EAF3;
+  --color-fixed: #1F3A5F;
+  --color-variable: #BA7F16;
+
+  /* Tokens diretos: --atencao (#BA7F16) restrito a preenchimentos/barras gráficos.
+     Para texto/glifos, usar sempre --text-warn (#8C5E0B, 5.32:1). */
+  --paper: #F4EFE6;
+  --line: #D9D0BF;
+  --nanquim: #1F3A5F;
+  --entrou: #2F6B4F;
+  --saiu: #B4412F;
+  --atencao: #BA7F16;
+  --acento: #C2571A;
+
+  /* Escala tipográfica 5 tamanhos */
+  --text-size-1: 0.75rem;
+  --text-size-2: 0.875rem;
+  --text-size-3: 1rem;
+  --text-size-4: 1.25rem;
+  --text-size-5: 1.75rem;
+
+  --font-size-caption: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-title: 1.25rem;
+  --font-size-hero: 1.75rem;
+
+  --radius-card: 6px;
+  --radius-input: 4px;
+
+  /* Cores de fundo e borda para alertas e dicas (Hint) */
+  --color-warn-soft: #FAF3E0;
+  --border-warn: #E6D4A5;
+  --border-out: #F3C5BC;
+  --border-in: #C5DFD0;
+  --border-brand: #C8D7E8;
 }
 
-/* Botões preenchidos: o contraste é do texto branco contra o próprio botão,
-   então valem os mesmos tons nos dois temas. */
 :root,
 .dark {
-  --btn-in: #0f766e;
-  --btn-out: #be123c;
+  --btn-in: #2F6B4F;
+  --btn-out: #B4412F;
+  --btn-brand: #1F3A5F;
+  --btn-accent: #C2571A;
 }
 
 .dark {
-  --bg: #0d1017;
-  --surface: #151a24;
-  --surface-2: #1a212d;
-  --border: #262e3d;
-  --text: #e8ecf3;
-  --text-muted: #97a2b5;
-  --text-in: #2dd4bf;
-  --text-out: #fb7185;
-  --text-warn: #fb923c;
-  --text-brand: #8fa9b0;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+  /* Paleta escura */
+  --bg: #14110E;
+  --surface: #1C1814;
+  --surface-2: #25201B;
+  --border: #332C25;
+  --text: #EDE6DA;
+  --text-muted: #A89E90;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+
+  /* Contraste WCAG AA garantido no tema escuro (>= 4.5:1) */
+  --text-in: #6FBF9A;      /* 8.06:1 sobre #1C1814, 8.60:1 sobre #14110E */
+  --text-out: #E07A66;     /* 6.00:1 sobre #1C1814, 6.40:1 sobre #14110E */
+  --text-warn: #E5A93C;    /* 8.46:1 sobre #1C1814, 9.02:1 sobre #14110E */
+  --text-brand: #8FB0DD;   /* 7.92:1 sobre #1C1814, 8.44:1 sobre #14110E */
+  --text-accent: #E07A44;  /* 5.91:1 sobre #1C1814, 6.30:1 sobre #14110E */
+
+  /* Aliases de compatibilidade */
+  --warning: var(--text-warn);
+  --danger: var(--text-out);
+
+  /* Cores financeiras clareadas para dark mode (WCAG AA >= 4.5:1 sobre #1C1814) */
+  --color-money-in: #6FBF9A;
+  --color-money-in-soft: rgba(111, 191, 154, 0.15);
+  --color-money-out: #E07A66;
+  --color-money-out-soft: rgba(224, 122, 102, 0.15);
+  --color-save: #8FB0DD;
+  --color-save-soft: rgba(143, 176, 221, 0.15);
+  --color-fixed: #8FB0DD;
+  --color-variable: #E5A93C;
+  --color-warn-soft: rgba(229, 169, 60, 0.15);
+  --border-warn: rgba(229, 169, 60, 0.25);
+  --border-out: rgba(224, 122, 102, 0.25);
+  --border-in: rgba(111, 191, 154, 0.25);
+  --border-brand: rgba(143, 176, 221, 0.25);
+
+  /* Tokens diretos */
+  --paper: #14110E;
+  --line: #332C25;
+  --nanquim: #8FB0DD;
+  --entrou: #6FBF9A;
+  --saiu: #E07A66;
+  --atencao: #E5A93C;
+  --acento: #E07A44;
 }
 
 * {
@@ -114,45 +229,56 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
 @layer components {
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius-xl2);
-    box-shadow: var(--shadow-card);
+    border-radius: var(--radius-card);
+    box-shadow: none;
   }
 
   .muted {
     color: var(--text-muted);
   }
 
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+
   .input-base {
     width: 100%;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.9375rem;
+    border-radius: var(--radius-input);
+    padding: 0.5rem 0.75rem;
+    font-size: var(--text-size-2);
     color: var(--text);
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  /* Sinaliza "isto é editável" antes do clique — sem isso, um valor dentro
-     de uma linha de dados (ex.: saldo devedor em Dívidas, limite em
-     Orçamento) só se revela clicável ao focar, tarde demais para quem só
-     passou o mouse por cima. */
+  @media (prefers-reduced-motion: reduce) {
+    .input-base {
+      transition: none;
+    }
+  }
   .input-base:hover:not(:disabled):not(:focus) {
     border-color: var(--color-brand-300);
   }
   .input-base:focus {
-    border-color: var(--color-brand-400);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 18%, transparent);
+    border-color: var(--acento);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acento) 20%, transparent);
   }
   .input-base::placeholder {
     color: var(--text-muted);
   }
-  /* select usa .input-base mas nunca quebra linha — sem isso, uma opção
-     comprida corta no meio da palavra em vez de reticenciar. */
   select.input-base {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -160,17 +286,12 @@ body {
   }
 }
 
-/* ------------------------------------------------------------------
-   Foco visível em tudo que é interativo. O padrão do navegador some em
-   alguns componentes com fundo próprio, então definimos um anel único.
-------------------------------------------------------------------- */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-acento, #C2571A);
   outline-offset: 2px;
-  border-radius: 0.5rem;
+  border-radius: 4px;
 }
 
-/* Quem navega por teclado precisa pular o menu lateral repetido */
 .skip-link {
   position: absolute;
   left: 0.75rem;
@@ -180,7 +301,7 @@ body {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 6px;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -190,8 +311,6 @@ body {
   transform: translateY(0);
 }
 
-/* Números monetários alinhados, em uma tipografia mono dedicada — assina os
-   valores como um produto financeiro sério, não como texto comum. */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
@@ -202,8 +321,8 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
-  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 35%, transparent);
+  border-radius: 4px;
   border: 3px solid transparent;
   background-clip: content-box;
 }

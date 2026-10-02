@@ -9,17 +9,17 @@ type Size = "sm" | "md";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-500 shadow-sm disabled:bg-brand-300",
-  soft: "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/12 dark:text-brand-300 dark:hover:bg-brand-500/20",
+    "bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2 disabled:bg-brand-300",
+  soft: "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/12 dark:text-brand-300 dark:hover:bg-brand-500/20 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
   outline:
-    "border bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text)]",
-  ghost: "hover:bg-[var(--surface-2)] text-[var(--text)]",
-  danger: "bg-rose-600 text-white hover:bg-rose-700",
+    "border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text)] focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
+  ghost: "hover:bg-[var(--surface-2)] text-[var(--text)] focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
+  danger: "bg-[var(--btn-out)] text-white hover:opacity-90 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-[0.8125rem] rounded-lg gap-1.5",
-  md: "h-10 px-4 text-sm rounded-xl gap-2",
+  sm: "h-8 px-3 text-[0.8125rem] rounded-[var(--radius-input)] gap-1.5",
+  md: "h-10 px-4 text-sm rounded-[var(--radius-card)] gap-2",
 };
 
 export function Button({
@@ -31,7 +31,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex cursor-pointer items-center justify-center font-medium motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
         variants[variant],
         sizes[size],
         className,

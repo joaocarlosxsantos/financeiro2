@@ -1,18 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { Instrument_Sans, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-// Fonte de texto — carregada de verdade via next/font (antes o CSS só citava
-// "Inter" sem nenhum arquivo por trás, e o app renderizava na fonte padrão
-// do sistema operacional).
-const inter = Inter({
+// Fonte de texto — Instrument Sans (grotesca editorial limpa e contemporânea)
+const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-instrument-sans",
   display: "swap",
 });
 
-// Fonte mono para valores em dinheiro (`.tnum`) — números tabulares e mais
-// robustos, o tipo de detalhe que assina um produto financeiro sério.
+// Fonte serifada de display — Fraunces (títulos e números grandes do caderno de contas)
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+// Fonte mono para valores em dinheiro (`.tnum`) — números tabulares
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["500", "600"],
@@ -21,7 +25,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Financeiro 2.0 — clareza para a sua vida financeira",
+  title: "Financeiro 2.0",
   description:
     "Organize gastos fixos e variáveis, monte sua reserva de emergência, acompanhe metas e importe extratos e faturas.",
   applicationName: "Financeiro 2.0",
@@ -29,8 +33,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1017" },
+    { media: "(prefers-color-scheme: light)", color: "#F4EFE6" },
+    { media: "(prefers-color-scheme: dark)", color: "#14110E" },
   ],
 };
 
@@ -44,7 +48,11 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} ${plexMono.variable}`}>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${instrumentSans.variable} ${fraunces.variable} ${plexMono.variable}`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

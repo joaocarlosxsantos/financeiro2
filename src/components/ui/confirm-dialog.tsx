@@ -141,8 +141,8 @@ function Dialog({
         aria-labelledby={titleId}
         aria-describedby={state.description ? descId : undefined}
         className={cn(
-          "card relative w-full max-w-sm p-5 transition-all duration-150",
-          "rounded-b-none pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-b-2xl sm:pb-5",
+          "card relative w-full max-w-sm p-5 motion-reduce:transition-none transition-all duration-150",
+          "rounded-b-none pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-b-[var(--radius-card)] sm:pb-5",
           closing
             ? "translate-y-2 opacity-0 sm:translate-y-0 sm:scale-95"
             : "translate-y-0 opacity-100 sm:scale-100",
@@ -150,7 +150,7 @@ function Dialog({
       >
         <div className="flex items-start gap-3">
           {danger ? (
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-500/12 dark:text-rose-300">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-money-out-soft)] text-[var(--text-out)]">
               <AlertTriangle className="size-4.5" />
             </span>
           ) : null}
@@ -171,7 +171,7 @@ function Dialog({
             type="button"
             data-autofocus
             onClick={() => onSettle(false)}
-            className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl border bg-[var(--surface)] px-4 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+            className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--text)] motion-reduce:transition-none transition-colors hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
           >
             {state.cancelLabel ?? "Cancelar"}
           </button>
@@ -179,10 +179,10 @@ function Dialog({
             type="button"
             onClick={() => onSettle(true)}
             className={cn(
-              "inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto",
+              "inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-[var(--radius-input)] px-4 text-sm font-medium text-white motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto",
               danger
-                ? "bg-rose-600 hover:bg-rose-700 focus-visible:ring-rose-500"
-                : "bg-brand-600 shadow-sm hover:bg-brand-700 focus-visible:ring-brand-500",
+                ? "bg-[var(--btn-out)] hover:opacity-90 focus-visible:ring-[var(--acento)]"
+                : "bg-brand-600 hover:bg-brand-700 focus-visible:ring-[var(--acento)]",
             )}
           >
             {state.confirmLabel ?? "Confirmar"}

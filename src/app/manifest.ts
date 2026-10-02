@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Organize gastos fixos e variáveis, monte sua reserva de emergência e acompanhe metas.",
     start_url: "/painel",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#294f59",
+    background_color: "#F4EFE6",
+    theme_color: "#1F3A5F",
     lang: "pt-BR",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

@@ -14,7 +14,9 @@ export function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1.5 block text-[0.8125rem] font-medium">{label}</span>
+      <span className="mb-1.5 block text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        {label}
+      </span>
       {children}
       {hint ? <span className="muted mt-1 block text-xs leading-snug">{hint}</span> : null}
     </label>

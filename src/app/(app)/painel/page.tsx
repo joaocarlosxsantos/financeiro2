@@ -37,6 +37,7 @@ import { PageHeader } from "@/components/page-header";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { RecurringBanner } from "@/components/recurring-banner";
 import { StatTile } from "@/components/ui/stat";
+import { Money } from "@/components/ui/money";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/hint";
 import { Progress } from "@/components/ui/progress";
@@ -177,22 +178,25 @@ export default async function DashboardPage({
         <StatTile
           label="Entrou no mês"
           cents={summary.incomeCents}
+          tone="in"
           icon={ArrowUpRight}
-          color="#0d9488"
+          color="var(--text-in)"
           caption="Salário, renda extra e rendimentos"
         />
         <StatTile
           label="Saiu no mês"
           cents={summary.expenseCents}
+          tone="out"
           icon={ArrowDownRight}
-          color="#f43f5e"
+          color="var(--text-out)"
           caption={`${formatCents(summary.fixedCents)} fixo · ${formatCents(summary.variableCents)} variável`}
         />
         <StatTile
           label="Sobrou"
           cents={sobrou}
+          tone={sobrou >= 0 ? undefined : "out"}
           icon={Wallet}
-          color={sobrou >= 0 ? "var(--text-brand)" : "#f43f5e"}
+          color={sobrou >= 0 ? "var(--text-brand)" : "var(--text-out)"}
           caption={
             sobrou >= 0
               ? `Taxa de economia: ${rate}% da renda`
@@ -203,7 +207,7 @@ export default async function DashboardPage({
           label="Guardado em metas"
           cents={saved}
           icon={PiggyBank}
-          color="#0891b2"
+          color="var(--text-brand)"
           caption={runway > 0 ? `Cobre ${runway} meses de custo de vida` : "Ainda sem aportes"}
         />
       </section>
@@ -214,7 +218,7 @@ export default async function DashboardPage({
         <Card className="lg:col-span-2">
           <CardHeader
             title="Entrou, saiu e sobrou nos últimos 6 meses"
-            subtitle="A linha roxa é o que sobrou. Se ela vive abaixo de zero, o mês está no vermelho."
+            subtitle="A linha petróleo é o que sobrou. Se ela vive abaixo de zero, o mês está no vermelho."
           />
           <MonthlyFlowChart data={series} />
         </Card>
@@ -295,8 +299,8 @@ export default async function DashboardPage({
             }
           />
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="tnum text-2xl font-semibold">{formatCents(emergencySaved)}</span>
-            <span className="muted tnum text-[0.8125rem]">de {formatCents(emergencyTarget)}</span>
+            <Money cents={emergencySaved} size="lg" className="text-2xl font-semibold" />
+            <span className="muted text-[0.8125rem]">de <Money cents={emergencyTarget} size="sm" /></span>
           </div>
           <Progress
             label="Progresso da reserva de emergência"
@@ -336,7 +340,7 @@ export default async function DashboardPage({
               hint="Lazer, delivery, assinaturas, compras"
               target={split.wantsCents}
               actual={summary.variableCents}
-              color="#d95926"
+              color="var(--color-variable)"
               share={30}
             />
             <SplitRow
@@ -344,7 +348,7 @@ export default async function DashboardPage({
               hint="Reserva, investimentos e quitação de dívidas"
               target={split.futureCents}
               actual={Math.max(0, sobrou)}
-              color="#0d9488"
+              color="var(--color-money-in)"
               share={20}
             />
           </ul>
@@ -382,9 +386,9 @@ function SplitRow({
           {label}
           <span className="muted text-xs font-normal">{share}%</span>
         </span>
-        <span className="tnum text-[0.8125rem]">
-          <strong>{formatCents(actual)}</strong>
-          <span className="muted"> / {formatCents(target)}</span>
+        <span className="text-[0.8125rem]">
+          <strong><Money cents={actual} size="sm" /></strong>
+          <span className="muted"> / <Money cents={target} size="sm" /></span>
         </span>
       </div>
       <Progress value={ratio} color={color} label={`${label}: quanto do sugerido já foi usado`} />

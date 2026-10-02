@@ -30,35 +30,38 @@ export function ProjectionChart({
           <defs>
             {series.map((s) => (
               <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={s.color} stopOpacity={0.22} />
-                <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
+                <stop offset="0%" stopColor={s.color} stopOpacity={0.16} />
+                <stop offset="100%" stopColor={s.color} stopOpacity={0.01} />
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid stroke={VIZ.grid} vertical={false} />
+          <CartesianGrid stroke="var(--line)" strokeWidth={1} vertical={false} />
           <XAxis
             dataKey="label"
             tickLine={false}
             axisLine={false}
             interval={11}
-            tick={{ fontSize: 11, fill: "currentColor", opacity: 0.65 }}
+            tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
           />
           <YAxis
             tickFormatter={(v) => formatAxisCents(Number(v))}
             tickLine={false}
             axisLine={false}
             width={76}
-            tick={{ fontSize: 11, fill: "currentColor", opacity: 0.6 }}
+            tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
           />
-          <Tooltip content={<MoneyTooltip />} />
+          <Tooltip
+            content={<MoneyTooltip />}
+            cursor={{ stroke: "var(--line)", strokeWidth: 1 }}
+          />
           <Legend
             verticalAlign="top"
             align="left"
             height={32}
-            iconType="circle"
-            iconSize={8}
+            iconType="plainline"
+            iconSize={12}
             itemSorter={() => 0}
-            wrapperStyle={{ fontSize: 12, opacity: 0.85 }}
+            wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)", opacity: 0.85 }}
           />
           {series.map((s) => (
             <Area
@@ -70,7 +73,7 @@ export function ProjectionChart({
               strokeWidth={2}
               fill={`url(#grad-${s.key})`}
               dot={false}
-              activeDot={{ r: 5 }}
+              activeDot={{ r: 4, stroke: "var(--surface)", strokeWidth: 2 }}
             />
           ))}
         </AreaChart>

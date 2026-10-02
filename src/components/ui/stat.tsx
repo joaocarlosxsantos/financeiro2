@@ -1,10 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { formatCents } from "@/lib/money";
+import { Money } from "@/components/ui/money";
 
 export function StatTile({
   label,
   cents,
+  tone,
   icon: Icon,
   color,
   caption,
@@ -12,6 +13,7 @@ export function StatTile({
 }: {
   label: string;
   cents: number;
+  tone?: "in" | "out";
   icon: LucideIcon;
   color: string;
   caption?: string;
@@ -26,9 +28,9 @@ export function StatTile({
         <p className="muted text-[0.8125rem] font-medium">{label}</p>
         <Icon className="size-4 shrink-0 opacity-35" style={{ color }} />
       </div>
-      <p className="tnum text-[1.75rem] leading-none font-bold tracking-tight">
-        {formatCents(cents)}
-      </p>
+      <div className="tnum text-[1.75rem] leading-none font-bold tracking-tight">
+        <Money cents={cents} tone={tone} size="lg" />
+      </div>
       {caption ? <p className="muted mt-2 text-xs leading-snug">{caption}</p> : null}
     </div>
   );
