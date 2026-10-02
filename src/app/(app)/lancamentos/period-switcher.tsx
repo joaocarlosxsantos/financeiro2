@@ -3,7 +3,7 @@
 import { CalendarRange, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { monthLabel, monthRefToParam, shiftMonth, type MonthRef } from "@/lib/dates";
+import { monthLabel, monthRefToParam, shiftMonth, todayRef, type MonthRef } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -56,7 +56,7 @@ export function PeriodSwitcher({
 
   function allHistory() {
     const nextFrom = "2000-01-01";
-    const nextTo = new Date().toISOString().slice(0, 10);
+    const nextTo = todayRef();
     setFrom(nextFrom);
     setTo(nextTo);
     applyRange(nextFrom, nextTo);

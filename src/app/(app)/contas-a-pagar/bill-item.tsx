@@ -173,6 +173,18 @@ export function BillItem({
           {bill.type === "GROUP" ? (
             <div>
               <p className="muted mb-1.5 text-xs font-semibold tracking-wide uppercase">Quem divide</p>
+              {(() => {
+                const sum = bill.participants.reduce((acc, p) => acc + p.amountCents, 0);
+                const diff = bill.totalCents - sum;
+                if (diff !== 0) {
+                  return (
+                    <p className="mb-2 text-xs font-medium" style={{ color: diff > 0 ? "var(--text-warn)" : "var(--text-out)" }}>
+                      {diff > 0 ? `Falta dividir ${formatCents(diff)}` : `Passou ${formatCents(-diff)} do total`}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               <div className="divide-y rounded-xl border">
                 {bill.participants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 text-[0.8125rem]">

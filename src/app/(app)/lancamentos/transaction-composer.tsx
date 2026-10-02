@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { formatCents, parseMoneyToCents } from "@/lib/money";
 import { splitInstallments } from "@/lib/installments";
+import { todayRef } from "@/lib/dates";
 import type { PlainAccount, PlainCategory } from "./types";
 
 const initial: ActionState = {};
@@ -92,7 +93,7 @@ export function TransactionComposer({
           />
         </Field>
         <Field label="Data">
-          <Input name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input name="date" type="date" required defaultValue={todayRef()} />
         </Field>
       </div>
 

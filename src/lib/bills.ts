@@ -26,3 +26,32 @@ export function checkManualSplit(totalCents: number, amountsCents: number[]): Sp
   const remainingCents = totalCents - sum;
   return { ok: remainingCents === 0, remainingCents };
 }
+
+/**
+ * Recalcula a divisão após adicionar/remover participante.
+ * Recebe os valores ANTES da mudança, o novo número de participantes,
+ * e opcionalmente o índice do removido (para remoção manual).
+ * Se a divisão anterior era igual: redistribui igualmente todos.
+ * Se era manual: mantém valores antigos, novo participante = 0, remove = filtra o removido.
+ */
+export function recalculateSplit(
+  totalCents: number,
+  oldAmounts: number[],
+  newCount: number,
+  removedIndex?: number
+): number[] {
+  if (newCount <= 0) return [];
+  const oldCount = oldAmounts.length;
+  const expectedEqual = splitBillEqually(totalCents, oldCount);
+  const wasEqual = oldAmounts.every((amt, i) => amt === expectedEqual[i]);
+  if (wasEqual) {
+    return splitBillEqually(totalCents, newCount);
+  }
+  if (newCount > oldCount) {
+    return [...oldAmounts, ...new Array(newCount - oldCount).fill(0)];
+  }
+  if (removedIndex !== undefined && removedIndex >= 0 && removedIndex < oldCount) {
+    return oldAmounts.filter((_, i) => i !== removedIndex);
+  }
+  return oldAmounts.slice(0, newCount);
+}

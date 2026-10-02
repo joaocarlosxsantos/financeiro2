@@ -13,7 +13,7 @@ import {
 } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, formatCents } from "@/lib/money";
-import { checkManualSplit, splitBillEqually } from "@/lib/bills";
+import { checkManualSplit, recalculateSplit, splitBillEqually } from "@/lib/bills";
 import type { MonthRef } from "@/lib/dates";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -306,14 +306,41 @@ export async function addBillParticipant(billId: string, name: string, phone?: s
   if (!trimmed) return { error: "Informe o nome." };
 
   const [bill] = await db
-    .select({ id: bills.id, type: bills.type })
+    .select({ id: bills.id, type: bills.type, totalCents: bills.totalCents })
     .from(bills)
     .where(and(eq(bills.id, billId), eq(bills.userId, userId)))
     .limit(1);
   if (!bill) return { error: "Conta não encontrada." };
   if (bill.type !== "GROUP") return { error: "Só contas em grupo têm participantes." };
 
-  await db.insert(billParticipants).values({ billId, name: trimmed, phone: phone?.trim() || null });
+  await db.transaction(async (tx) => {
+    const oldParticipants = await tx
+      .select({ id: billParticipants.id, amountCents: billParticipants.amountCents })
+      .from(billParticipants)
+      .where(eq(billParticipants.billId, billId))
+      .orderBy(billParticipants.createdAt, billParticipants.id);
+
+    const oldAmounts = oldParticipants.map((p) => p.amountCents);
+    const newCount = oldParticipants.length + 1;
+
+    await tx.insert(billParticipants).values({ billId, name: trimmed, phone: phone?.trim() || null });
+
+    const allParticipants = await tx
+      .select({ id: billParticipants.id })
+      .from(billParticipants)
+      .where(eq(billParticipants.billId, billId))
+      .orderBy(billParticipants.createdAt, billParticipants.id);
+
+    const newAmounts = recalculateSplit(bill.totalCents, oldAmounts, newCount);
+
+    for (let i = 0; i < allParticipants.length; i++) {
+      await tx
+        .update(billParticipants)
+        .set({ amountCents: newAmounts[i] })
+        .where(eq(billParticipants.id, allParticipants[i].id));
+    }
+  });
+
   refresh();
   return { ok: true };
 }
@@ -321,14 +348,42 @@ export async function addBillParticipant(billId: string, name: string, phone?: s
 export async function removeBillParticipant(participantId: string): Promise<ActionState> {
   const userId = await requireUserId();
   const [row] = await db
-    .select({ id: billParticipants.id })
+    .select({ id: billParticipants.id, billId: bills.id, totalCents: bills.totalCents })
     .from(billParticipants)
     .innerJoin(bills, eq(bills.id, billParticipants.billId))
     .where(and(eq(billParticipants.id, participantId), eq(bills.userId, userId)))
     .limit(1);
   if (!row) return { error: "Participante não encontrado." };
 
-  await db.delete(billParticipants).where(eq(billParticipants.id, participantId));
+  await db.transaction(async (tx) => {
+    const oldParticipants = await tx
+      .select({ id: billParticipants.id, amountCents: billParticipants.amountCents })
+      .from(billParticipants)
+      .where(eq(billParticipants.billId, row.billId))
+      .orderBy(billParticipants.createdAt, billParticipants.id);
+
+    const oldAmounts = oldParticipants.map((p) => p.amountCents);
+    const removedIndex = oldParticipants.findIndex((p) => p.id === participantId);
+
+    await tx.delete(billParticipants).where(eq(billParticipants.id, participantId));
+
+    const remainingParticipants = await tx
+      .select({ id: billParticipants.id })
+      .from(billParticipants)
+      .where(eq(billParticipants.billId, row.billId))
+      .orderBy(billParticipants.createdAt, billParticipants.id);
+
+    const newCount = remainingParticipants.length;
+    const newAmounts = recalculateSplit(row.totalCents, oldAmounts, newCount, removedIndex);
+
+    for (let i = 0; i < remainingParticipants.length; i++) {
+      await tx
+        .update(billParticipants)
+        .set({ amountCents: newAmounts[i] })
+        .where(eq(billParticipants.id, remainingParticipants[i].id));
+    }
+  });
+
   refresh();
   return { ok: true };
 }

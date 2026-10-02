@@ -6,7 +6,7 @@ import {
   getMonthlySeries,
   getTopExpenses,
 } from "@/server/queries";
-import { currentMonthRef, formatDayMonth, monthRefFromParam, monthLabel, shiftMonth } from "@/lib/dates";
+import { currentMonthRef, formatDayMonth, monthRefFromParam, monthLabel, shiftMonth, todayRef } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
 import { categoryDeltas, spendingPace } from "@/lib/finance";
 import { PageHeader } from "@/components/page-header";
@@ -54,8 +54,8 @@ export default async function InsightsPage({
   let daysInMonth = 0;
   let dayOfMonth = 0;
   if (isCurrentMonth) {
-    const now = new Date();
-    dayOfMonth = now.getDate();
+    const today = todayRef();
+    dayOfMonth = Number(today.slice(8, 10));
     daysInMonth = new Date(ref.year, ref.month, 0).getDate();
     pace = spendingPace(summary.expenseCents, dayOfMonth, daysInMonth);
   }

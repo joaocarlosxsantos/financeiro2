@@ -10,9 +10,33 @@ import { ptBR } from "date-fns/locale";
 
 export type MonthRef = { year: number; month: number }; // month: 1-12
 
-export function currentMonthRef(): MonthRef {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+function getNowInSaoPaulo(now: Date = new Date()): Date {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = formatter.formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return new Date(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+}
+
+export function currentMonthRef(now: Date = new Date()): MonthRef {
+  const d = getNowInSaoPaulo(now);
+  return { year: d.getFullYear(), month: d.getMonth() + 1 };
+}
+
+export function todayRef(now: Date = new Date()): string {
+  const d = getNowInSaoPaulo(now);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function monthRefFromParam(param?: string | null): MonthRef {

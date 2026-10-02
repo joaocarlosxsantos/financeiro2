@@ -8,15 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { formatCents } from "@/lib/money";
-import { formatDate, monthLabel, monthRefFromParam } from "@/lib/dates";
+import { formatDate, monthLabel, monthRefFromParam, todayRef } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 
 type Account = { id: string; name: string; type: string };
 type Category = { id: string; name: string; kind: "INCOME" | "EXPENSE"; nature: "FIXED" | "VARIABLE"; color: string };
 
 function currentMonthValue(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return todayRef().slice(0, 7);
 }
 
 export function ImportWizard({ accounts, categories }: { accounts: Account[]; categories: Category[] }) {
