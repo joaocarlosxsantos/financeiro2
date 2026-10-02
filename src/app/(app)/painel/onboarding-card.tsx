@@ -1,59 +1,71 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import type { OnboardingChecklist } from "@/server/queries";
-import { Card, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 
-/**
- * Roteiro guiado pós-onboarding: a calibragem de renda/metas em /onboarding
- * cobre "passo 1 de 1" dela, mas o app ainda fica vazio até a pessoa criar
- * uma conta e lançar algo — os dois passos que faltavam ficar visíveis.
- * Some sozinho assim que os dois estiverem feitos; some é a única "ação".
- */
-export function OnboardingCard({ checklist }: { checklist: OnboardingChecklist }) {
+export function OnboardingCard({
+  checklist,
+  className,
+}: {
+  checklist: OnboardingChecklist;
+  className?: string;
+}) {
   if (checklist.hasAccount && checklist.hasTransaction) return null;
 
   const steps = [
     {
       done: checklist.hasAccount,
-      title: "Cadastre uma conta e o saldo que você tem hoje",
-      description: "Conta corrente, poupança, cartão de crédito — o que você usa no dia a dia.",
+      title: "Cadastre uma conta e o saldo inicial",
       href: "/contas",
       linkLabel: "Cadastrar conta",
     },
     {
       done: checklist.hasTransaction,
       title: "Lance ou importe seus primeiros lançamentos",
-      description: "Um mês de dados já é suficiente para o painel começar a fazer sentido.",
       href: "/importar",
       linkLabel: "Importar extrato",
     },
   ];
 
   return (
-    <Card className="mb-4">
-      <CardHeader title="Primeiros passos" subtitle="Duas coisas para o painel deixar de estar vazio." />
-      <ol className="space-y-3">
+    <aside
+      className={cn(
+        "rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-3.5",
+        className,
+      )}
+      aria-label="Primeiros passos"
+    >
+      <div className="mb-2 flex items-center justify-between border-b border-[var(--line)] pb-1.5">
+        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Primeiros passos
+        </h2>
+      </div>
+      <ol className="divide-y divide-[var(--line)]" role="list">
         {steps.map((s, i) => (
-          <li key={s.title} className="flex items-start gap-3">
+          <li key={s.title} className="flex items-center gap-3 py-2 first:pt-1 last:pb-0.5">
             <span
               className={cn(
-                "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[0.75rem] font-semibold",
+                "flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold",
                 s.done
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300"
-                  : "bg-brand-50 text-brand-700 dark:bg-brand-500/12 dark:text-brand-300",
+                  ? "bg-[var(--color-money-in-soft)] text-[var(--text-in)]"
+                  : "bg-[var(--color-save-soft)] text-[var(--text-brand)]",
+              )}
+              aria-hidden="true"
+            >
+              {s.done ? <Check className="size-3" /> : i + 1}
+            </span>
+            <span
+              className={cn(
+                "min-w-0 flex-1 text-xs",
+                s.done ? "text-[var(--text-muted)] line-through" : "font-medium text-[var(--text)]",
               )}
             >
-              {s.done ? <Check className="size-3.5" /> : i + 1}
+              {s.title}
             </span>
-            <div className="min-w-0 flex-1">
-              <p className={cn("text-[0.875rem] font-medium", s.done && "muted line-through")}>{s.title}</p>
-              <p className="muted mt-0.5 text-[0.8125rem] leading-relaxed">{s.description}</p>
-            </div>
             {!s.done ? (
               <Link
                 href={s.href}
-                className="mt-0.5 shrink-0 text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                className="shrink-0 text-xs font-medium text-[var(--text-brand)] hover:underline"
               >
                 {s.linkLabel}
               </Link>
@@ -61,6 +73,6 @@ export function OnboardingCard({ checklist }: { checklist: OnboardingChecklist }
           </li>
         ))}
       </ol>
-    </Card>
+    </aside>
   );
 }

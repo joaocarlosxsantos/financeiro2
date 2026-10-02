@@ -2,59 +2,65 @@ import Link from "next/link";
 import { TrendingDown } from "lucide-react";
 import { formatCents, pct } from "@/lib/money";
 import type { DebtOverview } from "@/server/queries";
+import { cn } from "@/lib/cn";
 
-/**
- * Só aparece para quem tem dívida cadastrada.
- * O número que importa aqui não é o saldo — é o quanto os juros levam por mês.
- */
 export function DebtCard({
   overview,
   incomeCents,
+  className,
 }: {
   overview: DebtOverview;
   incomeCents: number;
+  className?: string;
 }) {
   if (!overview.debts.length) return null;
 
   const share = incomeCents ? pct(overview.totalMonthlyInterestCents, incomeCents) : 0;
 
   return (
-    <div className="card mb-4 flex flex-wrap items-center gap-x-6 gap-y-4 p-5">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/12 dark:text-rose-300">
-        <TrendingDown className="size-5" />
-      </span>
-
-      <div>
-        <p className="muted text-[0.8125rem]">Saldo devedor</p>
-        <p className="tnum text-xl font-semibold tracking-tight">
-          {formatCents(overview.totalBalanceCents)}
-        </p>
+    <div
+      className={cn("flex flex-wrap items-center justify-between gap-x-6 gap-y-3", className)}
+      aria-label="Impacto das dívidas"
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className="flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--color-money-out-soft)] text-[var(--text-out)]"
+          aria-hidden="true"
+        >
+          <TrendingDown className="size-4" />
+        </span>
+        <div>
+          <p className="text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            Saldo devedor
+          </p>
+          <p className="tnum font-mono text-base font-semibold tracking-tight text-[var(--text)]">
+            {formatCents(overview.totalBalanceCents)}
+          </p>
+        </div>
       </div>
 
-      <div>
-        <p className="muted text-[0.8125rem]">Juros por mês</p>
-        <p className="tnum text-xl font-semibold tracking-tight text-[var(--text-out)]">
+      <div className="border-l border-[var(--line)] pl-4">
+        <p className="text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+          Juros por mês
+        </p>
+        <p className="tnum font-mono text-base font-semibold text-[var(--text-out)]">
           {formatCents(overview.totalMonthlyInterestCents)}
+          {share > 0 ? (
+            <span className="ml-1.5 text-xs font-normal text-[var(--text-muted)]">
+              ({share}% da renda)
+            </span>
+          ) : null}
         </p>
       </div>
 
-      <p className="muted min-w-48 flex-1 text-[0.8125rem] leading-snug">
-        {overview.totalMonthlyInterestCents > 0 ? (
-          <>
-            Esse é o valor que some todo mês sem você comprar nada
-            {share > 0 ? ` — ${share}% da sua renda` : ""}.
-          </>
-        ) : (
-          <>Informe a taxa de juros de cada dívida para ver quanto elas custam por mês.</>
-        )}
-      </p>
-
-      <Link
-        href="/dividas"
-        className="inline-flex h-10 shrink-0 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
-      >
-        Ver plano de quitação
-      </Link>
+      <div className="ml-auto">
+        <Link
+          href="/dividas"
+          className="inline-flex h-7 items-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
+        >
+          Ver plano de quitação
+        </Link>
+      </div>
     </div>
   );
 }

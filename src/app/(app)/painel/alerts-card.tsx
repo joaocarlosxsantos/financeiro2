@@ -1,46 +1,46 @@
 import Link from "next/link";
 import { TriangleAlert, Info } from "lucide-react";
 import type { Alert } from "@/lib/alerts";
-import { Card, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/cn";
 
-/**
- * Central de avisos: junta num só lugar o que hoje só aparecia se a pessoa
- * fosse conferir cada tela (orçamento estourado, meta que passou do prazo).
- * Só dentro do app por decisão explícita — sem e-mail nem notificação push.
- *
- * Recorrência pendente do mês já tem aviso próprio e acionável (o banner
- * "Lançar todas" logo no topo do Painel) — não duplicamos aqui.
- */
-export function AlertsCard({ alerts }: { alerts: Alert[] }) {
+export function AlertsCard({ alerts, className }: { alerts: Alert[]; className?: string }) {
   if (!alerts.length) return null;
 
   return (
-    <Card className="mb-4">
-      <CardHeader
-        title="Central de avisos"
-        subtitle={`${alerts.length} coisa${alerts.length > 1 ? "s" : ""} que vale${alerts.length > 1 ? "m" : ""} sua atenção agora.`}
-      />
-      <ul className="space-y-3">
+    <aside
+      className={cn(
+        "rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-3.5",
+        className,
+      )}
+      aria-label="Avisos importantes"
+    >
+      <div className="mb-2 flex items-center justify-between border-b border-[var(--line)] pb-1.5">
+        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Avisos ({alerts.length})
+        </h2>
+      </div>
+      <ul className="divide-y divide-[var(--line)]" role="list">
         {alerts.map((a) => {
           const Icon = a.tone === "warn" ? TriangleAlert : Info;
           return (
-            <li key={a.id} className="flex items-start gap-3">
+            <li key={a.id} className="flex items-center gap-3 py-2 first:pt-1 last:pb-0.5">
               <span
                 className={
                   a.tone === "warn"
-                    ? "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-500/12 dark:text-rose-300"
-                    : "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/12 dark:text-brand-300"
+                    ? "flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--color-warn-soft)] text-[var(--text-warn)]"
+                    : "flex size-6 shrink-0 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] text-[var(--text-brand)]"
                 }
+                aria-hidden="true"
               >
-                <Icon className="size-4" />
+                <Icon className="size-3.5" />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.875rem] font-medium">{a.title}</p>
-                <p className="muted mt-0.5 text-[0.8125rem] leading-relaxed">{a.description}</p>
+              <div className="min-w-0 flex-1 text-xs">
+                <span className="font-medium text-[var(--text)]">{a.title}</span>
+                <span className="text-[var(--text-muted)]"> · {a.description}</span>
               </div>
               <Link
                 href={a.href}
-                className="mt-0.5 shrink-0 text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                className="shrink-0 text-xs font-medium text-[var(--text-brand)] hover:underline"
               >
                 {a.linkLabel}
               </Link>
@@ -48,6 +48,6 @@ export function AlertsCard({ alerts }: { alerts: Alert[] }) {
           );
         })}
       </ul>
-    </Card>
+    </aside>
   );
 }

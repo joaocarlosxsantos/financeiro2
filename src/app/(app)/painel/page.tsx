@@ -1,11 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  PiggyBank,
-  Receipt,
-  Wallet,
-} from "lucide-react";
+import { Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
   getAvgMonthlyCostCents,
@@ -36,7 +30,6 @@ import { buildBudgetAlerts, buildGoalAlerts } from "@/lib/alerts";
 import { PageHeader } from "@/components/page-header";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { RecurringBanner } from "@/components/recurring-banner";
-import { StatTile } from "@/components/ui/stat";
 import { Money } from "@/components/ui/money";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/hint";
@@ -86,14 +79,11 @@ export default async function DashboardPage({
     getCategoryBreakdown(userId, ref, { cardMode: "cash" }),
     getCardCategoryBreakdown(userId, ref),
     getAvgMonthlyCostCents(userId, 3),
-    // Total guardado em TODAS as metas — só usado no valor do tile "Guardado
-    // em metas" abaixo. Reserva de emergência usa `emergencySaved`, não este.
     getTotalSavedCents(userId),
     getEmergencyFundSavedCents(userId),
     getBudgetOverview(userId, ref),
     getRecurringStatus(userId, ref),
     getDebtOverview(userId),
-    // Só para a central de avisos abaixo (meta que passou do prazo).
     getGoals(userId),
     getOnboardingChecklist(userId),
   ]);
@@ -104,9 +94,6 @@ export default async function DashboardPage({
   const rate = savingsRate(summary);
   const costBase = avgCost > 0 ? avgCost : Math.round(user.monthlyIncomeCents * 0.7);
   const emergencyTarget = emergencyTargetCents(costBase, user.emergencyMonths);
-  // Quantos meses de renda a reserva cobre — precisa ser só o que está
-  // guardado NA meta de reserva, senão dinheiro de outra meta (uma viagem,
-  // por exemplo) infla a sensação de colchão de segurança.
   const runway = monthsOfRunway(emergencySaved, costBase);
   const split = fiftyThirtyTwenty(user.monthlyIncomeCents || summary.incomeCents);
 
@@ -121,114 +108,150 @@ export default async function DashboardPage({
     fixedShareOfIncomePct: fixedShare,
   });
 
-  // Considera também gasto no cartão: sem isso, um mês só com compra no
-  // cartão (nada na conta corrente ainda) mostra "nenhum lançamento" bem em
-  // cima da seção "Gastos no cartão" logo abaixo — contradição na mesma tela.
   const hasData = summary.incomeCents > 0 || summary.expenseCents > 0 || cardBreakdown.length > 0;
 
   return (
     <>
       <PageHeader
         title={`Olá, ${user.name.split(" ")[0]}`}
-        description="Este é o retrato do seu mês. Comece de cima: o que entrou, o que saiu e o que sobrou."
+        description="Resumo do mês: entradas, saídas e saldo."
         action={<MonthSwitcher value={ref} />}
       />
 
-      <OnboardingCard checklist={onboarding} />
+      {/* 1. Hero mês: 'Sobrou' grande + linha Entrou/Saiu/Fixo menores */}
+      <section
+        className="card p-5 sm:p-6"
+        aria-label="Resumo financeiro do mês"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+          <div>
+            <span className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Sobrou no mês
+            </span>
+            <div className="mt-1 flex flex-wrap items-baseline gap-3">
+              <Money
+                cents={sobrou}
+                tone={sobrou < 0 ? "out" : undefined}
+                size="lg"
+                className="text-3xl sm:text-4xl font-semibold"
+              />
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                {sobrou >= 0
+                  ? `Taxa de economia: ${rate}% da renda`
+                  : "Gastos superaram as receitas no mês"}
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <RecurringBanner
-        monthRef={ref}
-        monthName={monthLabel(ref)}
-        count={recurring.pending.length}
-        incomeCents={recurring.pendingIncomeCents}
-        expenseCents={recurring.pendingExpenseCents}
-      />
+        <div className="mt-5 grid grid-cols-3 divide-x divide-[var(--border)] border-t border-[var(--border)] pt-4">
+          <div className="min-w-0 pr-2 sm:pr-4">
+            <p className="text-[0.75rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              Entrou
+            </p>
+            <div className="mt-1">
+              <Money
+                cents={summary.incomeCents}
+                tone="in"
+                size="md"
+                className="text-sm sm:text-base font-medium"
+              />
+            </div>
+            <p className="muted mt-0.5 hidden text-xs sm:block truncate">
+              Salário e receitas
+            </p>
+          </div>
 
-      <AlertsCard alerts={alerts} />
+          <div className="min-w-0 px-2 sm:px-4">
+            <p className="text-[0.75rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              Saiu
+            </p>
+            <div className="mt-1">
+              <Money
+                cents={summary.expenseCents}
+                tone="out"
+                size="md"
+                className="text-sm sm:text-base font-medium"
+              />
+            </div>
+            <p className="muted mt-0.5 hidden text-xs sm:block truncate">
+              {formatCents(summary.variableCents)} variável
+            </p>
+          </div>
 
-      <DebtCard overview={debts} incomeCents={user.monthlyIncomeCents} />
-
-      {!hasData ? (
-        <Card className="mb-6 p-0">
-          <EmptyState
-            icon={Receipt}
-            title={`Nenhum lançamento em ${monthLabel(ref)}`}
-            description="Adicione seus lançamentos na mão ou importe o extrato do banco e a fatura do cartão — o sistema categoriza para você."
-            action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <Link
-                  href="/lancamentos"
-                  className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
-                >
-                  Adicionar lançamento
-                </Link>
-                <Link
-                  href="/importar"
-                  className="inline-flex h-10 items-center rounded-xl border px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
-                >
-                  Importar extrato
-                </Link>
-              </div>
-            }
-          />
-        </Card>
-      ) : null}
-
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatTile
-          label="Entrou no mês"
-          cents={summary.incomeCents}
-          tone="in"
-          icon={ArrowUpRight}
-          color="var(--text-in)"
-          caption="Salário, renda extra e rendimentos"
-        />
-        <StatTile
-          label="Saiu no mês"
-          cents={summary.expenseCents}
-          tone="out"
-          icon={ArrowDownRight}
-          color="var(--text-out)"
-          caption={`${formatCents(summary.fixedCents)} fixo · ${formatCents(summary.variableCents)} variável`}
-        />
-        <StatTile
-          label="Sobrou"
-          cents={sobrou}
-          tone={sobrou >= 0 ? undefined : "out"}
-          icon={Wallet}
-          color={sobrou >= 0 ? "var(--text-brand)" : "var(--text-out)"}
-          caption={
-            sobrou >= 0
-              ? `Taxa de economia: ${rate}% da renda`
-              : "Você gastou mais do que ganhou neste mês"
-          }
-        />
-        <StatTile
-          label="Guardado em metas"
-          cents={saved}
-          icon={PiggyBank}
-          color="var(--text-brand)"
-          caption={runway > 0 ? `Cobre ${runway} meses de custo de vida` : "Ainda sem aportes"}
-        />
+          <div className="min-w-0 pl-2 sm:pl-4">
+            <p className="text-[0.75rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              Fixo
+            </p>
+            <div className="mt-1">
+              <Money
+                cents={summary.fixedCents}
+                size="md"
+                className="text-sm sm:text-base font-medium"
+              />
+            </div>
+            <p className="muted mt-0.5 hidden text-xs sm:block truncate">
+              {fixedShare > 0 ? `${fixedShare}% da renda` : "Compromissos"}
+            </p>
+          </div>
+        </div>
       </section>
 
-      <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <HealthCard health={health} />
+      {/* 2. Alerta/onboarding compacta logo abaixo */}
+      <div className="mt-4 space-y-3">
+        <OnboardingCard checklist={onboarding} />
 
-        <Card className="lg:col-span-2">
+        <RecurringBanner
+          monthRef={ref}
+          monthName={monthLabel(ref)}
+          count={recurring.pending.length}
+          incomeCents={recurring.pendingIncomeCents}
+          expenseCents={recurring.pendingExpenseCents}
+        />
+
+        <AlertsCard alerts={alerts} />
+
+        {!hasData ? (
+          <Card className="p-0">
+            <EmptyState
+              icon={Receipt}
+              title={`Nenhum lançamento em ${monthLabel(ref)}`}
+              description="Adicione seus lançamentos ou importe o extrato do banco e a fatura do cartão."
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Link
+                    href="/lancamentos"
+                    className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    Adicionar lançamento
+                  </Link>
+                  <Link
+                    href="/importar"
+                    className="inline-flex h-10 items-center rounded-xl border px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+                  >
+                    Importar extrato
+                  </Link>
+                </div>
+              }
+            />
+          </Card>
+        ) : null}
+      </div>
+
+      {/* 3. Gráfico 6m + ranking categorias lado-a-lado (largura maior) */}
+      <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12" aria-label="Fluxo e categorias">
+        <Card className="lg:col-span-7">
           <CardHeader
             title="Entrou, saiu e sobrou nos últimos 6 meses"
-            subtitle="A linha petróleo é o que sobrou. Se ela vive abaixo de zero, o mês está no vermelho."
+            subtitle="Histórico de entradas, saídas e saldo líquido mês a mês."
           />
           <MonthlyFlowChart data={series} />
         </Card>
-      </section>
 
-      <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-5">
           <CardHeader
             title={`Para onde foi o dinheiro em ${monthLabel(ref)}`}
-            subtitle="Ranking das categorias que mais pesaram no mês. Não inclui compras no cartão — elas têm o gráfico próprio logo abaixo."
+            subtitle="Ranking das categorias que mais pesaram no mês."
           />
           {breakdown.length ? (
             <CategoryBars slices={breakdown} />
@@ -238,36 +261,14 @@ export default async function DashboardPage({
             </p>
           )}
         </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader
-            title="Gasto fixo x variável"
-            subtitle="Fixo é compromisso que se repete. Variável é onde dá para agir rápido."
-          />
-          <FixedVariableChart data={series} />
-          <div className="mt-4">
-            <Hint tone={fixedShare > 60 ? "warn" : "tip"}>
-              {fixedShare > 0 ? (
-                <>
-                  Seus gastos fixos consomem <strong>{fixedShare}%</strong> da sua renda.{" "}
-                  {fixedShare > 60
-                    ? "Acima de 60% o orçamento fica engessado: qualquer imprevisto vira dívida."
-                    : "Abaixo de 50% é o ideal — sobra espaço para imprevistos e para guardar."}
-                </>
-              ) : (
-                <>Classifique seus lançamentos como fixo ou variável para ver esta análise.</>
-              )}
-            </Hint>
-          </div>
-        </Card>
       </section>
 
       {cardBreakdown.length ? (
-        <section className="mt-4">
+        <section className="mt-4" aria-label="Gastos no cartão de crédito">
           <Card>
             <CardHeader
               title={`Gastos no cartão em ${monthLabel(ref)}`}
-              subtitle="Demonstrativo — essas compras nunca entram no resumo acima. O que realmente saiu da conta é o que você importa do extrato do banco."
+              subtitle="Demonstrativo de compras faturadas no cartão de crédito."
               action={
                 <Link
                   href="/lancamentos?acc=CARD"
@@ -282,81 +283,150 @@ export default async function DashboardPage({
         </section>
       ) : null}
 
-      <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <BudgetCard overview={budget} monthRef={ref} />
+      {/* 4. Seções planas (saúde, orçamento, reserva, dívidas, 50/30/20) em 2 colunas desktop */}
+      <section
+        className="mt-8 border-t border-[var(--border)] pt-8"
+        aria-label="Planejamento e saúde financeira"
+      >
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Coluna 1: Saúde Financeira, Orçamento & Fixo x Variável */}
+          <div className="space-y-8 [&_.card]:border-0 [&_.card]:bg-transparent [&_.card]:p-0 [&_.card]:shadow-none [&_.card]:rounded-none">
+            <div>
+              <HealthCard health={health} className="border-0 bg-transparent p-0 rounded-none shadow-none" />
+            </div>
 
-        <Card id="reserva-emergencia" className="scroll-mt-20">
-          <CardHeader
-            title="Reserva de emergência"
-            subtitle={`Meta de ${user.emergencyMonths} meses de custo de vida.`}
-            action={
-              <Link
-                href="/metas"
-                className="text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
-              >
-                Gerenciar
-              </Link>
-            }
-          />
-          <div className="mb-2 flex items-baseline justify-between">
-            <Money cents={emergencySaved} size="lg" className="text-2xl font-semibold" />
-            <span className="muted text-[0.8125rem]">de <Money cents={emergencyTarget} size="sm" /></span>
-          </div>
-          <Progress
-            label="Progresso da reserva de emergência"
-            value={emergencyTarget ? (emergencySaved / emergencyTarget) * 100 : 0}
-            color="var(--color-save)"
-            height={10}
-          />
-          <p className="muted mt-3 text-[0.8125rem] leading-relaxed">
-            Base de cálculo: custo de vida de <strong>{formatCents(costBase)}</strong> por mês
-            {avgCost > 0 ? " (média real dos últimos meses)" : " (estimado em 70% da sua renda)"}.
-          </p>
-          <div className="mt-4">
-            <Hint tone={runway >= user.emergencyMonths ? "good" : "info"}>
-              {runway >= user.emergencyMonths
-                ? "Reserva completa. A partir daqui, o excedente pode ir para investimentos de prazo maior."
-                : `Hoje você aguenta ${runway} ${runway === 1 ? "mês" : "meses"} sem renda. Faltam ${formatCents(Math.max(0, emergencyTarget - emergencySaved))} para chegar na meta.`}
-            </Hint>
-          </div>
-        </Card>
+            <div className="border-t border-[var(--border)] pt-6">
+              <BudgetCard overview={budget} monthRef={ref} className="border-0 bg-transparent p-0 rounded-none shadow-none" />
+            </div>
 
-        <Card>
-          <CardHeader
-            title="Como dividir a sua renda"
-            subtitle="Referência 50/30/20 aplicada à sua renda mensal."
-          />
-          <ul className="space-y-4">
-            <SplitRow
-              label="Essenciais"
-              hint="Moradia, contas, mercado, transporte, saúde"
-              target={split.necessitiesCents}
-              actual={summary.fixedCents}
-              color="var(--text-brand)"
-              share={50}
-            />
-            <SplitRow
-              label="Estilo de vida"
-              hint="Lazer, delivery, assinaturas, compras"
-              target={split.wantsCents}
-              actual={summary.variableCents}
-              color="var(--color-variable)"
-              share={30}
-            />
-            <SplitRow
-              label="Futuro"
-              hint="Reserva, investimentos e quitação de dívidas"
-              target={split.futureCents}
-              actual={Math.max(0, sobrou)}
-              color="var(--color-money-in)"
-              share={20}
-            />
-          </ul>
-          <p className="muted mt-4 text-xs leading-relaxed">
-            É uma referência, não uma regra rígida. Serve para você perceber rápido qual bloco está
-            fora do lugar.
-          </p>
-        </Card>
+            <div className="border-t border-[var(--border)] pt-6">
+              <div className="mb-4 border-b border-[var(--line)] pb-3">
+                <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  Gasto fixo x variável
+                </h2>
+                <p className="muted mt-1 text-[0.8125rem] leading-snug">
+                  Evolução de compromissos fixos e gastos controláveis nos últimos 6 meses.
+                </p>
+              </div>
+              <FixedVariableChart data={series} />
+              <div className="mt-3">
+                <Hint tone={fixedShare > 60 ? "warn" : "tip"}>
+                  {fixedShare > 0 ? (
+                    <>
+                      Gastos fixos consomem <strong>{fixedShare}%</strong> da renda.{" "}
+                      {fixedShare > 60
+                        ? "Acima de 60% o orçamento engessa e reduz flexibilidade."
+                        : "Abaixo de 50% é o equilíbrio ideal para absorver imprevistos."}
+                    </>
+                  ) : (
+                    <>Classifique lançamentos como fixo ou variável para esta análise.</>
+                  )}
+                </Hint>
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna 2: Reserva de Emergência, Dívidas & 50/30/20 */}
+          <div className="space-y-8 [&_.card]:border-0 [&_.card]:bg-transparent [&_.card]:p-0 [&_.card]:shadow-none [&_.card]:rounded-none">
+            {/* Reserva de Emergência */}
+            <div id="reserva-emergencia" className="scroll-mt-20">
+              <div className="mb-4 flex items-start justify-between gap-4 border-b border-[var(--line)] pb-3">
+                <div className="min-w-0">
+                  <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    Reserva de emergência
+                  </h2>
+                  <p className="muted mt-1 text-[0.8125rem] leading-snug">
+                    Meta de {user.emergencyMonths} meses de custo de vida.
+                  </p>
+                </div>
+                <Link
+                  href="/metas"
+                  className="shrink-0 text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                >
+                  Gerenciar
+                </Link>
+              </div>
+
+              <div className="mb-2 flex items-baseline justify-between">
+                <Money cents={emergencySaved} size="lg" className="text-2xl font-semibold" />
+                <span className="muted text-[0.8125rem]">
+                  de <Money cents={emergencyTarget} size="sm" />
+                </span>
+              </div>
+              <Progress
+                label="Progresso da reserva de emergência"
+                value={emergencyTarget ? (emergencySaved / emergencyTarget) * 100 : 0}
+                color="var(--color-save)"
+                height={8}
+              />
+              <p className="muted mt-2 text-xs leading-relaxed">
+                Base de cálculo: custo de vida de <strong>{formatCents(costBase)}</strong> por mês
+                {avgCost > 0 ? " (média real recente)" : " (estimado em 70% da renda)"}
+                {saved > emergencySaved ? ` · Total em metas: ${formatCents(saved)}` : ""}.
+              </p>
+              <div className="mt-3">
+                <Hint tone={runway >= user.emergencyMonths ? "good" : "info"}>
+                  {runway >= user.emergencyMonths
+                    ? "Reserva completa. O excedente pode ir para investimentos de longo prazo."
+                    : `Cobre ${runway} ${runway === 1 ? "mês" : "meses"} sem renda. Faltam ${formatCents(Math.max(0, emergencyTarget - emergencySaved))} para a meta.`}
+                </Hint>
+              </div>
+            </div>
+
+            {/* Dívidas (se houver) */}
+            {debts.debts.length > 0 ? (
+              <div className="border-t border-[var(--border)] pt-6">
+                <DebtCard
+                  overview={debts}
+                  incomeCents={user.monthlyIncomeCents}
+                  className="border-0 bg-transparent p-0 rounded-none shadow-none"
+                />
+              </div>
+            ) : null}
+
+            {/* 50/30/20 */}
+            <div className="border-t border-[var(--border)] pt-6">
+              <div className="mb-4 border-b border-[var(--line)] pb-3">
+                <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  Como dividir a sua renda
+                </h2>
+                <p className="muted mt-1 text-[0.8125rem] leading-snug">
+                  Referência 50/30/20 aplicada à sua renda mensal.
+                </p>
+              </div>
+
+              <ul className="space-y-4">
+                <SplitRow
+                  label="Essenciais"
+                  hint="Moradia, contas, mercado, transporte, saúde"
+                  target={split.necessitiesCents}
+                  actual={summary.fixedCents}
+                  color="var(--text-brand)"
+                  share={50}
+                />
+                <SplitRow
+                  label="Estilo de vida"
+                  hint="Lazer, delivery, assinaturas, compras"
+                  target={split.wantsCents}
+                  actual={summary.variableCents}
+                  color="var(--color-variable)"
+                  share={30}
+                />
+                <SplitRow
+                  label="Futuro"
+                  hint="Reserva, investimentos e quitação de dívidas"
+                  target={split.futureCents}
+                  actual={Math.max(0, sobrou)}
+                  color="var(--color-money-in)"
+                  share={20}
+                />
+              </ul>
+              <p className="muted mt-3 text-xs leading-relaxed">
+                Referência para equilibrar gastos essenciais, estilo de vida e metas.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
     </>
   );
