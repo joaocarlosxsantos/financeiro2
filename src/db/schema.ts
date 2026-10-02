@@ -541,12 +541,39 @@ export const billParticipants = pgTable(
   (t) => [index("bill_participants_bill_idx").on(t.billId)],
 );
 
+/**
+ * Divisão de um lançamento (despesa) com outras pessoas.
+ * Permite registrar quanto cada pessoa deve. O lançamento mantém o valor total.
+ * A parte do dono não é gravada: minha parte = total - soma dos outros.
+ */
+export const transactionSplits = pgTable(
+  "transaction_splits",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    transactionId: varchar("transaction_id", { length: 32 })
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    amountCents: integer("amount_cents").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("transaction_splits_user_idx").on(t.userId),
+    index("transaction_splits_transaction_idx").on(t.transactionId),
+  ],
+);
+
 // ---------------------------------------------------------------- relations
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   categories: many(categories),
   transactions: many(transactions),
+  transactionSplits: many(transactionSplits),
   goals: many(goals),
   budgets: many(budgets),
   recurringRules: many(recurringRules),
@@ -582,7 +609,7 @@ export const budgetsRelations = relations(budgets, ({ one }) => ({
   category: one(categories, { fields: [budgets.categoryId], references: [categories.id] }),
 }));
 
-export const transactionsRelations = relations(transactions, ({ one }) => ({
+export const transactionsRelations = relations(transactions, ({ one, many }) => ({
   user: one(users, { fields: [transactions.userId], references: [users.id] }),
   account: one(accounts, { fields: [transactions.accountId], references: [accounts.id] }),
   category: one(categories, { fields: [transactions.categoryId], references: [categories.id] }),
@@ -590,6 +617,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     fields: [transactions.recurringRuleId],
     references: [recurringRules.id],
   }),
+  splits: many(transactionSplits),
 }));
 
 export const recurringRulesRelations = relations(recurringRules, ({ one, many }) => ({
@@ -652,6 +680,14 @@ export const billParticipantsRelations = relations(billParticipants, ({ one }) =
   bill: one(bills, { fields: [billParticipants.billId], references: [bills.id] }),
 }));
 
+export const transactionSplitsRelations = relations(transactionSplits, ({ one }) => ({
+  user: one(users, { fields: [transactionSplits.userId], references: [users.id] }),
+  transaction: one(transactions, {
+    fields: [transactionSplits.transactionId],
+    references: [transactions.id],
+  }),
+}));
+
 // ---------------------------------------------------------------- tipos
 
 export type CategoryKind = (typeof categoryKind.enumValues)[number];
@@ -663,6 +699,7 @@ export type User = typeof users.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
+export type TransactionSplit = typeof transactionSplits.$inferSelect;
 export type Goal = typeof goals.$inferSelect;
 export type Budget = typeof budgets.$inferSelect;
 export type RecurringRule = typeof recurringRules.$inferSelect;

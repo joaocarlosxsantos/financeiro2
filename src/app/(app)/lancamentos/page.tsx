@@ -1,6 +1,13 @@
 import { CreditCard, Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
-import { getAccounts, getCategories, getRecurringStatus, getTransactions } from "@/server/queries";
+import {
+  getAccounts,
+  getCategories,
+  getReceivablesByPerson,
+  getRecurringStatus,
+  getTransactionSplits,
+  getTransactions,
+} from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -11,6 +18,7 @@ import { Hint } from "@/components/ui/hint";
 import { Money } from "@/components/ui/money";
 import { TransactionComposer } from "./transaction-composer";
 import { TransactionList } from "./transaction-list";
+import { ReceivablesSection } from "./receivables-section";
 import { Filters } from "./filters";
 import { PeriodSwitcher } from "./period-switcher";
 import { ExportMenu } from "./export-menu";
@@ -42,7 +50,7 @@ export default async function TransactionsPage({
       ? { from: sp.from, to: sp.to }
       : null;
 
-  const [accounts, categories, transactions, recurring] = await Promise.all([
+  const [accounts, categories, transactions, recurring, receivables] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
     getTransactions(
@@ -61,28 +69,45 @@ export default async function TransactionsPage({
       customRange ? 1000 : 300,
     ),
     getRecurringStatus(userId, ref),
+    getReceivablesByPerson(userId, ref),
   ]);
 
-  const plain = transactions.map((t) => ({
-    id: t.id,
-    date: t.date.toISOString().slice(0, 10),
-    description: t.description,
-    amountCents: t.amountCents,
-    kind: t.kind as "INCOME" | "EXPENSE",
-    nature: t.nature as "FIXED" | "VARIABLE",
-    categoryId: t.categoryId,
-    categoryName: t.categoryName,
-    categoryColor: t.categoryColor,
-    accountId: t.accountId,
-    accountName: t.accountName,
-    isCard: t.accountType === "CREDIT_CARD",
-    notes: t.notes,
-    isTransfer: t.isTransfer,
-    recurringRuleId: t.recurringRuleId,
-    installmentGroupId: t.installmentGroupId,
-    installmentNumber: t.installmentNumber,
-    installmentTotal: t.installmentTotal,
-  }));
+  const txIds = transactions.map((t) => t.id);
+  const splitsMap = await getTransactionSplits(userId, txIds);
+
+  const plain = transactions.map((t) => {
+    const splits = (splitsMap.get(t.id) ?? []).map((s) => ({
+      id: s.id,
+      name: s.name,
+      phone: s.phone,
+      amountCents: s.amountCents,
+    }));
+    const othersSum = splits.reduce((acc, s) => acc + s.amountCents, 0);
+    const myShareCents = splits.length > 0 ? Math.max(0, t.amountCents - othersSum) : t.amountCents;
+
+    return {
+      id: t.id,
+      date: t.date.toISOString().slice(0, 10),
+      description: t.description,
+      amountCents: t.amountCents,
+      kind: t.kind as "INCOME" | "EXPENSE",
+      nature: t.nature as "FIXED" | "VARIABLE",
+      categoryId: t.categoryId,
+      categoryName: t.categoryName,
+      categoryColor: t.categoryColor,
+      accountId: t.accountId,
+      accountName: t.accountName,
+      isCard: t.accountType === "CREDIT_CARD",
+      notes: t.notes,
+      isTransfer: t.isTransfer,
+      recurringRuleId: t.recurringRuleId,
+      installmentGroupId: t.installmentGroupId,
+      installmentNumber: t.installmentNumber,
+      installmentTotal: t.installmentTotal,
+      splits,
+      myShareCents,
+    };
+  });
 
   const plainCategories = categories.map((c) => ({
     id: c.id,
@@ -188,6 +213,11 @@ export default async function TransactionsPage({
             </ul>
             <TransactionComposer categories={plainCategories} accounts={plainAccounts} />
           </Card>
+
+          <ReceivablesSection
+            receivables={receivables}
+            monthName={monthLabel(ref)}
+          />
         </div>
       </div>
     </>

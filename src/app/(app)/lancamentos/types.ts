@@ -8,6 +8,13 @@ export type PlainCategory = {
 
 export type PlainAccount = { id: string; name: string };
 
+export type PlainSplit = {
+  id: string;
+  name: string;
+  phone: string | null;
+  amountCents: number;
+};
+
 export type PlainTransaction = {
   id: string;
   date: string;
@@ -30,4 +37,8 @@ export type PlainTransaction = {
   installmentGroupId: string | null;
   installmentNumber: number | null;
   installmentTotal: number | null;
+  /** Divisão desta despesa com outras pessoas. */
+  splits?: PlainSplit[];
+  /** Minha parte calculada (total - soma das partes dos outros). */
+  myShareCents?: number;
 };

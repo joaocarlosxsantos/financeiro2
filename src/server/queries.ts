@@ -1254,3 +1254,5 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
     participants: participantsByBill.get(r.id) ?? [],
   }));
 }
+
+export * from "./split-queries";

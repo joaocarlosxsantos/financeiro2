@@ -1,7 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
-import { ArrowLeftRight, CreditCard, Repeat, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ArrowLeftRight, CreditCard, Repeat, Trash2, Users } from "lucide-react";
 import {
   deleteTransaction,
   setTransactionCategory,
@@ -11,6 +11,7 @@ import { formatCents } from "@/lib/money";
 import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { SplitDialog } from "./split-dialog";
 import type { PlainAccount, PlainCategory, PlainTransaction } from "./types";
 
 export function TransactionList({
@@ -64,8 +65,11 @@ export function TransactionList({
 
 function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCategory[] }) {
   const [pending, start] = useTransition();
+  const [splitOpen, setSplitOpen] = useState(false);
   const confirm = useConfirm();
   const options = categories.filter((c) => c.kind === tx.kind);
+  const canSplit = tx.kind === "EXPENSE" && !tx.isTransfer;
+  const isSplit = Boolean(tx.splits && tx.splits.length > 0);
 
   return (
     <li className={cn("flex items-center gap-3 px-4 py-2.5 transition-opacity", pending && "opacity-50")}>
@@ -135,22 +139,65 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
               recorrente
             </span>
           ) : null}
+          {isSplit ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]"
+              title={tx.splits!.map((s) => `${s.name}: ${formatCents(s.amountCents)}`).join(", ")}
+            >
+              <Users className="size-3" />
+              dividido com {tx.splits!.length}
+            </span>
+          ) : null}
           <span className="truncate text-[0.6875rem]">{tx.accountName}</span>
         </div>
       </div>
 
-      <span
-        className={cn(
-          "tnum font-mono shrink-0 text-right text-sm font-semibold",
-          tx.isTransfer
-            ? "text-[var(--text-muted)]"
-            : tx.kind === "INCOME"
-              ? "text-[var(--text-in)]"
-              : "text-[var(--text-out)]",
-        )}
-      >
-        {tx.isTransfer ? "" : tx.kind === "INCOME" ? "+" : "−"} {formatCents(tx.amountCents)}
-      </span>
+      <div className="shrink-0 text-right">
+        <span
+          className={cn(
+            "tnum font-mono block text-sm font-semibold",
+            tx.isTransfer
+              ? "text-[var(--text-muted)]"
+              : tx.kind === "INCOME"
+                ? "text-[var(--text-in)]"
+                : "text-[var(--text-out)]",
+          )}
+        >
+          {tx.isTransfer ? "" : tx.kind === "INCOME" ? "+" : "−"} {formatCents(tx.amountCents)}
+        </span>
+        {isSplit ? (
+          <span
+            className="tnum font-mono block text-[0.6875rem] text-[var(--text-muted)]"
+            title="Sua parte nesta despesa"
+          >
+            sua parte: {formatCents(tx.myShareCents ?? tx.amountCents)}
+          </span>
+        ) : null}
+      </div>
+
+      {canSplit ? (
+        <button
+          type="button"
+          aria-label={
+            isSplit
+              ? `Editar divisão de ${tx.description}`
+              : `Dividir ${tx.description}`
+          }
+          title={
+            isSplit
+              ? `Dividido com ${tx.splits!.length} pessoa(s). Clique para editar`
+              : "Dividir despesa com outras pessoas"
+          }
+          disabled={pending}
+          onClick={() => setSplitOpen(true)}
+          className={cn(
+            "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
+            isSplit ? "text-[var(--text-brand)]" : "text-[var(--text-muted)] hover:text-[var(--text)]",
+          )}
+        >
+          <Users className="size-3.5" />
+        </button>
+      ) : null}
 
       <button
         type="button"
@@ -197,6 +244,15 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
       >
         <Trash2 className="size-3.5" />
       </button>
+
+      {splitOpen ? (
+        <SplitDialog
+          isOpen={splitOpen}
+          onClose={() => setSplitOpen(false)}
+          transaction={tx}
+          initialSplits={tx.splits}
+        />
+      ) : null}
     </li>
   );
 }
