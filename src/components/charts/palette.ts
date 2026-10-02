@@ -21,26 +21,20 @@ export const VIZ = {
 } as const;
 
 /**
- * 17 tons de categoria desbotados derivados da paleta "caderno de contas"
- * (nanquim, musgo, tijolo, ocre, ameixa, oliva, petróleo, couro, argila, índigo).
- * Tons com delta perceptível claro e índice único para cada categoria padrão.
+ * 10 tons de categoria limpos e distintos entre si
+ * (famílias azul, verde-água, violeta, âmbar, coral e cinza).
+ * Saturação média, contraste >= 3:1 contra a superfície em ambos os temas
+ * (#FFFFFF no claro e #151A21 no escuro) e delta perceptível entre vizinhos.
  */
 export const CATEGORY_PALETTE = [
-  "#2F6B4F", // 0: verde musgo floresta (Salário)
-  "#4E8065", // 1: sálvia suave (Renda extra)
-  "#1F3A5F", // 2: azul nanquim profundo (Rendimentos)
-  "#2E4D6E", // 3: nanquim ardósia (Moradia)
-  "#5C6B73", // 4: ardósia lavado neutro (Contas de casa)
-  "#7B4B68", // 5: ameixa / vinho desbotado (Educação)
-  "#3D7870", // 6: verde petróleo / sálvia medicinal (Saúde)
-  "#4B5878", // 7: índigo acinzentado (Assinaturas)
-  "#B8863A", // 8: ocre mostarda (Transporte fixo)
-  "#8F3D30", // 9: vermelho tijolo escuro (Dívidas e juros)
-  "#5E733B", // 10: verde oliva seco (Mercado)
-  "#C2571A", // 11: laranja acento / queimado (Alimentação fora)
-  "#D49B42", // 12: âmbar / trigo dourado (Transporte)
-  "#9E5664", // 13: rosa antigo / argila (Lazer)
-  "#B4412F", // 14: vermelho tijolo / terracota (Compras)
-  "#825434", // 15: marrom couro / sela (Cuidados pessoais)
-  "#6E727A", // 16: grafite / pedra neutro (Outros)
+  "#316DBA", // 0: azul safira (família azul)
+  "#168272", // 1: verde-água profundo / petróleo (família verde-água)
+  "#775CB8", // 2: violeta ametista (família violeta)
+  "#A8721A", // 3: âmbar dourado (família âmbar)
+  "#BA533D", // 4: coral terracota (família coral)
+  "#2A8256", // 5: verde sálvia floresta (família verde-água)
+  "#2480A4", // 6: azul ardósia cerúleo (família azul)
+  "#9A5082", // 7: ameixa suave / baga (família violeta)
+  "#AC5369", // 8: rosa argila / terracota (família coral)
+  "#5D6C7D", // 9: cinza ardósia / grafite (família cinza)
 ] as const;

@@ -1,18 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Sans, Fraunces, IBM_Plex_Mono } from "next/font/google";
+import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-// Fonte de texto — Instrument Sans (grotesca editorial limpa e contemporânea)
+// Fonte de texto e títulos — Instrument Sans
 const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
   variable: "--font-instrument-sans",
-  display: "swap",
-});
-
-// Fonte serifada de display — Fraunces (títulos e números grandes do caderno de contas)
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
   display: "swap",
 });
 
@@ -33,8 +26,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F4EFE6" },
-    { media: "(prefers-color-scheme: dark)", color: "#14110E" },
+    { media: "(prefers-color-scheme: light)", color: "#F6F7F9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0E1116" },
   ],
 };
 
@@ -51,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={`${instrumentSans.variable} ${fraunces.variable} ${plexMono.variable}`}
+      className={`${instrumentSans.variable} ${plexMono.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

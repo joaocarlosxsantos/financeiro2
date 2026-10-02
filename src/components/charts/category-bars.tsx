@@ -40,7 +40,7 @@ export function CategoryBars({ slices, limit = 8 }: { slices: CategorySlice[]; l
               <span
                 className={
                   row.nature === "FIXED"
-                    ? "shrink-0 rounded-[var(--radius-badge)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wider text-[var(--text-muted)] ring-1 ring-[var(--line)]"
+                    ? "shrink-0 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wider text-[var(--text-muted)] ring-1 ring-[var(--line)]"
                     : "hidden"
                 }
               >

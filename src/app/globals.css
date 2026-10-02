@@ -6,14 +6,14 @@
 
 /* ------------------------------------------------------------------
    Financeiro 2.0 — design tokens
-   Direção visual: "caderno de contas" (papel de livro-caixa com tinta).
-   Paleta clara e escura com contraste WCAG AA rigoroso em ambos os temas.
+   Direção visual: Paleta Clean (moderna, alto contraste, neutros refinados).
+   Contraste WCAG AA rigorosamente garantido em ambos os temas.
 ------------------------------------------------------------------- */
 
 @theme {
   --font-sans: var(--font-instrument-sans), var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-display: var(--font-sans);
+  --font-serif: var(--font-sans);
   --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* Escala tipográfica fixa (5 tamanhos em tokens) */
@@ -34,103 +34,104 @@
   --text-display: 1.75rem;
   --text-display--line-height: 2.125rem;
 
-  /* Escala de tinta quente derivada de papel #F4EFE6 e texto #1E1A16 */
-  --color-ink-50: #FBF8F2;
-  --color-ink-100: #F4EFE6;
-  --color-ink-200: #E8E0D1;
-  --color-ink-300: #D9D0BF;
-  --color-ink-400: #A89E90;
-  --color-ink-500: #6B6256;
-  --color-ink-600: #524A40;
-  --color-ink-700: #3C352D;
-  --color-ink-800: #2B251F;
-  --color-ink-900: #1E1A16;
-  --color-ink-950: #14110E;
+  /* Escala neutra clean (baseada em #101828 e #F6F7F9) */
+  --color-ink-50: #F6F7F9;
+  --color-ink-100: #E4E7EC;
+  --color-ink-200: #D0D5DD;
+  --color-ink-300: #9AA4B2;
+  --color-ink-400: #7A8494;
+  --color-ink-500: #6B7280;
+  --color-ink-600: #5B6472;
+  --color-ink-700: #344054;
+  --color-ink-800: #1D2939;
+  --color-ink-900: #101828;
+  --color-ink-950: #0E1116;
 
-  /* Tinta de marca — Azul Nanquim (#1F3A5F) e nanquim claro (#8FB0DD) */
-  --color-brand-50: #F1F5FA;
-  --color-brand-100: #DEE8F4;
-  --color-brand-200: #BFD3EC;
-  --color-brand-300: #8FB0DD;
-  --color-brand-400: #547EAE;
-  --color-brand-500: #294D7B;
-  --color-brand-600: #1F3A5F;
-  --color-brand-700: #162943;
-  --color-brand-800: #0F1D30;
-  --color-brand-900: #0A1320;
+  /* Marca — Azul Real (#2349C9) no claro / Azul Vivo (#7FA2FF) no escuro */
+  --color-brand-50: #EEF2FF;
+  --color-brand-100: #E0E7FF;
+  --color-brand-200: #C7D2FE;
+  --color-brand-300: #7FA2FF;
+  --color-brand-400: #4B74F6;
+  --color-brand-500: #3359E0;
+  --color-brand-600: #2349C9;
+  --color-brand-700: #1B38A3;
+  --color-brand-800: #162B7D;
+  --color-brand-900: #111F57;
 
-  /* Cores semânticas financeiras da nova paleta */
-  --color-money-in: #2F6B4F;
-  --color-money-in-soft: #E3EDE7;
-  --color-money-out: #B4412F;
-  --color-money-out-soft: #FBECE9;
-  --color-save: #1F3A5F;
-  --color-fixed: #1F3A5F;
-  --color-variable: #BA7F16;
-  --color-save-soft: #E2EAF3;
-  --color-warn-soft: #FAF3E0;
+  /* Cores semânticas financeiras (valores padrão / claro) */
+  --color-money-in: #0B7A52;
+  --color-money-in-soft: #E6F5EE;
+  --color-money-out: #C0352B;
+  --color-money-out-soft: #FCEAE8;
+  --color-save: #2349C9;
+  --color-fixed: #2349C9;
+  --color-variable: #B8760A;
+  --color-save-soft: #EEF2FF;
+  --color-warn-soft: #FEF6E7;
 
-  /* Tokens semânticos diretos do caderno de contas */
-  --color-paper: #F4EFE6;
-  --color-surface: #FBF8F2;
-  --color-line: #D9D0BF;
-  --color-nanquim: #1F3A5F;
-  --color-nanquim-light: #8FB0DD;
-  --color-entrou: #2F6B4F;
-  --color-saiu: #B4412F;
-  --color-atencao: #BA7F16;
-  --color-acento: #C2571A;
+  /* Tokens semânticos diretos */
+  --color-paper: #F6F7F9;
+  --color-surface: #FFFFFF;
+  --color-line: #E4E7EC;
+  --color-nanquim: #2349C9;
+  --color-nanquim-light: #7FA2FF;
+  --color-entrou: #0B7A52;
+  --color-saiu: #C0352B;
+  --color-atencao: #B8760A;
+  --color-acento: #2349C9;
 
-  /* Raios 4-6px */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 6px;
-  --radius-xl: 6px;
-  --radius-xl2: 6px;
+  /* Raios 8px (cards, inputs e botões) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-xl2: 8px;
 }
 
 :root {
   /* Paleta clara */
-  --bg: #F4EFE6;
-  --surface: #FBF8F2;
-  --surface-2: #FAF5EB;
-  --border: #D9D0BF;
-  --text: #1E1A16;
-  --text-muted: #6B6256;
-  --shadow-card: 0 1px 2px rgba(30, 26, 22, 0.04);
-  --shadow-sm: 0 1px 2px rgba(30, 26, 22, 0.03);
+  --bg: #F6F7F9;
+  --surface: #FFFFFF;
+  --surface-2: #F6F7F9;
+  --border: #E4E7EC;
+  --text: #101828;
+  --text-muted: #5B6472;
+  --text-subtle: #6B7280;
+  --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05), 0 1px 2px rgba(16, 24, 40, 0.03);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-overlay: 0 4px 6px -1px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.04);
 
-  /* Cores de texto/glifo com contraste WCAG AA garantido (>= 4.5:1) */
-  --text-in: #2F6B4F;      /* 5.94:1 sobre #FBF8F2, 5.49:1 sobre #F4EFE6 */
-  --text-out: #B4412F;     /* 5.30:1 sobre #FBF8F2, 4.91:1 sobre #F4EFE6 */
-  --text-warn: #8C5E0B;    /* 5.32:1 sobre #FBF8F2, 4.93:1 sobre #F4EFE6 */
-  --text-brand: #1F3A5F;   /* 10.83:1 sobre #FBF8F2, 10.03:1 sobre #F4EFE6 */
-  --text-accent: #9E3E0A;  /* 6.29:1 sobre #FBF8F2, 5.83:1 sobre #F4EFE6 */
+  /* Cores de texto com contraste WCAG AA rigorosamente garantido (>= 4.5:1) */
+  --text-in: #0B7A52;      /* 5.36:1 sobre #FFFFFF, 5.00:1 sobre #F6F7F9 */
+  --text-out: #C0352B;     /* 5.55:1 sobre #FFFFFF, 5.18:1 sobre #F6F7F9 */
+  --text-warn: #8A5A00;    /* 5.93:1 sobre #FFFFFF, 5.53:1 sobre #F6F7F9 */
+  --text-brand: #2349C9;   /* 7.32:1 sobre #FFFFFF, 6.83:1 sobre #F6F7F9 */
+  --text-accent: #2349C9;  /* Acento azul de marca */
 
   /* Aliases de compatibilidade */
   --warning: var(--text-warn);
   --danger: var(--text-out);
 
-  /* Cores financeiras no tema claro */
-  --color-money-in: #2F6B4F;
-  --color-money-in-soft: #E3EDE7;
-  --color-money-out: #B4412F;
-  --color-money-out-soft: #FBECE9;
-  --color-save: #1F3A5F;
-  --color-save-soft: #E2EAF3;
-  --color-fixed: #1F3A5F;
-  --color-variable: #BA7F16;
+  /* Cores financeiras dinâmicas (tema claro) */
+  --color-money-in: #0B7A52;
+  --color-money-in-soft: #E6F5EE;
+  --color-money-out: #C0352B;
+  --color-money-out-soft: #FCEAE8;
+  --color-save: #2349C9;
+  --color-save-soft: #EEF2FF;
+  --color-fixed: #2349C9;
+  --color-variable: #B8760A;
 
-  /* Tokens diretos: --atencao (#BA7F16) restrito a preenchimentos/barras gráficos.
-     Para texto/glifos, usar sempre --text-warn (#8C5E0B, 5.32:1). */
-  --paper: #F4EFE6;
-  --line: #D9D0BF;
-  --nanquim: #1F3A5F;
-  --entrou: #2F6B4F;
-  --saiu: #B4412F;
-  --atencao: #BA7F16;
-  --acento: #C2571A;
+  /* Tokens diretos */
+  --paper: #F6F7F9;
+  --line: #E4E7EC;
+  --nanquim: #2349C9;
+  --entrou: #0B7A52;
+  --saiu: #C0352B;
+  --atencao: #B8760A;
+  --acento: #2349C9;
 
   /* Escala tipográfica 5 tamanhos */
   --text-size-1: 0.75rem;
@@ -145,70 +146,73 @@
   --font-size-title: 1.25rem;
   --font-size-hero: 1.75rem;
 
-  --radius-card: 6px;
-  --radius-input: 4px;
+  --radius-card: 8px;
+  --radius-input: 8px;
+  --radius-button: 8px;
 
   /* Cores de fundo e borda para alertas e dicas (Hint) */
-  --color-warn-soft: #FAF3E0;
-  --border-warn: #E6D4A5;
-  --border-out: #F3C5BC;
-  --border-in: #C5DFD0;
-  --border-brand: #C8D7E8;
+  --color-warn-soft: #FEF6E7;
+  --border-warn: #F9DBAF;
+  --border-out: #FECDCA;
+  --border-in: #D1FADF;
+  --border-brand: #D1E0FF;
 }
 
 :root,
 .dark {
-  --btn-in: #2F6B4F;
-  --btn-out: #B4412F;
-  --btn-brand: #1F3A5F;
-  --btn-accent: #C2571A;
+  --btn-in: #0B7A52;
+  --btn-out: #C0352B;
+  --btn-brand: #2349C9;
+  --btn-accent: #2349C9;
 }
 
 .dark {
   /* Paleta escura */
-  --bg: #14110E;
-  --surface: #1C1814;
-  --surface-2: #25201B;
-  --border: #332C25;
-  --text: #EDE6DA;
-  --text-muted: #A89E90;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --bg: #0E1116;
+  --surface: #151A21;
+  --surface-2: #1B222B;
+  --border: #262D37;
+  --text: #ECEFF4;
+  --text-muted: #9AA4B2;
+  --text-subtle: #7A8494;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-overlay: 0 4px 12px rgba(0, 0, 0, 0.5);
 
-  /* Contraste WCAG AA garantido no tema escuro (>= 4.5:1) */
-  --text-in: #6FBF9A;      /* 8.06:1 sobre #1C1814, 8.60:1 sobre #14110E */
-  --text-out: #E07A66;     /* 6.00:1 sobre #1C1814, 6.40:1 sobre #14110E */
-  --text-warn: #E5A93C;    /* 8.46:1 sobre #1C1814, 9.02:1 sobre #14110E */
-  --text-brand: #8FB0DD;   /* 7.92:1 sobre #1C1814, 8.44:1 sobre #14110E */
-  --text-accent: #E07A44;  /* 5.91:1 sobre #1C1814, 6.30:1 sobre #14110E */
+  /* Contraste WCAG AA rigorosamente garantido no tema escuro (>= 4.5:1) */
+  --text-in: #4FD1A1;      /* 9.13:1 sobre #151A21, 9.88:1 sobre #0E1116 */
+  --text-out: #FF7F73;     /* 7.10:1 sobre #151A21, 7.69:1 sobre #0E1116 */
+  --text-warn: #F2B84B;    /* 9.76:1 sobre #151A21, 10.57:1 sobre #0E1116 */
+  --text-brand: #7FA2FF;   /* 7.09:1 sobre #151A21, 7.67:1 sobre #0E1116 */
+  --text-accent: #7FA2FF;  /* Acento azul de marca no escuro */
 
   /* Aliases de compatibilidade */
   --warning: var(--text-warn);
   --danger: var(--text-out);
 
-  /* Cores financeiras clareadas para dark mode (WCAG AA >= 4.5:1 sobre #1C1814) */
-  --color-money-in: #6FBF9A;
-  --color-money-in-soft: rgba(111, 191, 154, 0.15);
-  --color-money-out: #E07A66;
-  --color-money-out-soft: rgba(224, 122, 102, 0.15);
-  --color-save: #8FB0DD;
-  --color-save-soft: rgba(143, 176, 221, 0.15);
-  --color-fixed: #8FB0DD;
-  --color-variable: #E5A93C;
-  --color-warn-soft: rgba(229, 169, 60, 0.15);
-  --border-warn: rgba(229, 169, 60, 0.25);
-  --border-out: rgba(224, 122, 102, 0.25);
-  --border-in: rgba(111, 191, 154, 0.25);
-  --border-brand: rgba(143, 176, 221, 0.25);
+  /* Cores financeiras dinâmicas clareadas para dark mode */
+  --color-money-in: #4FD1A1;
+  --color-money-in-soft: rgba(79, 209, 161, 0.15);
+  --color-money-out: #FF7F73;
+  --color-money-out-soft: rgba(255, 127, 115, 0.15);
+  --color-save: #7FA2FF;
+  --color-save-soft: rgba(127, 162, 255, 0.15);
+  --color-fixed: #7FA2FF;
+  --color-variable: #F2B84B;
+  --color-warn-soft: rgba(242, 184, 75, 0.15);
+  --border-warn: rgba(242, 184, 75, 0.25);
+  --border-out: rgba(255, 127, 115, 0.25);
+  --border-in: rgba(79, 209, 161, 0.25);
+  --border-brand: rgba(127, 162, 255, 0.25);
 
   /* Tokens diretos */
-  --paper: #14110E;
-  --line: #332C25;
-  --nanquim: #8FB0DD;
-  --entrou: #6FBF9A;
-  --saiu: #E07A66;
-  --atencao: #E5A93C;
-  --acento: #E07A44;
+  --paper: #0E1116;
+  --line: #262D37;
+  --nanquim: #7FA2FF;
+  --entrou: #4FD1A1;
+  --saiu: #FF7F73;
+  --atencao: #F2B84B;
+  --acento: #7FA2FF;
 }
 
 * {
@@ -230,7 +234,9 @@ body {
 }
 
 h1, h2, h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.5px;
 }
 
 @layer components {
@@ -238,7 +244,7 @@ h1, h2, h3 {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
-    box-shadow: none;
+    box-shadow: var(--shadow-card);
   }
 
   .muted {
@@ -246,16 +252,17 @@ h1, h2, h3 {
   }
 
   .font-display {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
+    letter-spacing: -0.5px;
   }
 
   .font-serif {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
   }
 
   .input-base {
     width: 100%;
-    background: var(--surface-2);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-input);
     padding: 0.5rem 0.75rem;
@@ -274,10 +281,10 @@ h1, h2, h3 {
   }
   .input-base:focus {
     border-color: var(--acento);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acento) 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acento) 20%, transparent);
   }
   .input-base::placeholder {
-    color: var(--text-muted);
+    color: var(--text-subtle);
   }
   select.input-base {
     overflow: hidden;
@@ -287,9 +294,9 @@ h1, h2, h3 {
 }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-acento, #C2571A);
+  outline: 2px solid var(--acento);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .skip-link {
@@ -301,7 +308,7 @@ h1, h2, h3 {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -317,12 +324,12 @@ h1, h2, h3 {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--text-muted) 35%, transparent);
-  border-radius: 4px;
-  border: 3px solid transparent;
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
   background-clip: content-box;
 }

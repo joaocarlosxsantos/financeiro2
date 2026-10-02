@@ -16,7 +16,7 @@ export function LoginForm() {
         <Input name="email" type="email" autoComplete="email" required placeholder="voce@email.com" />
       </Field>
       <Field label="Senha">
-        <Input name="password" type="password" autoComplete="current-password" required placeholder="••••••••" />
+        <Input name="password" type="password" autoComplete="current-password" required placeholder="Sua senha" />
       </Field>
 
       {state.error ? (

@@ -19,10 +19,10 @@ export function RegisterForm() {
         <Input name="email" type="email" required placeholder="voce@email.com" autoComplete="email" />
       </Field>
       <Field label="Senha" hint="Mínimo de 8 caracteres.">
-        <Input name="password" type="password" required minLength={8} autoComplete="new-password" />
+        <Input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="Sua senha" />
       </Field>
       <Field label="Confirmar senha">
-        <Input name="confirm" type="password" required minLength={8} autoComplete="new-password" />
+        <Input name="confirm" type="password" required minLength={8} autoComplete="new-password" placeholder="Sua senha" />
       </Field>
 
       {state.error ? (
