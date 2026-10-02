@@ -31,7 +31,7 @@ export function BillList({
           <div key={key}>
             <div className="muted flex items-center justify-between gap-3 bg-[var(--surface-2)] px-4 py-2">
               <p className="text-xs font-semibold tracking-wide uppercase">{group.name}</p>
-              <p className="tnum text-xs font-semibold">{formatCents(groupTotalCents)}</p>
+              <p className="tnum font-mono text-xs font-semibold">{formatCents(groupTotalCents)}</p>
             </div>
             <ul className="divide-y">
               {group.items.map((bill) => (

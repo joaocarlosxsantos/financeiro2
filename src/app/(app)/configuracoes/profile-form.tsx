@@ -51,12 +51,12 @@ export function ProfileForm({
       </div>
 
       {state.error ? (
-        <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.8125rem] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-xl bg-[var(--color-money-out-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}
       {state.ok ? (
-        <p className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-[0.8125rem] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <p className="rounded-xl bg-[var(--color-money-in-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-in)]">
           Perfil atualizado.
         </p>
       ) : null}

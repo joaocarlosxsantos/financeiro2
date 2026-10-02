@@ -189,7 +189,7 @@ export default async function BudgetPage({
             <div className="mt-4">
               <Link
                 href="/lancamentos"
-                className="text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                className="text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
               >
                 Ver os lançamentos do mês →
               </Link>

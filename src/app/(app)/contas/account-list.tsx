@@ -9,6 +9,7 @@ import { Field, Input } from "@/components/ui/field";
 import { formatCents, formatCentsPlain } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import { Money } from "@/components/ui/money";
 
 type Account = {
   id: string;
@@ -65,7 +66,7 @@ function Row({ account }: { account: Account }) {
     <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
       <div className="flex flex-wrap items-center gap-3">
         <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl"
+          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-button)]"
           style={{
             background: `color-mix(in srgb, ${account.color} 14%, transparent)`,
             color: account.color,
@@ -84,12 +85,12 @@ function Row({ account }: { account: Account }) {
         </div>
 
         <div className="text-right">
-          <p
-            className="tnum text-[1.0625rem] font-semibold tracking-tight"
-            style={negativo ? { color: "var(--text-out)" } : undefined}
-          >
-            {formatCents(account.balanceCents)}
-          </p>
+          <Money
+            cents={account.balanceCents}
+            size="md"
+            className="text-base font-semibold"
+            tone={negativo ? "out" : undefined}
+          />
           <p className="muted text-xs">saldo atual</p>
         </div>
       </div>
@@ -112,7 +113,7 @@ function Row({ account }: { account: Account }) {
         <button
           type="button"
           onClick={() => setEditing((v) => !v)}
-          className="ml-auto cursor-pointer font-medium text-brand-600 hover:underline dark:text-brand-300"
+          className="ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
         >
           {editing ? "Fechar" : "Ajustar saldo inicial"}
         </button>
@@ -120,7 +121,7 @@ function Row({ account }: { account: Account }) {
 
       {editing ? (
         <form
-          className="mt-3 grid grid-cols-1 gap-3 rounded-xl border bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="mt-3 grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
           action={(formData) => {
             start(async () => {
               await saveOpeningBalance({

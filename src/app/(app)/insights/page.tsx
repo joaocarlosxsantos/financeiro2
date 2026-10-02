@@ -120,9 +120,9 @@ export default async function InsightsPage({
                     <p
                       className={`mt-1 flex items-center gap-1 text-xs font-medium ${
                         expenseChangePct > 0
-                          ? "text-rose-600 dark:text-rose-400"
+                          ? "text-[var(--text-out)]"
                           : expenseChangePct < 0
-                            ? "text-emerald-600 dark:text-emerald-400"
+                            ? "text-[var(--text-in)]"
                             : "muted"
                       }`}
                     >
@@ -191,9 +191,9 @@ export default async function InsightsPage({
                       <span
                         className={`tnum flex w-20 shrink-0 items-center justify-end gap-1 text-xs font-medium ${
                           d.deltaCents > 0
-                            ? "text-rose-600 dark:text-rose-400"
+                            ? "text-[var(--text-out)]"
                             : d.deltaCents < 0
-                              ? "text-emerald-600 dark:text-emerald-400"
+                              ? "text-[var(--text-in)]"
                               : "muted"
                         }`}
                       >
@@ -224,7 +224,7 @@ export default async function InsightsPage({
                     <li key={t.id} className="flex items-center gap-3 py-2.5 text-[0.8125rem]">
                       <span
                         className="size-2.5 shrink-0 rounded-full"
-                        style={{ background: t.categoryColor ?? "#94a3b8" }}
+                        style={{ background: t.categoryColor ?? "var(--text-muted)" }}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{t.description}</p>

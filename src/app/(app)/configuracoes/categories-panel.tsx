@@ -6,6 +6,7 @@ import { createCategory, deleteCategory, updateCategory, type ActionState } from
 import { Field, Input, Select } from "@/components/ui/field";
 import { Button, SubmitButton } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { CATEGORY_PALETTE } from "@/components/charts/palette";
 
 const initial: ActionState = {};
 
@@ -94,9 +95,9 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
             <Input name="keywords" placeholder="petz, cobasi, racao" />
           </Field>
           <Field label="Cor">
-            <Input name="color" type="color" defaultValue="#64748b" className="h-11 w-24 p-1" />
+            <Input name="color" type="color" defaultValue={CATEGORY_PALETTE[9]} className="h-11 w-24 p-1" />
           </Field>
-          {state.error ? <p className="text-[0.8125rem] text-rose-600">{state.error}</p> : null}
+          {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
             <SubmitButton size="sm">Adicionar categoria</SubmitButton>
             <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
@@ -152,7 +153,7 @@ function Group({
                 type="button"
                 aria-label={`Editar ${c.name}`}
                 onClick={() => onToggleEdit(c.id)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
               >
                 <Pencil className="size-4" />
               </button>
@@ -160,7 +161,7 @@ function Group({
                 type="button"
                 aria-label={`Arquivar ${c.name}`}
                 onClick={() => onDelete(c.id, c.name)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -219,7 +220,7 @@ function EditForm({ category, onDone }: { category: Cat; onDone: () => void }) {
       <Field label="Cor">
         <Input name="color" type="color" defaultValue={category.color} className="h-11 w-24 p-1" />
       </Field>
-      {state.error ? <p className="text-[0.8125rem] text-rose-600">{state.error}</p> : null}
+      {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
       <div className="flex gap-2">
         <SubmitButton size="sm">Salvar</SubmitButton>
         <Button type="button" size="sm" variant="ghost" onClick={onDone}>

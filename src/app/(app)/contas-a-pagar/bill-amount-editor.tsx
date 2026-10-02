@@ -49,7 +49,7 @@ export function BillAmountEditor({
   }, [mode, participants, amounts, totalCentsPreview]);
 
   return (
-    <form action={formAction} className="space-y-3 rounded-xl border bg-[var(--surface-2)] p-3">
+    <form action={formAction} className="space-y-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
       <input type="hidden" name="billId" value={billId} />
       <input type="hidden" name="mode" value={mode} />
 
@@ -70,8 +70,8 @@ export function BillAmountEditor({
             <button
               type="button"
               onClick={() => setMode("EQUAL")}
-              className={`flex-1 rounded-lg border px-3 py-1.5 text-[0.8125rem] font-medium ${
-                mode === "EQUAL" ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/12 dark:text-brand-300" : ""
+              className={`flex-1 rounded-[var(--radius-button)] border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
+                mode === "EQUAL" ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]" : "border-[var(--border)] text-[var(--text-muted)]"
               }`}
             >
               Dividir igualmente
@@ -79,8 +79,8 @@ export function BillAmountEditor({
             <button
               type="button"
               onClick={() => setMode("MANUAL")}
-              className={`flex-1 rounded-lg border px-3 py-1.5 text-[0.8125rem] font-medium ${
-                mode === "MANUAL" ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/12 dark:text-brand-300" : ""
+              className={`flex-1 rounded-[var(--radius-button)] border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
+                mode === "MANUAL" ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]" : "border-[var(--border)] text-[var(--text-muted)]"
               }`}
             >
               Dividir manualmente
@@ -106,8 +106,8 @@ export function BillAmountEditor({
                 <p
                   className={`text-[0.8125rem] font-medium ${
                     manualCheck.ok
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-rose-600 dark:text-rose-400"
+                      ? "text-[var(--text-in)]"
+                      : "text-[var(--text-out)]"
                   }`}
                 >
                   {manualCheck.ok
@@ -122,7 +122,7 @@ export function BillAmountEditor({
         </>
       ) : null}
 
-      {state.error ? <p className="text-[0.8125rem] text-rose-600 dark:text-rose-400">{state.error}</p> : null}
+      {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
 
       <div className="flex gap-2">
         <SubmitButton size="sm" pendingLabel="Salvando...">

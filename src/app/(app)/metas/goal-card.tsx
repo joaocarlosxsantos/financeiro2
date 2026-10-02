@@ -58,7 +58,7 @@ export function GoalCard({
               {KIND_LABEL[goal.kind] ?? "Meta"}
             </span>
             {done ? (
-              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300">
+              <span className="rounded-md bg-[var(--color-money-in-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-in)]">
                 concluída
               </span>
             ) : null}
@@ -77,7 +77,7 @@ export function GoalCard({
             if (!ok) return;
             start(async () => void (await deleteGoal(goal.id)));
           }}
-          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-4" />
         </button>
@@ -102,7 +102,7 @@ export function GoalCard({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="ml-auto cursor-pointer font-medium text-brand-600 hover:underline dark:text-brand-300"
+          className="ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
         >
           {open ? "Fechar" : "Registrar aporte"}
         </button>

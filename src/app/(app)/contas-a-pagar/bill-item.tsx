@@ -119,7 +119,7 @@ export function BillItem({
           ) : null}
         </div>
 
-        <span className="tnum text-[0.875rem] font-semibold">{formatCents(bill.totalCents)}</span>
+        <span className="tnum font-mono text-[0.875rem] font-semibold">{formatCents(bill.totalCents)}</span>
 
         <button
           type="button"
@@ -133,7 +133,7 @@ export function BillItem({
           type="button"
           aria-label={`Excluir ${bill.name}`}
           onClick={() => void remove()}
-          className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+          className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-3.5" />
         </button>
@@ -185,7 +185,7 @@ export function BillItem({
                 }
                 return null;
               })()}
-              <div className="divide-y rounded-xl border">
+              <div className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)]">
                 {bill.participants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 text-[0.8125rem]">
                     <div className="min-w-0 flex-1">
@@ -197,7 +197,7 @@ export function BillItem({
                         </p>
                       ) : null}
                     </div>
-                    <span className="tnum shrink-0 font-medium">{formatCents(p.amountCents)}</span>
+                    <span className="tnum font-mono shrink-0 font-medium">{formatCents(p.amountCents)}</span>
                     {(() => {
                       const link = shareLinkFor(p);
                       return (
@@ -214,7 +214,7 @@ export function BillItem({
                           }}
                           className={`shrink-0 rounded-lg p-1.5 ${
                             link
-                              ? "cursor-pointer text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                              ? "cursor-pointer text-[var(--text-in)] hover:bg-[var(--color-money-in-soft)]"
                               : "muted cursor-not-allowed opacity-40"
                           }`}
                         >
@@ -226,7 +226,7 @@ export function BillItem({
                       type="button"
                       aria-label={`Remover ${p.name}`}
                       onClick={() => start(async () => void (await removeBillParticipant(p.id)))}
-                      className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                      className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

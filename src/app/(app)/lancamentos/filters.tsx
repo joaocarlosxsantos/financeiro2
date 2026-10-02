@@ -26,20 +26,20 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
   const hasFilters = Boolean(kind || nature || cat || acc || params.get("q"));
 
   return (
-    <div className="card flex flex-wrap items-center gap-2 p-3">
+    <div className="card flex flex-wrap items-center gap-1.5 p-2.5">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           update("q", q.trim());
         }}
-        className="relative min-w-48 flex-1"
+        className="relative min-w-44 flex-1"
       >
-        <Search className="muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Search className="muted pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar descrição..."
-          className="input-base h-9 py-0 pl-9 text-[0.8125rem]"
+          className="input-base h-8 py-0 pl-8 text-xs"
         />
       </form>
 
@@ -59,7 +59,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         Variáveis
       </Chip>
 
-      <span className="muted mx-0.5 h-5 w-px bg-[var(--border)]" aria-hidden />
+      <span className="mx-0.5 h-4 w-px bg-[var(--border)]" aria-hidden />
 
       <Chip active={acc === "OTHER"} onClick={() => update("acc", acc === "OTHER" ? "" : "OTHER")}>
         Conta corrente
@@ -72,7 +72,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         value={cat}
         onChange={(e) => update("cat", e.target.value)}
         aria-label="Filtrar por categoria"
-        className="input-base h-9 w-auto cursor-pointer py-0 text-[0.8125rem]"
+        className="input-base h-8 w-auto cursor-pointer py-0 text-xs"
       >
         <option value="">Todas as categorias</option>
         <option value="NONE">Sem categoria</option>
@@ -87,9 +87,9 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         <button
           type="button"
           onClick={() => router.push(pathname)}
-          className="muted inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[0.8125rem] hover:bg-[var(--surface-2)]"
+          className="muted inline-flex h-8 cursor-pointer items-center gap-1 rounded-[var(--radius-button)] px-2 text-xs hover:bg-[var(--surface-2)]"
         >
-          <X className="size-3.5" />
+          <X className="size-3" />
           Limpar
         </button>
       ) : null}
@@ -111,10 +111,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-9 cursor-pointer rounded-lg border px-3 text-[0.8125rem] font-medium transition-colors",
+        "h-8 cursor-pointer rounded-[var(--radius-button)] border px-2.5 text-xs font-medium transition-colors",
         active
-          ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/12 dark:text-brand-300"
-          : "hover:bg-[var(--surface-2)]",
+          ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]"
+          : "border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-muted)]",
       )}
     >
       {children}

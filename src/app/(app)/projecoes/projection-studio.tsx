@@ -10,8 +10,8 @@ import { projectBalance } from "@/lib/finance";
 
 const SCENARIOS = [
   { key: "conservador", name: "Conservador", rate: 6, color: "var(--text-brand)", desc: "Renda fixa pós-fixada em ano de juro baixo" },
-  { key: "realista", name: "Realista", rate: 10, color: "#0d9488", desc: "Carteira equilibrada ao longo do tempo" },
-  { key: "otimista", name: "Otimista", rate: 14, color: "#d95926", desc: "Cenário favorável, com mais risco envolvido" },
+  { key: "realista", name: "Realista", rate: 10, color: "var(--color-money-in)", desc: "Carteira equilibrada ao longo do tempo" },
+  { key: "otimista", name: "Otimista", rate: 14, color: "var(--color-variable)", desc: "Cenário favorável, com mais risco envolvido" },
 ] as const;
 
 const HORIZONS = [1, 3, 5, 10, 20];
@@ -82,8 +82,8 @@ export function ProjectionStudio({
                     onClick={() => setYears(y)}
                     className={
                       years === y
-                        ? "h-9 cursor-pointer rounded-lg border border-brand-500 bg-brand-50 px-3 text-[0.8125rem] font-medium text-brand-700 dark:bg-brand-500/12 dark:text-brand-300"
-                        : "h-9 cursor-pointer rounded-lg border px-3 text-[0.8125rem] font-medium hover:bg-[var(--surface-2)]"
+                        ? "h-9 cursor-pointer rounded-[var(--radius-button)] border border-[var(--acento)] bg-[var(--color-save-soft)] px-3 text-[0.8125rem] font-medium text-[var(--text-brand)]"
+                        : "h-9 cursor-pointer rounded-[var(--radius-button)] border border-[var(--border)] px-3 text-[0.8125rem] font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
                     }
                   >
                     {y} ano{y === 1 ? "" : "s"}

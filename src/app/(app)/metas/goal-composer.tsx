@@ -9,10 +9,10 @@ const initial: ActionState = {};
 
 const KINDS = [
   { value: "PURCHASE", label: "Compra", color: "var(--text-brand)" },
-  { value: "TRIP", label: "Viagem", color: "#0891b2" },
-  { value: "DEBT_PAYOFF", label: "Quitar dívida", color: "#f43f5e" },
-  { value: "INVESTMENT", label: "Investimento", color: "#0d9488" },
-  { value: "CUSTOM", label: "Outra", color: "#d95926" },
+  { value: "TRIP", label: "Viagem", color: "var(--color-variable)" },
+  { value: "DEBT_PAYOFF", label: "Quitar dívida", color: "var(--color-money-out)" },
+  { value: "INVESTMENT", label: "Investimento", color: "var(--color-money-in)" },
+  { value: "CUSTOM", label: "Outra", color: "var(--text-muted)" },
 ];
 
 export function GoalComposer() {
@@ -78,7 +78,7 @@ export function GoalComposer() {
       </Field>
 
       {state.error ? (
-        <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.8125rem] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-xl bg-[var(--color-money-out-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}

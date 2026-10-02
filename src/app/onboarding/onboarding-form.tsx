@@ -76,8 +76,8 @@ export function OnboardingForm({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SplitCard label="Essenciais (50%)" value={split.necessitiesCents} color="var(--text-brand)" desc="Moradia, contas, mercado, transporte" />
-            <SplitCard label="Estilo de vida (30%)" value={split.wantsCents} color="#f59e0b" desc="Lazer, assinaturas, extras" />
-            <SplitCard label="Futuro (20%)" value={split.futureCents} color="#059669" desc="Reserva, investimentos, quitar dívida" />
+            <SplitCard label="Estilo de vida (30%)" value={split.wantsCents} color="var(--color-variable)" desc="Lazer, assinaturas, extras" />
+            <SplitCard label="Futuro (20%)" value={split.futureCents} color="var(--color-money-in)" desc="Reserva, investimentos, quitar dívida" />
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -107,7 +107,7 @@ export function OnboardingForm({
       ) : null}
 
       {state.error ? (
-        <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.8125rem] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-xl bg-[var(--color-money-out-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}

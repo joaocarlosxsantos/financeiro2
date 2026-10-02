@@ -70,7 +70,7 @@ function Row({ debt }: { debt: Debt }) {
             if (!ok) return;
             start(async () => void (await deleteDebt(debt.id)));
           }}
-          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-4" />
         </button>
@@ -114,7 +114,7 @@ function Row({ debt }: { debt: Debt }) {
         <button
           type="button"
           onClick={() => setPaying((v) => !v)}
-          className="ml-auto cursor-pointer font-medium text-brand-600 hover:underline dark:text-brand-300"
+          className="ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
         >
           {paying ? "Fechar" : "Registrar pagamento"}
         </button>

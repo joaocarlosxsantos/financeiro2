@@ -104,7 +104,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 type="button"
                 aria-label={`Editar ${a.name}`}
                 onClick={() => toggleEdit(a.id)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
               >
                 <Pencil className="size-4" />
               </button>
@@ -112,7 +112,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 type="button"
                 aria-label={`Arquivar ${a.name}`}
                 onClick={() => void archive(a)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -158,7 +158,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Editar ${a.name}`}
                     onClick={() => toggleEdit(a.id)}
-                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/10"
+                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface)] hover:text-[var(--text-brand)]"
                   >
                     <Pencil className="size-4" />
                   </button>
@@ -166,7 +166,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Reativar ${a.name}`}
                     onClick={() => start(async () => void (await restoreAccount(a.id)))}
-                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10"
+                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-in-soft)] hover:text-[var(--text-in)]"
                   >
                     <ArchiveRestore className="size-4" />
                   </button>
@@ -174,7 +174,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Excluir ${a.name} definitivamente`}
                     onClick={() => void removeForever(a)}
-                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -207,7 +207,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
               <Input name="institution" placeholder="Ex.: Banco Inter" />
             </Field>
           </div>
-          {state.error ? <p className="text-[0.8125rem] text-rose-600">{state.error}</p> : null}
+          {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
             <SubmitButton size="sm">Adicionar conta</SubmitButton>
             <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
@@ -257,7 +257,7 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
       <Field label="Cor">
         <Input name="color" type="color" defaultValue={account.color} className="h-11 w-24 p-1" />
       </Field>
-      {state.error ? <p className="text-[0.8125rem] text-rose-600">{state.error}</p> : null}
+      {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
       <div className="flex gap-2">
         <SubmitButton size="sm">Salvar</SubmitButton>
         <Button type="button" size="sm" variant="ghost" onClick={onDone}>

@@ -37,7 +37,7 @@ export default async function RecurringPage({
     <>
       <PageHeader
         title="Lançamentos recorrentes"
-        description="Cadastre uma vez o que se repete todo mês — aluguel, assinaturas, salário — e depois é um clique para lançar o mês inteiro."
+        description="Compromissos e receitas que se repetem todo mês."
         action={<MonthSwitcher value={ref} />}
       />
 
@@ -61,16 +61,17 @@ export default async function RecurringPage({
             />
           ) : status.rules.length ? (
             <Hint tone="good" title={`Tudo lançado em ${monthLabel(ref)}`}>
-              Todas as recorrências vigentes já viraram lançamento neste mês. Use o seletor de mês
-              acima para adiantar o próximo.
+              Todas as recorrências ativas já foram lançadas neste mês.
             </Hint>
           ) : null}
 
           <Card className="p-0">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-[0.9375rem] font-semibold tracking-tight">Suas recorrências</h2>
-              <p className="muted mt-0.5 text-[0.8125rem]">
-                Pausar interrompe a geração sem apagar o histórico já lançado.
+            <div className="border-b border-[var(--line)] px-5 py-4">
+              <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Suas recorrências
+              </h2>
+              <p className="muted mt-0.5 text-xs">
+                Pausar interrompe a geração futura sem apagar lançamentos anteriores.
               </p>
             </div>
 
@@ -98,36 +99,35 @@ export default async function RecurringPage({
               <EmptyState
                 icon={Repeat}
                 title="Nenhuma recorrência cadastrada"
-                description="Comece pelos compromissos que você sabe de cabeça: aluguel, contas de casa, assinaturas e o salário."
+                description="Cadastre compromissos mensais (aluguel, contas, assinaturas ou salário) ao lado."
               />
             )}
           </Card>
 
-          <Hint tone="tip" title="Por que não lançamos automático">
-            O sistema nunca escreve no seu histórico sozinho. Abrir uma tela não cria lançamento —
-            você confere o que vai entrar e confirma. Assim o mês fechado nunca muda sem você saber.
+          <Hint tone="tip" title="Geração sob controle">
+            Lançamentos recorrentes não entram no extrato automaticamente: confira e aprove na lista antes de lançar.
           </Hint>
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card>
-            <CardHeader title="Compromisso mensal" subtitle="Somando as recorrências vigentes." />
+            <CardHeader title="Compromisso mensal" subtitle="Soma das recorrências ativas." />
             <ul className="space-y-3 text-[0.8125rem]">
               <li className="flex items-baseline justify-between gap-3">
                 <span className="muted">Entradas previstas</span>
-                <span className="tnum font-semibold text-[var(--text-in)]">
+                <span className="tnum font-mono font-semibold text-[var(--text-in)]">
                   {formatCents(status.monthlyIncomeCents)}
                 </span>
               </li>
               <li className="flex items-baseline justify-between gap-3">
                 <span className="muted">Saídas previstas</span>
-                <span className="tnum font-semibold text-[var(--text-out)]">
+                <span className="tnum font-mono font-semibold text-[var(--text-out)]">
                   {formatCents(status.monthlyExpenseCents)}
                 </span>
               </li>
-              <li className="flex items-baseline justify-between gap-3 border-t pt-3">
+              <li className="flex items-baseline justify-between gap-3 border-t border-[var(--line)] pt-3">
                 <span className="muted">Da renda já comprometida</span>
-                <span className="tnum font-semibold">{income ? `${comprometido}%` : "—"}</span>
+                <span className="tnum font-mono font-semibold">{income ? `${comprometido}%` : "—"}</span>
               </li>
             </ul>
 
@@ -136,14 +136,11 @@ export default async function RecurringPage({
                 <Hint tone={comprometido > 60 ? "warn" : "info"}>
                   {comprometido > 60 ? (
                     <>
-                      Mais de <strong>{comprometido}%</strong> da renda já está comprometida antes de
-                      você gastar qualquer coisa. Sobra pouca margem para imprevisto — vale olhar
-                      quais desses compromissos dá para renegociar ou cortar.
+                      <strong>{comprometido}%</strong> da renda comprometida antes de qualquer gasto discricionário.
                     </>
                   ) : (
                     <>
-                      <strong>{comprometido}%</strong> da renda sai todo mês sem você decidir nada. É
-                      o seu piso de custo de vida.
+                      <strong>{comprometido}%</strong> da renda representa seu piso de custo fixo mensal.
                     </>
                   )}
                 </Hint>
@@ -154,7 +151,7 @@ export default async function RecurringPage({
           <Card>
             <CardHeader
               title="Nova recorrência"
-              subtitle="Vale para gasto e para entrada — cadastre também o salário."
+              subtitle="Receitas ou despesas fixas mensais."
             />
             <RuleComposer
               monthRef={ref}

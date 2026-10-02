@@ -33,7 +33,7 @@ export default async function BillsPage({
     <>
       <PageHeader
         title="Contas a pagar"
-        description="Anote suas contas do mês e administre a divisão de valores com quem mora ou assina algo junto com você. Fica separado dos Lançamentos — não mexe no Painel nem nos relatórios."
+        description="Controle de vencimentos e rateio de despesas do mês."
         action={<MonthSwitcher value={ref} />}
       />
 
@@ -56,17 +56,17 @@ export default async function BillsPage({
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card>
-            <h2 className="mb-3 text-[0.9375rem] font-semibold tracking-tight">Nova conta</h2>
+            <h2 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Nova conta</h2>
             <NewBillForm groupings={groupings} monthRef={ref} />
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-[0.9375rem] font-semibold tracking-tight">Contas recorrentes</h2>
+            <h2 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Contas recorrentes</h2>
             <BillRulesManager rules={rulesStatus.rules} monthRef={ref} />
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-[0.9375rem] font-semibold tracking-tight">Agrupamentos</h2>
+            <h2 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Agrupamentos</h2>
             <BillGroupingsManager groupings={groupings} />
           </Card>
         </div>

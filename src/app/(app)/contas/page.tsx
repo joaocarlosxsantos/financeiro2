@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import { getBalances } from "@/server/queries";
-import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/hint";
 import { EmptyState } from "@/components/ui/empty";
+import { Money } from "@/components/ui/money";
 import { AccountList } from "./account-list";
 
 export const metadata = { title: "Contas — Financeiro 2.0" };
@@ -18,16 +18,16 @@ export default async function AccountsPage() {
   if (!overview.accounts.length) {
     return (
       <>
-        <PageHeader title="Contas" description="Onde o seu dinheiro está agora." />
+        <PageHeader title="Contas" description="Saldos atuais e patrimônio líquido consolidado." />
         <Card className="p-0">
           <EmptyState
             icon={Wallet}
             title="Nenhuma conta cadastrada"
-            description="Cadastre suas contas e cartões nas configurações para acompanhar o saldo de cada um."
+            description="Cadastre contas e cartões nas configurações para acompanhar os saldos."
             action={
               <Link
                 href="/configuracoes"
-                className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+                className="inline-flex h-10 items-center rounded-[var(--radius-button)] bg-[var(--btn-brand)] px-4 text-sm font-medium text-white hover:opacity-90"
               >
                 Ir para configurações
               </Link>
@@ -42,25 +42,25 @@ export default async function AccountsPage() {
     <>
       <PageHeader
         title="Contas"
-        description="Onde o seu dinheiro está agora, e quanto dele já tem dono. O sistema só conhece o que você lançou — por isso o saldo parte de um valor inicial que você informa."
+        description="Saldos atuais e patrimônio líquido consolidado."
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           {overview.needsOpeningBalance ? (
             <Hint tone="tip" title="Informe o saldo inicial">
-              Alguma conta ainda está sem saldo inicial. Abra o extrato do banco, copie o saldo de
-              uma data e informe abaixo: a partir dela o sistema soma o que entrou e subtrai o que
-              saiu. Sem esse ponto de partida o saldo mostrado é só a movimentação, não o valor real.
+              Alguma conta está sem saldo inicial. Informe o saldo na data de referência para
+              conciliação correta com o extrato bancário.
             </Hint>
           ) : null}
 
           <Card className="p-0">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-[0.9375rem] font-semibold tracking-tight">Contas</h2>
-              <p className="muted mt-0.5 text-[0.8125rem]">
-                Saldo inicial + o que entrou − o que saiu. Transferências entram na conta: elas
-                movem dinheiro de verdade.
+            <div className="border-b border-[var(--line)] px-5 py-4">
+              <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Contas
+              </h2>
+              <p className="muted mt-0.5 text-xs">
+                Saldo inicial somado às entradas e saídas de cada conta.
               </p>
             </div>
             <AccountList
@@ -87,19 +87,16 @@ export default async function AccountsPage() {
           <Card>
             <CardHeader
               title="Patrimônio líquido"
-              subtitle="O que você tem menos o que você deve."
+              subtitle="Total em contas menos saldo de dívidas."
             />
-            <p
-              className="tnum mb-4 text-3xl font-semibold tracking-tight"
-              style={{
-                color:
-                  overview.netWorthCents >= 0
-                    ? "var(--text-in)"
-                    : "var(--text-out)",
-              }}
-            >
-              {formatCents(overview.netWorthCents)}
-            </p>
+            <div className="mb-4">
+              <Money
+                cents={overview.netWorthCents}
+                size="lg"
+                className="text-3xl font-semibold"
+                tone={overview.netWorthCents < 0 ? "out" : undefined}
+              />
+            </div>
 
             <ul className="space-y-2.5 text-[0.8125rem]">
               <Row label="Disponível em contas" value={overview.availableCents} />
@@ -108,15 +105,13 @@ export default async function AccountsPage() {
             </ul>
 
             <p className="muted mt-4 text-xs leading-relaxed">
-              Só entra o que o sistema conhece. Carro, imóvel e investimentos fora daqui não estão
-              nesta conta.
+              Consolidação baseada exclusivamente nos registros do sistema.
             </p>
           </Card>
 
-          <Hint tone="info" title="Como conciliar com o banco">
-            Se o saldo aqui não bate com o do banco, quase sempre falta lançamento. Informe o saldo
-            inicial com a data de hoje e passe a lançar (ou importar) a partir daí — assim os dois
-            números andam juntos daqui para frente.
+          <Hint tone="info" title="Conciliação com o banco">
+            Se o saldo divergir do extrato, atualize o saldo inicial na data de hoje e lance as
+            movimentações a partir dela.
           </Hint>
         </div>
       </div>
@@ -136,12 +131,12 @@ function Row({
   return (
     <li className="flex items-baseline justify-between gap-3">
       <span className="muted">{label}</span>
-      <span
-        className="tnum font-semibold"
-        style={negative && value !== 0 ? { color: "var(--text-out)" } : undefined}
-      >
-        {formatCents(value)}
-      </span>
+      <Money
+        cents={value}
+        size="sm"
+        className="font-semibold"
+        tone={negative && value !== 0 ? "out" : undefined}
+      />
     </li>
   );
 }

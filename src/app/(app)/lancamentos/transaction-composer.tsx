@@ -52,7 +52,7 @@ export function TransactionComposer({
 
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-2)] p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-1">
         {(["EXPENSE", "INCOME"] as const).map((k) => (
           <button
             key={k}
@@ -62,12 +62,12 @@ export function TransactionComposer({
               setCategoryId("");
             }}
             className={cn(
-              "cursor-pointer rounded-lg py-2 text-[0.8125rem] font-medium transition-colors",
+              "cursor-pointer rounded-[var(--radius-button)] py-2 text-[0.8125rem] font-medium transition-colors",
               kind === k
                 ? k === "EXPENSE"
                   ? "bg-[var(--btn-out)] text-white shadow-sm"
                   : "bg-[var(--btn-in)] text-white shadow-sm"
-                : "hover:bg-[var(--surface)]",
+                : "hover:bg-[var(--surface)] text-[var(--text-muted)]",
             )}
           >
             {k === "EXPENSE" ? "Saiu" : "Entrou"}
@@ -109,15 +109,15 @@ export function TransactionComposer({
       </Field>
 
       {kind === "EXPENSE" ? (
-        <Field label="Tipo de gasto" hint="Fixo se repete todo mês. Variável muda conforme o seu comportamento.">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-2)] p-1">
+        <Field label="Tipo de gasto" hint="Compromisso mensal fixo ou gasto variável.">
+          <div className="grid grid-cols-2 gap-1 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-1">
             {(["FIXED", "VARIABLE"] as const).map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => setNature(n)}
                 className={cn(
-                  "cursor-pointer rounded-lg py-2 text-[0.8125rem] font-medium transition-colors",
+                  "cursor-pointer rounded-[var(--radius-button)] py-2 text-[0.8125rem] font-medium transition-colors",
                   nature === n ? "bg-[var(--surface)] shadow-sm ring-1 ring-[var(--border)]" : "muted",
                 )}
               >
@@ -133,8 +133,8 @@ export function TransactionComposer({
           label="Parcelamento"
           hint={
             installments > 1
-              ? "Uma parcela por mês, a partir da data acima."
-              : "Compra parcelada no cartão? Escolha o número de vezes."
+              ? "Uma parcela por mês."
+              : "Para compras parceladas no cartão."
           }
         >
           <Select
@@ -152,7 +152,7 @@ export function TransactionComposer({
             <p className="muted mt-2 text-xs leading-snug">
               {installments}x de <strong>{formatCents(parcelas[0])}</strong>
               {parcelas[0] !== parcelas[parcelas.length - 1]
-                ? ` (a última fica em ${formatCents(parcelas[parcelas.length - 1])})`
+                ? ` (última em ${formatCents(parcelas[parcelas.length - 1])})`
                 : ""}
               . Total {formatCents(totalCents)}.
             </p>
@@ -172,7 +172,7 @@ export function TransactionComposer({
       </Field>
 
       {state.error ? (
-        <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.8125rem] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-[var(--radius-input)] bg-[var(--color-money-out-soft)] px-3.5 py-2 text-xs text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}

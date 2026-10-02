@@ -233,7 +233,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       {savedCount !== null ? (
         <Card>
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-6 text-emerald-600" />
+            <CheckCircle2 className="size-6 text-[var(--text-in)]" />
             <div>
               <p className="text-[0.9375rem] font-semibold">
                 {savedCount} lançamento(s) importado(s) com sucesso
@@ -347,7 +347,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                       {formatDate(row.date)}
                       {row.dateAdjusted ? (
                         <span
-                          className="mt-0.5 flex items-center gap-1 text-[0.6875rem] font-medium text-amber-700 dark:text-amber-300"
+                          className="mt-0.5 flex items-center gap-1 text-[0.6875rem] font-medium text-[var(--text-warn)]"
                           title={`Compra realizada em ${formatDate(row.originalDate!)} — gravada na fatura do mês escolhido`}
                         >
                           compra realizada em {formatDate(row.originalDate!)}
@@ -358,12 +358,12 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                       <span className="block truncate">{row.description}</span>
                       <span className="mt-0.5 flex flex-wrap gap-1">
                         {row.possibleDuplicate ? (
-                          <span className="inline-block rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-amber-700 dark:bg-amber-500/12 dark:text-amber-300">
+                          <span className="inline-block rounded-md bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-warn)]">
                             possível duplicata
                           </span>
                         ) : null}
                         {row.installmentNumber && row.installmentTotal ? (
-                          <span className="inline-block rounded-md bg-brand-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-brand-700 dark:bg-brand-500/12 dark:text-brand-300">
+                          <span className="inline-block rounded-md bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]">
                             parcela {row.installmentNumber}/{row.installmentTotal}
                           </span>
                         ) : null}
@@ -400,7 +400,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                         className={cn(
                           "inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-[0.6875rem] font-medium transition-colors",
                           row.isTransfer
-                            ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300"
+                            ? "bg-[var(--color-save-soft)] text-[var(--text-brand)]"
                             : "muted hover:bg-[var(--surface-2)]",
                         )}
                       >

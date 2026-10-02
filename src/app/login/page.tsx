@@ -31,7 +31,7 @@ export default async function LoginPage({
           <p className="muted mt-1 mb-6 text-xs">Acesse seu caderno de contas.</p>
 
           {sessao === "expirada" ? (
-            <p className="mb-5 rounded-[4px] border border-amber-300/40 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 dark:border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-200">
+            <p className="mb-5 rounded-[4px] border border-[var(--border-warn)] bg-[var(--color-warn-soft)] px-3.5 py-2.5 text-xs text-[var(--text-warn)]">
               Sua sessão expirou neste banco. Entre novamente.
             </p>
           ) : null}
@@ -41,7 +41,7 @@ export default async function LoginPage({
 
         <p className="muted mt-6 text-center text-xs">
           Não tem conta?{" "}
-          <Link href="/cadastro" className="font-medium text-brand-600 hover:underline dark:text-brand-300">
+          <Link href="/cadastro" className="font-medium text-[var(--text-brand)] hover:underline">
             Criar conta
           </Link>
         </p>

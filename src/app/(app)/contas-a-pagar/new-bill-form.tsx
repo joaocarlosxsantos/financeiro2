@@ -72,16 +72,15 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
           label="Valor total"
           hint={
             type === "GROUP"
-              ? "Opcional — se preencher, começa dividido igualmente entre as pessoas abaixo. Dá pra ajustar depois."
-              : "Opcional — dá pra deixar em branco e preencher depois, abrindo a conta na lista."
+              ? "Opcional — se preencher, começa dividido igualmente entre as pessoas abaixo."
+              : "Opcional — preencha agora ou depois na lista."
           }
         >
           <Input name="total" inputMode="decimal" placeholder="0,00" />
         </Field>
       ) : (
         <p className="muted -mt-1 text-xs leading-relaxed">
-          Conta recorrente não tem valor fixo — depois que a conta deste mês for gerada (veja o
-          aviso no topo da lista), o valor é preenchido mês a mês, abrindo a conta na lista.
+          Conta recorrente não tem valor fixo inicial — após ser gerada no mês, preencha o valor na lista.
         </p>
       )}
 
@@ -99,7 +98,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
       ) : null}
 
       {type === "GROUP" ? (
-        <div className="space-y-2 rounded-xl border bg-[var(--surface-2)] p-3">
+        <div className="space-y-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
           <p className="text-[0.8125rem] font-medium">Quem divide essa conta</p>
           {rows.map((key, i) => (
             <div key={key} className="flex items-center gap-2">
@@ -110,7 +109,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
                   type="button"
                   aria-label="Remover pessoa"
                   onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}
-                  className="muted shrink-0 cursor-pointer rounded-lg p-2 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                  className="muted shrink-0 cursor-pointer rounded-lg p-2 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -120,7 +119,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
           <button
             type="button"
             onClick={() => setRows((r) => [...r, (r.at(-1) ?? 0) + 1])}
-            className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+            className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
           >
             <Plus className="size-3.5" />
             Adicionar pessoa
@@ -128,7 +127,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
         </div>
       ) : null}
 
-      {state.error ? <p className="text-[0.8125rem] text-rose-600 dark:text-rose-400">{state.error}</p> : null}
+      {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
       <SubmitButton size="sm" className="w-full" pendingLabel="Criando...">
         Criar conta
       </SubmitButton>

@@ -36,7 +36,7 @@ export function ExportMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border bg-[var(--surface)] px-3 text-[0.8125rem] font-medium hover:bg-[var(--surface-2)]"
+        className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[0.8125rem] font-medium hover:bg-[var(--surface-2)]"
       >
         <Download className="size-3.5" />
         Exportar
@@ -44,10 +44,10 @@ export function ExportMenu() {
       </button>
 
       {open ? (
-        <div className="absolute top-full right-0 z-20 mt-2 w-64 rounded-xl border bg-[var(--surface)] p-1.5 shadow-lg">
+        <div className="absolute top-full right-0 z-20 mt-2 w-64 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-overlay)]">
           <a
             href={csvHref}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.8125rem] hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2.5 rounded-[var(--radius-xs)] px-2.5 py-2 text-[0.8125rem] hover:bg-[var(--surface-2)]"
             onClick={() => setOpen(false)}
           >
             <FileText className="muted size-4" />
@@ -58,7 +58,7 @@ export function ExportMenu() {
           </a>
           <a
             href={xlsxHref}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.8125rem] hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2.5 rounded-[var(--radius-xs)] px-2.5 py-2 text-[0.8125rem] hover:bg-[var(--surface-2)]"
             onClick={() => setOpen(false)}
           >
             <FileSpreadsheet className="muted size-4" />
@@ -69,7 +69,7 @@ export function ExportMenu() {
           </a>
           <a
             href={pdfHref}
-            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.8125rem] hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2.5 rounded-[var(--radius-xs)] px-2.5 py-2 text-[0.8125rem] hover:bg-[var(--surface-2)]"
             onClick={() => setOpen(false)}
           >
             <FileText className="muted size-4" />

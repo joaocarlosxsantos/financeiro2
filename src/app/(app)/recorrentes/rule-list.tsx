@@ -43,13 +43,13 @@ function statusOf(rule: Rule): { label: string; className: string } {
     return {
       label: "lançada no mês",
       className:
-        "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300",
+        "bg-[var(--color-money-in-soft)] text-[var(--text-in)]",
     };
   }
   if (rule.dueThisMonth) {
     return {
       label: "pendente",
-      className: "bg-brand-50 text-brand-700 dark:bg-brand-500/12 dark:text-brand-300",
+      className: "bg-[var(--color-save-soft)] text-[var(--text-brand)]",
     };
   }
   return { label: "fora do período", className: "bg-[var(--surface-2)] text-[var(--text-muted)]" };
@@ -64,7 +64,7 @@ function Row({ rule }: { rule: Rule }) {
     <li className={cn("flex flex-wrap items-center gap-3 px-5 py-3.5", pending && "opacity-50")}>
       <span
         className="size-2.5 shrink-0 rounded-full"
-        style={{ background: rule.categoryColor ?? "#94a3b8" }}
+        style={{ background: rule.categoryColor ?? "var(--text-muted)" }}
       />
 
       <div className="min-w-0 flex-1">
@@ -83,7 +83,7 @@ function Row({ rule }: { rule: Rule }) {
       </div>
 
       <span
-        className="tnum shrink-0 text-[0.9375rem] font-semibold"
+        className="tnum font-mono shrink-0 text-[0.9375rem] font-semibold"
         style={{
           color: rule.kind === "INCOME" ? "var(--text-in)" : "var(--text-out)",
         }}
@@ -116,7 +116,7 @@ function Row({ rule }: { rule: Rule }) {
           if (!ok) return;
           start(async () => void (await deleteRecurringRule(rule.id)));
         }}
-        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-4" />
       </button>

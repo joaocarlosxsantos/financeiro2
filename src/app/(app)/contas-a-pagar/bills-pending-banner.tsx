@@ -28,8 +28,8 @@ export function BillsPendingBanner({
   if (!pending.length) return null;
 
   return (
-    <div className="card mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-brand-200 p-4 dark:border-brand-400/30">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/12 dark:text-brand-300">
+    <div className="card mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-[var(--border)] p-4">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[var(--color-save-soft)] text-[var(--text-brand)]">
         <CalendarClock className="size-4.5" />
       </span>
 

@@ -53,7 +53,7 @@ export function ImportHistory({ batches }: { batches: Batch[] }) {
 
   return (
     <div>
-      {error ? <p className="mb-2 text-[0.8125rem] text-rose-600">{error}</p> : null}
+      {error ? <p className="mb-2 text-[0.8125rem] text-[var(--text-out)]">{error}</p> : null}
       <ul className="space-y-3">
         {items.map((b) => (
           <li key={b.id} className={cn("flex items-start gap-2 text-[0.8125rem]", pendingId === b.id && "opacity-50")}>
@@ -69,7 +69,7 @@ export function ImportHistory({ batches }: { batches: Batch[] }) {
               title="Apagar esta importação e os lançamentos que vieram dela"
               disabled={pendingId === b.id}
               onClick={() => remove(b)}
-              className="muted mt-0.5 shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+              className="muted mt-0.5 shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-4" />
             </button>

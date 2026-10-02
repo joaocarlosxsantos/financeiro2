@@ -71,9 +71,9 @@ export function PeriodSwitcher({
 
   if (range) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-xl border bg-[var(--surface)] px-3 py-1.5">
+      <div className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
         <CalendarRange className="muted size-4 shrink-0" />
-        <span className="text-[0.8125rem] font-medium tnum">
+        <span className="text-[0.8125rem] font-medium font-mono tnum">
           {formatBr(range.from)} – {formatBr(range.to)}
         </span>
         <button
@@ -81,7 +81,7 @@ export function PeriodSwitcher({
           onClick={clearRange}
           aria-label="Voltar para visão por mês"
           title="Voltar para visão por mês"
-          className="muted inline-flex size-6 cursor-pointer items-center justify-center rounded-md hover:bg-[var(--surface-2)]"
+          className="muted inline-flex size-6 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)]"
         >
           <X className="size-3.5" />
         </button>
@@ -91,12 +91,12 @@ export function PeriodSwitcher({
 
   return (
     <div className="relative inline-flex items-center gap-1.5" ref={boxRef}>
-      <div className="inline-flex items-center gap-1 rounded-xl border bg-[var(--surface)] p-1">
+      <div className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] p-1">
         <button
           type="button"
           onClick={() => goMonth(-1)}
           aria-label="Mês anterior"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
+          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)]"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -107,7 +107,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(1)}
           aria-label="Próximo mês"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
+          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)]"
         >
           <ChevronRight className="size-4" />
         </button>
@@ -118,13 +118,13 @@ export function PeriodSwitcher({
         onClick={() => setOpen((v) => !v)}
         aria-label="Período customizado"
         title="Período customizado"
-        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-xl border bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)]"
       >
         <CalendarRange className="size-4" />
       </button>
 
       {open ? (
-        <div className="absolute top-full right-0 z-20 mt-2 w-72 rounded-xl border bg-[var(--surface)] p-3 shadow-lg">
+        <div className="absolute top-full right-0 z-20 mt-2 w-72 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-overlay)]">
           <p className="mb-2 text-[0.8125rem] font-semibold">Período customizado</p>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-[0.75rem]">
@@ -150,7 +150,7 @@ export function PeriodSwitcher({
             <button
               type="button"
               onClick={allHistory}
-              className="cursor-pointer text-[0.75rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+              className="cursor-pointer text-[0.75rem] font-medium text-[var(--text-brand)] hover:underline"
             >
               Ver todo o histórico
             </button>
@@ -164,7 +164,7 @@ export function PeriodSwitcher({
             </Button>
           </div>
           {from && to && from > to ? (
-            <p className="mt-2 text-[0.75rem] text-rose-600 dark:text-rose-400">
+            <p className="mt-2 text-[0.75rem] text-[var(--text-out)]">
               A data &quot;De&quot; precisa vir antes da &quot;Até&quot;.
             </p>
           ) : null}

@@ -24,8 +24,8 @@ export function GoalRecurringBanner({
   if (!count) return null;
 
   return (
-    <div className="card mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-cyan-200 p-4 dark:border-cyan-400/30">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300">
+    <div className="card mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-[var(--line)] p-4">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-save-soft)] text-[var(--color-save)]">
         <PiggyBank className="size-4.5" />
       </span>
 

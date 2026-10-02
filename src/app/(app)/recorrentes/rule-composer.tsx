@@ -44,7 +44,7 @@ export function RuleComposer({
 
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-2)] p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-1">
         {(["EXPENSE", "INCOME"] as const).map((k) => (
           <button
             key={k}
@@ -54,12 +54,12 @@ export function RuleComposer({
               setCategoryId("");
             }}
             className={cn(
-              "cursor-pointer rounded-lg py-2 text-[0.8125rem] font-medium transition-colors",
+              "cursor-pointer rounded-[var(--radius-button)] py-2 text-[0.8125rem] font-medium transition-colors",
               kind === k
                 ? k === "EXPENSE"
                   ? "bg-[var(--btn-out)] text-white shadow-sm"
                   : "bg-[var(--btn-in)] text-white shadow-sm"
-                : "hover:bg-[var(--surface)]",
+                : "hover:bg-[var(--surface)] text-[var(--text-muted)]",
             )}
           >
             {k === "EXPENSE" ? "Sai todo mês" : "Entra todo mês"}
@@ -124,7 +124,7 @@ export function RuleComposer({
       </Field>
 
       {state.error ? (
-        <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-[0.8125rem] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-[var(--radius-input)] bg-[var(--color-money-out-soft)] px-3.5 py-2 text-xs text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}

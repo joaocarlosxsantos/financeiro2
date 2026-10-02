@@ -43,10 +43,10 @@ export function PendingPanel({
   }
 
   return (
-    <Card className="border-brand-200 dark:border-brand-400/30">
+    <Card className="border-[var(--border)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/12 dark:text-brand-300">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[var(--color-save-soft)] text-[var(--text-brand)]">
             <CalendarClock className="size-5" />
           </span>
           <div>
@@ -64,17 +64,17 @@ export function PendingPanel({
         </Button>
       </div>
 
-      <ul className="divide-y rounded-xl border">
+      <ul className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)]">
         {pending.map((p) => (
           <li key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-[0.8125rem]">
             <span
               className="size-2.5 shrink-0 rounded-full"
-              style={{ background: p.categoryColor ?? "#94a3b8" }}
+              style={{ background: p.categoryColor ?? "var(--text-muted)" }}
             />
             <span className="min-w-0 flex-1 truncate font-medium">{p.description}</span>
             <span className="muted shrink-0 text-xs">dia {p.dayOfMonth}</span>
             <span
-              className="tnum shrink-0 font-semibold"
+              className="tnum font-mono shrink-0 font-semibold"
               style={{
                 color: p.kind === "INCOME" ? "var(--text-in)" : "var(--text-out)",
               }}
@@ -85,7 +85,7 @@ export function PendingPanel({
               type="button"
               onClick={() => generate(p.id)}
               disabled={busy}
-              className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-brand-600 hover:bg-[var(--surface-2)] dark:text-brand-300"
+              className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--surface-2)]"
             >
               lançar
             </button>

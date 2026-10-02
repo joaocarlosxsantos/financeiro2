@@ -40,7 +40,7 @@ export function EmergencyPanel({
   return (
     <Card>
       <div className="mb-5 flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 dark:bg-cyan-500/12 dark:text-cyan-300">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-save-soft)] text-[var(--color-save)]">
           <LifeBuoy className="size-5" />
         </span>
         <div className="min-w-0 flex-1">

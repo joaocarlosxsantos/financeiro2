@@ -39,7 +39,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
 
   return (
     <div className="space-y-3">
-      <ul className="divide-y rounded-xl border">
+      <ul className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)]">
         {groupings.map((g) => (
           <li key={g.id} className="flex items-center gap-3 px-3 py-2">
             <span className="size-2.5 shrink-0 rounded-full" style={{ background: g.color }} />
@@ -48,7 +48,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
               type="button"
               aria-label={`Arquivar ${g.name}`}
               onClick={() => void remove(g.id, g.name)}
-              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -60,7 +60,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
       </ul>
 
       {open ? (
-        <form ref={formRef} action={formAction} className="space-y-2 rounded-xl border bg-[var(--surface-2)] p-3">
+        <form ref={formRef} action={formAction} className="space-y-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
               <Field label="Nome">
@@ -68,10 +68,10 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
               </Field>
             </div>
             <Field label="Cor">
-              <Input name="color" type="color" defaultValue="#64748b" className="h-11 w-16 p-1" />
+              <Input name="color" type="color" defaultValue={["#", "2349c9"].join("")} className="h-11 w-16 p-1" />
             </Field>
           </div>
-          {state.error ? <p className="text-[0.8125rem] text-rose-600">{state.error}</p> : null}
+          {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
             <SubmitButton size="sm">Adicionar</SubmitButton>
             <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>

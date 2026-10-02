@@ -8,6 +8,7 @@ import { RecurringBanner } from "@/components/recurring-banner";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty";
 import { Hint } from "@/components/ui/hint";
+import { Money } from "@/components/ui/money";
 import { TransactionComposer } from "./transaction-composer";
 import { TransactionList } from "./transaction-list";
 import { Filters } from "./filters";
@@ -36,11 +37,6 @@ export default async function TransactionsPage({
   const sp = await searchParams;
   const ref = monthRefFromParam(sp.m);
 
-  /**
-   * Período customizado: só entra em vigor com `from` e `to` válidos e com
-   * `from <= to`. Fora isso a página se comporta como sempre — presa ao mês
-   * de `ref`. É o que deixa buscar/ver lançamentos além de um único mês.
-   */
   const customRange =
     sp.from && sp.to && ISO_DATE.test(sp.from) && ISO_DATE.test(sp.to) && sp.from <= sp.to
       ? { from: sp.from, to: sp.to }
@@ -99,12 +95,6 @@ export default async function TransactionsPage({
   const plainAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
   const uncategorized = plain.filter((t) => !t.categoryId).length;
 
-  /**
-   * Entrou/Saiu/Sobrou consideram só conta corrente — cartão tem linha própria,
-   * porque a compra no cartão ainda não saiu de fato da conta (só quando a
-   * fatura é paga). Os quatro valores refletem exatamente os filtros ativos
-   * acima: a lista e o resumo nunca mostram números diferentes.
-   */
   const cash = plain.filter((t) => !t.isTransfer && !t.isCard);
   const card = plain.filter((t) => !t.isTransfer && t.isCard);
 
@@ -117,7 +107,7 @@ export default async function TransactionsPage({
     <>
       <PageHeader
         title="Lançamentos"
-        description="Tudo que entrou e saiu. Classificar cada gasto como fixo ou variável é o que faz o painel virar decisão."
+        description="Registro de entradas e saídas por conta e categoria."
         action={
           <div className="flex items-center gap-2">
             <PeriodSwitcher value={ref} range={customRange} />
@@ -141,14 +131,13 @@ export default async function TransactionsPage({
           {uncategorized > 0 ? (
             <Hint tone="info">
               {uncategorized} lançamento(s) sem categoria {customRange ? "nesse período" : "neste mês"}.
-              Escolha a categoria direto na lista — o valor entra na análise no mesmo instante.
+              Selecione a categoria direto na lista.
             </Hint>
           ) : null}
 
           {customRange && plain.length >= 1000 ? (
             <Hint tone="warn">
-              Mostrando os 1.000 lançamentos mais recentes do período. Estreite as datas ou use a
-              busca para achar algo mais específico.
+              Mostrando os 1.000 lançamentos mais recentes. Estreite o período ou use a busca.
             </Hint>
           ) : null}
 
@@ -163,7 +152,7 @@ export default async function TransactionsPage({
               <EmptyState
                 icon={Receipt}
                 title={customRange ? "Nada lançado nesse período" : `Nada lançado em ${monthLabel(ref)}`}
-                description="Use o formulário ao lado para adicionar, ou importe o extrato do banco na aba Importar."
+                description="Adicione um lançamento ao lado ou importe o extrato na aba Importar."
               />
             )}
           </Card>
@@ -171,34 +160,30 @@ export default async function TransactionsPage({
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card>
-            <ul className="mb-4 border-b pb-4 text-[0.8125rem]">
+            <ul className="mb-4 border-b border-[var(--line)] pb-4 text-[0.8125rem]">
               <li className="flex items-baseline justify-between gap-3 py-1">
                 <span className="muted">Entrou</span>
-                <span className="tnum font-semibold text-[var(--text-in)]">
-                  {formatCents(entrouCents)}
-                </span>
+                <Money cents={entrouCents} tone="in" size="sm" className="font-semibold" />
               </li>
               <li className="flex items-baseline justify-between gap-3 py-1">
                 <span className="muted">Saiu</span>
-                <span className="tnum font-semibold text-[var(--text-out)]">
-                  {formatCents(saiuCents)}
-                </span>
+                <Money cents={saiuCents} tone="out" size="sm" className="font-semibold" />
               </li>
               <li
-                className="mt-2 flex items-baseline justify-between gap-3 border-t pt-2"
-                title="Compras no cartão — só saem da sua conta de fato quando a fatura é paga"
+                className="mt-2 flex items-baseline justify-between gap-3 border-t border-[var(--line)] pt-2"
+                title="Compras no cartão — saem da conta quando a fatura é paga"
               >
                 <span className="muted inline-flex items-center gap-1.5">
                   <CreditCard className="size-3.5" />
                   Cartão
                 </span>
-                <span className="tnum font-semibold text-amber-700 dark:text-amber-300">
+                <span className="tnum font-mono font-semibold text-[var(--text-warn)]">
                   {formatCents(cartaoCents)}
                 </span>
               </li>
-              <li className="mt-2 flex items-baseline justify-between gap-3 border-t pt-2">
+              <li className="mt-2 flex items-baseline justify-between gap-3 border-t border-[var(--line)] pt-2">
                 <span className="muted">Sobrou</span>
-                <span className="tnum font-semibold">{formatCents(sobrouCents)}</span>
+                <Money cents={sobrouCents} tone={sobrouCents < 0 ? "out" : undefined} size="sm" className="font-semibold" />
               </li>
             </ul>
             <TransactionComposer categories={plainCategories} accounts={plainAccounts} />

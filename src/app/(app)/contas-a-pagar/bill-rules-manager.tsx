@@ -41,7 +41,7 @@ export function BillRulesManager({ rules, monthRef }: { rules: PlainBillRule[]; 
   }
 
   return (
-    <ul className={`divide-y rounded-xl border ${pending ? "opacity-60" : ""}`}>
+    <ul className={`divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)] ${pending ? "opacity-60" : ""}`}>
       {rules.map((r) => (
         <li key={r.id} className="px-3 py-2.5">
           <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export function BillRulesManager({ rules, monthRef }: { rules: PlainBillRule[]; 
               type="button"
               title="Excluir regra"
               onClick={() => void remove(r.id, r.name)}
-              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-3.5" />
             </button>
