@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { fingerprint } from "@/lib/categorize";
 import { insertInstallments } from "@/server/installments";
 
@@ -82,6 +82,7 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
 
   const d = parsed.data;
   const amountCents = Math.abs(parseMoneyToCents(d.amount));
+  if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
 
   const ownershipError = await verifyAccountAndCategory(userId, d.accountId, d.categoryId || null);
@@ -137,12 +138,13 @@ export async function updateTransaction(id: string, formData: FormData): Promise
 
   const d = parsed.data;
   const amountCents = Math.abs(parseMoneyToCents(d.amount));
+  if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
 
   const ownershipError = await verifyAccountAndCategory(userId, d.accountId, d.categoryId || null);
   if (ownershipError) return { error: ownershipError };
 
-  await db
+  const result = await db
     .update(transactions)
     .set({
       accountId: d.accountId,
@@ -155,8 +157,10 @@ export async function updateTransaction(id: string, formData: FormData): Promise
       notes: d.notes || null,
       updatedAt: new Date(),
     })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+    .returning({ id: transactions.id });
 
+  if (result.length === 0) return { error: "Não encontrado." };
   refresh();
   return { ok: true };
 }
@@ -172,17 +176,20 @@ export async function deleteTransaction(id: string) {
  * Transferência não é gasto nem receita: sai dos totais para o dinheiro não
  * ser contado duas vezes — o caso clássico é o pagamento da fatura do cartão.
  */
-export async function setTransactionTransfer(id: string, isTransfer: boolean) {
+export async function setTransactionTransfer(id: string, isTransfer: boolean): Promise<ActionState> {
   const userId = await requireUserId();
-  await db
+  const result = await db
     .update(transactions)
     .set({ isTransfer, updatedAt: new Date() })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+    .returning({ id: transactions.id });
+  if (result.length === 0) return { error: "Não encontrado." };
   refresh();
   revalidatePath("/orcamento");
+  return { ok: true };
 }
 
-export async function setTransactionCategory(id: string, categoryId: string | null) {
+export async function setTransactionCategory(id: string, categoryId: string | null): Promise<ActionState> {
   const userId = await requireUserId();
 
   let nature: "FIXED" | "VARIABLE" | undefined;
@@ -192,14 +199,17 @@ export async function setTransactionCategory(id: string, categoryId: string | nu
       .from(categories)
       .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)))
       .limit(1);
-    if (!cat) return;
+    if (!cat) return { error: "Categoria não encontrada." };
     nature = cat.nature;
   }
 
-  await db
+  const result = await db
     .update(transactions)
     .set({ categoryId, ...(nature ? { nature } : {}), updatedAt: new Date() })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+    .returning({ id: transactions.id });
 
+  if (result.length === 0) return { error: "Não encontrado." };
   refresh();
+  return { ok: true };
 }

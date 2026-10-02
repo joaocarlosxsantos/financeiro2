@@ -6,7 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { goalContributions, goalRecurringRules, goals } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import type { MonthRef } from "@/lib/dates";
 import { dateForMonth } from "@/lib/installments";
 
@@ -45,6 +45,7 @@ export async function createGoalRecurringRule(
 
   const d = parsed.data;
   const amountCents = Math.abs(parseMoneyToCents(d.amount));
+  if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
 
   const [goal] = await db

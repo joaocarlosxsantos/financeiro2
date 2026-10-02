@@ -6,7 +6,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { debtPayments, debts } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { effectiveDelta } from "@/lib/effectiveDelta";
+import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -57,7 +58,12 @@ export async function createDebt(_prev: ActionState, formData: FormData): Promis
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
   const balanceCents = Math.abs(parseMoneyToCents(parsed.data.balance));
+
+  if (balanceCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (balanceCents <= 0) return { error: "O saldo devedor precisa ser maior que zero." };
+
+  const minimumPaymentCents = Math.abs(parseMoneyToCents(parsed.data.minimum ?? "0"));
+  if (minimumPaymentCents > MAX_CENTS) return { error: "Valor muito alto." };
 
   await db.insert(debts).values({
     userId,
@@ -66,7 +72,7 @@ export async function createDebt(_prev: ActionState, formData: FormData): Promis
     kind: parsed.data.kind,
     balanceCents,
     monthlyRateBps: parseRateToBps(parsed.data.rate ?? "0"),
-    minimumPaymentCents: Math.abs(parseMoneyToCents(parsed.data.minimum ?? "0")),
+    minimumPaymentCents,
     dueDay: parsed.data.dueDay,
     note: parsed.data.note || null,
   });
@@ -90,6 +96,8 @@ export async function updateDebtField(input: {
         ? { minimumPaymentCents: Math.abs(parseMoneyToCents(input.value)) }
         : { monthlyRateBps: parseRateToBps(input.value) };
 
+  if (Object.values(patch).some((v) => v > MAX_CENTS)) return { error: "Valor muito alto." };
+
   await db
     .update(debts)
     .set({ ...patch, updatedAt: new Date() })
@@ -111,36 +119,48 @@ export async function registerDebtPayment(
   const userId = await requireUserId();
 
   const amountCents = Math.abs(parseMoneyToCents(String(formData.get("amount") ?? "")));
+
+  if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "Informe o valor pago." };
 
-  const [debt] = await db
-    .select()
-    .from(debts)
-    .where(and(eq(debts.id, debtId), eq(debts.userId, userId)))
-    .limit(1);
-  if (!debt) return { error: "Dívida não encontrada." };
+  // Mesma ideia das metas: trava a linha, calcula o abatimento efetivo (piso em 0) e grava o
+  // mesmo valor no saldo e no histórico.
+  const found = await db.transaction(async (tx) => {
+    const [debt] = await tx
+      .select({ balanceCents: debts.balanceCents })
+      .from(debts)
+      .where(and(eq(debts.id, debtId), eq(debts.userId, userId)))
+      .for("update")
+      .limit(1);
+    if (!debt) return false;
 
-  await db.transaction(async (tx) => {
-    await tx.insert(debtPayments).values({
-      debtId,
-      amountCents,
-      note: String(formData.get("note") ?? "") || null,
-    });
+    const paid = -effectiveDelta(debt.balanceCents, -amountCents);
+    if (paid === 0) return true;
+
     await tx
       .update(debts)
-      .set({
-        balanceCents: Math.max(0, debt.balanceCents - amountCents),
-        updatedAt: new Date(),
-      })
-      .where(eq(debts.id, debtId));
+      .set({ balanceCents: debt.balanceCents - paid, updatedAt: new Date() })
+      .where(and(eq(debts.id, debtId), eq(debts.userId, userId)));
+    await tx.insert(debtPayments).values({
+      debtId,
+      amountCents: paid,
+      note: String(formData.get("note") ?? "") || null,
+    });
+    return true;
   });
+  if (!found) return { error: "Dívida não encontrada." };
 
   refresh();
   return { ok: true };
 }
 
-export async function deleteDebt(id: string) {
+export async function deleteDebt(id: string): Promise<ActionState> {
   const userId = await requireUserId();
-  await db.delete(debts).where(and(eq(debts.id, id), eq(debts.userId, userId)));
+  const result = await db
+    .delete(debts)
+    .where(and(eq(debts.id, id), eq(debts.userId, userId)))
+    .returning({ id: debts.id });
+  if (result.length === 0) return { error: "Não encontrado." };
   refresh();
+  return { ok: true };
 }

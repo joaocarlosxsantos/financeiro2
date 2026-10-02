@@ -6,6 +6,10 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { clearFailures, isRateLimited, recordFailure } from "@/lib/rate-limit";
+
+// Hash fictício: e-mail inexistente também paga o custo do bcrypt (sem pista por tempo de resposta).
+const DUMMY_HASH = bcrypt.hashSync("senha-inexistente", 10);
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -27,15 +31,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
+        // Vale também para chamadas diretas a /api/auth, não só para a action de login.
+        const key = `login:${parsed.data.email.toLowerCase()}`;
+        if (!isRateLimited(key).allowed) return null;
+
         const [user] = await db
           .select()
           .from(users)
           .where(eq(users.email, parsed.data.email.toLowerCase()))
           .limit(1);
-        if (!user) return null;
-
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
+        const ok = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
+        if (!user || !ok) {
+          recordFailure(key);
+          return null;
+        }
+        clearFailures(key);
 
         return { id: user.id, name: user.name, email: user.email };
       },

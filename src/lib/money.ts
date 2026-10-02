@@ -3,6 +3,8 @@
  * Nunca use float para somar dinheiro.
  */
 
+export const MAX_CENTS = 2_000_000_000;
+
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",

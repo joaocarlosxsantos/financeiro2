@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { transactions, transactionSplits } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { MAX_CENTS } from "@/lib/money";
 import { computeSplit } from "@/lib/splits";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -27,7 +28,7 @@ function isTableMissingError(err: unknown): boolean {
 const splitPersonSchema = z.object({
   name: z.string().trim().min(1, "O nome não pode ser vazio."),
   phone: z.string().trim().nullable().optional(),
-  amount: z.number().int().min(0).max(2_000_000_000).optional(),
+  amount: z.number().int().min(0).max(MAX_CENTS).optional(),
   basisPoints: z.number().int().min(0).max(10_000).optional(),
   percent: z.number().min(0).max(100).optional(),
 });
@@ -87,7 +88,7 @@ export async function setTransactionSplit(
     return { error: "Apenas despesas podem ser divididas." };
   }
 
-  if (tx.amountCents > 2_000_000_000) {
+  if (tx.amountCents > MAX_CENTS) {
     return { error: "Valor do lançamento excede o teto permitido (20 milhões)." };
   }
 

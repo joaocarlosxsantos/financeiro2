@@ -6,7 +6,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { goalContributions, goals } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { effectiveDelta } from "@/lib/effectiveDelta";
+import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -41,14 +42,18 @@ export async function createGoal(_prev: ActionState, formData: FormData): Promis
 
   const d = parsed.data;
   const targetCents = Math.abs(parseMoneyToCents(d.target));
+  if (targetCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (targetCents <= 0) return { error: "O valor da meta precisa ser maior que zero." };
+
+  const savedCents = Math.abs(parseMoneyToCents(d.saved ?? "0"));
+  if (savedCents > MAX_CENTS) return { error: "Valor muito alto." };
 
   await db.insert(goals).values({
     userId,
     name: d.name,
     kind: d.kind,
     targetCents,
-    savedCents: Math.abs(parseMoneyToCents(d.saved ?? "0")),
+    savedCents,
     targetDate: d.targetDate ? new Date(`${d.targetDate}T12:00:00.000Z`) : null,
     color: d.color || "#0ea5e9",
     note: d.note || null,
@@ -61,37 +66,53 @@ export async function createGoal(_prev: ActionState, formData: FormData): Promis
 export async function contributeToGoal(goalId: string, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
   const cents = Math.abs(parseMoneyToCents(String(formData.get("amount") ?? "")));
+  if (cents > MAX_CENTS) return { error: "Valor muito alto." };
   if (cents <= 0) return { error: "Informe um valor válido." };
 
   const delta = String(formData.get("mode") ?? "add") === "withdraw" ? -cents : cents;
 
-  const [goal] = await db
-    .select()
-    .from(goals)
-    .where(and(eq(goals.id, goalId), eq(goals.userId, userId)))
-    .limit(1);
-  if (!goal) return { error: "Meta não encontrada." };
+  // Lê o saldo travando a linha (FOR UPDATE): o delta efetivo (piso em 0) é calculado sobre o
+  // saldo atual e o mesmo valor vai para o UPDATE e para o histórico, sem corrida entre cliques.
+  const found = await db.transaction(async (tx) => {
+    const [goal] = await tx
+      .select({ savedCents: goals.savedCents })
+      .from(goals)
+      .where(and(eq(goals.id, goalId), eq(goals.userId, userId)))
+      .for("update")
+      .limit(1);
+    if (!goal) return false;
 
-  await db.transaction(async (tx) => {
-    await tx.insert(goalContributions).values({
-      goalId,
-      deltaCents: delta,
-      note: String(formData.get("note") ?? "") || null,
-    });
+    const applied = effectiveDelta(goal.savedCents, delta);
+    if (applied === 0) return true;
+    if (goal.savedCents + applied > MAX_CENTS) return "max" as const;
+
     await tx
       .update(goals)
-      .set({ savedCents: Math.max(0, goal.savedCents + delta), updatedAt: new Date() })
-      .where(eq(goals.id, goalId));
+      .set({ savedCents: goal.savedCents + applied, updatedAt: new Date() })
+      .where(and(eq(goals.id, goalId), eq(goals.userId, userId)));
+    await tx.insert(goalContributions).values({
+      goalId,
+      deltaCents: applied,
+      note: String(formData.get("note") ?? "") || null,
+    });
+    return true;
   });
+  if (!found) return { error: "Meta não encontrada." };
+  if (found === "max") return { error: "Valor muito alto." };
 
   refresh();
   return { ok: true };
 }
 
-export async function deleteGoal(goalId: string) {
+export async function deleteGoal(goalId: string): Promise<ActionState> {
   const userId = await requireUserId();
-  await db.delete(goals).where(and(eq(goals.id, goalId), eq(goals.userId, userId)));
+  const result = await db
+    .delete(goals)
+    .where(and(eq(goals.id, goalId), eq(goals.userId, userId)))
+    .returning({ id: goals.id });
+  if (result.length === 0) return { error: "Não encontrado." };
   refresh();
+  return { ok: true };
 }
 
 /** Cria (ou atualiza) a meta de reserva de emergência calculada pelo sistema. */

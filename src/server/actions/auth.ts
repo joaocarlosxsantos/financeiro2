@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { accounts, categories, users } from "@/db/schema";
 import { signIn, signOut } from "@/lib/auth";
 import { DEFAULT_CATEGORIES } from "@/lib/default-categories";
+import { checkRateLimit, isRateLimited } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; ok?: boolean };
 
@@ -38,19 +39,36 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
 
   const { name, email, password } = parsed.data;
 
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  if (existing) return { error: "Já existe uma conta com esse e-mail." };
+  const rateLimit = checkRateLimit(`register:${email}`);
+  if (!rateLimit.allowed) {
+    return { error: "Muitas tentativas. Tente novamente em alguns minutos." };
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const [user] = await db.insert(users).values({ name, email, passwordHash }).returning({ id: users.id });
+  try {
+    let userId: string;
+    await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({ name, email, passwordHash })
+        .returning({ id: users.id });
+      userId = user.id;
 
-  // Categorias e contas prontas para o usuário começar a usar hoje.
-  await db.insert(categories).values(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId: user.id })));
-  await db.insert(accounts).values([
-    { userId: user.id, name: "Conta corrente", type: "CHECKING" as const, color: "#294f59" },
-    { userId: user.id, name: "Cartão de crédito", type: "CREDIT_CARD" as const, color: "#f43f5e" },
-  ]);
+      await tx.insert(categories).values(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId })));
+      await tx.insert(accounts).values([
+        { userId, name: "Conta corrente", type: "CHECKING" as const, color: "#2349C9" },
+        { userId, name: "Cartão de crédito", type: "CREDIT_CARD" as const, color: "#C0352B" },
+      ]);
+    });
+  } catch (error: unknown) {
+    // drizzle embrulha o erro do driver em .cause
+    const e = error as { code?: string; cause?: { code?: string } };
+    if (e.code === "23505" || e.cause?.code === "23505") {
+      return { error: "Erro ao criar a conta. Tente novamente." };
+    }
+    throw error;
+  }
 
   try {
     await signIn("credentials", { email, password, redirect: false });
@@ -67,6 +85,11 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) return { error: "Preencha e-mail e senha." };
+
+  // Só consulta: quem conta as falhas é o authorize (lib/auth.ts).
+  if (!isRateLimited(`login:${email}`).allowed) {
+    return { error: "Muitas tentativas. Tente novamente em alguns minutos." };
+  }
 
   try {
     await signIn("credentials", { email, password, redirectTo: "/painel" });

@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { budgets, categories } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { shiftMonth, type MonthRef } from "@/lib/dates";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -27,7 +27,7 @@ export async function setBudget(input: {
 }): Promise<ActionState> {
   const userId = await requireUserId();
 
-  if (!Number.isInteger(input.year) || input.month < 1 || input.month > 12) {
+  if (!Number.isInteger(input.year) || input.year < 2000 || input.year > 2100 || input.month < 1 || input.month > 12) {
     return { error: "Período inválido." };
   }
 
@@ -43,6 +43,8 @@ export async function setBudget(input: {
   }
 
   const limitCents = Math.abs(parseMoneyToCents(input.amount));
+
+  if (limitCents > MAX_CENTS) return { error: "Valor muito alto." };
 
   if (limitCents === 0) {
     await removeBudget(input.categoryId, input.year, input.month);

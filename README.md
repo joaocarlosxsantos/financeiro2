@@ -14,9 +14,9 @@ projetar o futuro e importar extratos e faturas.
 | Área | O que faz |
 |---|---|
 | **Painel** | Entrou / saiu / sobrou do mês, nota de saúde financeira aberta em 3 partes, evolução de 6 meses, ranking de categorias, fixo x variável, reserva e guia 50/30/20 |
-| **Lançamentos** | CRUD completo, filtros (tipo, natureza, categoria, busca), troca de categoria inline, agrupamento por dia, compras parceladas em até 48x com divisão exata dos centavos |
+| **Lançamentos** | CRUD completo, filtros (tipo, natureza, categoria, busca), troca de categoria inline, agrupamento por dia, divisão com outras pessoas (igual, percentual ou valor), compras parceladas em até 60x com divisão exata dos centavos |
 | **Contas** | Saldo de cada conta a partir de um saldo inicial informado, quanto se deve em cada cartão e patrimônio líquido |
-| **Faturas** | Ciclo de fatura do cartão (fechamento e vencimento), compras agrupadas por ciclo, status da fatura e registro de pagamento — sem contar o gasto duas vezes |
+| **Contas a pagar** | Contas avulsas ou recorrentes, divididas entre pessoas, rateio exato e mensagem de cobrança por link do WhatsApp |
 | **Recorrentes** | Regras de lançamento que se repetem todo mês (aluguel, assinaturas, salário), geradas com um clique — nunca automaticamente. Pausar, encerrar por data e ver quanto da renda já está comprometida |
 | **Orçamento** | Limite mensal por categoria, acompanhamento do quanto já foi consumido, alerta em três estados e projeção de fechamento no ritmo atual |
 | **Dívidas** | Saldo, taxa e custo mensal de juros de cada dívida; simulador que compara bola de neve x avalanche com prazo, juros totais e ordem de quitação |
@@ -30,7 +30,7 @@ projetar o futuro e importar extratos e faturas.
 
 ## Stack
 
-- **Next.js 15** (App Router, Server Components e Server Actions) + **TypeScript**
+- **Next.js 16** (App Router, Server Components e Server Actions) + **TypeScript**
 - **Tailwind CSS v4** — tema claro/escuro por classe, tokens em `globals.css`
 - **Drizzle ORM** + **PostgreSQL** (Neon, Supabase, Vercel Postgres — qualquer um)
 - **Auth.js v5** (next-auth) com provider de credenciais e sessão JWT
@@ -160,7 +160,7 @@ O projeto não usa nada específico da Vercel — roda igual em qualquer host No
 ```
 src/
   app/
-    (app)/                 área logada (painel, lançamentos, contas, faturas,
+    (app)/                 área logada (painel, lançamentos, contas, contas a pagar,
                            recorrentes, orçamento, dívidas, metas, projeções,
                            importar, configurações)
     login/  cadastro/  onboarding/
@@ -175,7 +175,6 @@ src/
     finance.ts             regras financeiras (reserva, 50/30/20, saúde, projeção)
     money.ts               centavos ⇄ texto, formatação BRL
     installments.ts        divisão de parcelas e datas de recorrência (funções puras)
-    invoices.ts            ciclo de fatura do cartão (funções puras)
     debts.ts               simulação de quitação: bola de neve x avalanche
     balances.ts            saldo de conta, dívida de cartão e patrimônio líquido
     parsers/               leitura de CSV e OFX
@@ -190,7 +189,7 @@ scripts/seed.mjs           dados de demonstração
 
 ### Onde mexer primeiro
 
-- **Regras financeiras** → `src/lib/finance.ts`, `src/lib/debts.ts`, `src/lib/invoices.ts`
+- **Regras financeiras** → `src/lib/finance.ts`, `src/lib/debts.ts`
   e `src/lib/installments.ts` — todas funções puras, cobertas por `npm test`
 - **Categorias padrão e palavras-chave** → `src/lib/default-categories.ts`
 - **Cores e tipografia** → `src/app/globals.css`

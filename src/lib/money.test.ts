@@ -1,6 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { formatCents, formatCentsParts, parseMoneyToCents } from "./money";
+import { formatCents, formatCentsParts, parseMoneyToCents, MAX_CENTS } from "./money";
 
 test("lê os formatos que aparecem em extrato e digitação", () => {
   assert.equal(parseMoneyToCents("1.234,56"), 123456);
@@ -63,4 +63,8 @@ test("formatCentsParts: negativo, zero, milhar e centavos", () => {
   const cincoCentavos = formatCentsParts(5);
   assert.equal(cincoCentavos.integer, "0");
   assert.equal(cincoCentavos.fraction, "05");
+});
+
+test("MAX_CENTS é o teto para centavos (2 bilhões)", () => {
+  assert.equal(MAX_CENTS, 2_000_000_000);
 });

@@ -12,7 +12,7 @@ import {
   bills,
 } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents, formatCents } from "@/lib/money";
+import { parseMoneyToCents, formatCents, MAX_CENTS } from "@/lib/money";
 import { checkManualSplit, recalculateSplit, splitBillEqually } from "@/lib/bills";
 import type { MonthRef } from "@/lib/dates";
 
@@ -232,7 +232,7 @@ const oneOffSchema = z.object({
   name: z.string().trim().min(1, "Dê um nome à conta."),
   type: z.enum(["INDIVIDUAL", "GROUP"]),
   groupingId: z.string().optional(),
-  year: z.coerce.number().int(),
+  year: z.coerce.number().int().min(2000).max(2100, "Ano deve estar entre 2000 e 2100."),
   month: z.coerce.number().int().min(1).max(12),
 });
 
@@ -265,6 +265,7 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
   if (groupingError) return { error: groupingError };
 
   const totalCents = Math.abs(parseMoneyToCents(formData.get("total") as string | null));
+  if (totalCents > MAX_CENTS) return { error: "Valor muito alto." };
   const shares = totalCents > 0 && participants.length ? splitBillEqually(totalCents, participants.length) : null;
 
   await db.transaction(async (tx) => {
@@ -410,6 +411,7 @@ export async function updateBillAmount(_prev: ActionState, formData: FormData): 
 
   const totalCents = Math.abs(parseMoneyToCents(formData.get("total") as string | null));
   if (totalCents <= 0) return { error: "O valor total precisa ser maior que zero." };
+  if (totalCents > MAX_CENTS) return { error: "Valor muito alto." };
 
   if (bill.type === "INDIVIDUAL") {
     await db.update(bills).set({ totalCents, updatedAt: new Date() }).where(eq(bills.id, billId));

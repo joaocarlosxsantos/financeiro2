@@ -7,7 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, users } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
-import { parseMoneyToCents } from "@/lib/money";
+import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -28,11 +28,14 @@ export async function saveProfile(_prev: ActionState, formData: FormData): Promi
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
+  const monthlyIncomeCents = Math.abs(parseMoneyToCents(parsed.data.income));
+  if (monthlyIncomeCents > MAX_CENTS) return { error: "Valor muito alto." };
+
   await db
     .update(users)
     .set({
       name: parsed.data.name,
-      monthlyIncomeCents: Math.abs(parseMoneyToCents(parsed.data.income)),
+      monthlyIncomeCents,
       emergencyMonths: parsed.data.emergencyMonths,
       savingsTargetPct: parsed.data.savingsTargetPct,
       updatedAt: new Date(),
@@ -48,6 +51,7 @@ export async function saveProfile(_prev: ActionState, formData: FormData): Promi
 export async function completeOnboarding(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
   const income = Math.abs(parseMoneyToCents(String(formData.get("income") ?? "")));
+  if (income > MAX_CENTS) return { error: "Valor muito alto." };
   if (income <= 0) return { error: "Informe sua renda mensal líquida." };
 
   const emergencyMonths = Number(formData.get("emergencyMonths") ?? 6);
@@ -158,10 +162,13 @@ export async function saveOpeningBalance(input: {
     .limit(1);
   if (!account) return { error: "Conta não encontrada." };
 
+  const openingBalanceCents = parseMoneyToCents(input.amount);
+  if (Math.abs(openingBalanceCents) > MAX_CENTS) return { error: "Valor muito alto." };
+
   await db
     .update(accounts)
     .set({
-      openingBalanceCents: parseMoneyToCents(input.amount),
+      openingBalanceCents,
       openingBalanceDate: input.date ? new Date(`${input.date}T00:00:00.000Z`) : null,
     })
     .where(eq(accounts.id, input.accountId));
