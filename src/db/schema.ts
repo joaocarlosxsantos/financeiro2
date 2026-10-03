@@ -5,7 +5,7 @@
  * Isso evita erro de arredondamento de float e problema de serialização
  * de Decimal entre Server e Client Components.
  */
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -158,6 +158,8 @@ export const transactions = pgTable(
     installmentNumber: integer("installment_number"),
     /** Total de parcelas da compra. */
     installmentTotal: integer("installment_total"),
+    /** Transferências entre contas: mesmo grupo para as duas pernas (saída e entrada). */
+    transferGroupId: varchar("transfer_group_id", { length: 32 }),
     /** Hash de conta+data+valor+descrição — impede importar a mesma linha duas vezes. */
     fingerprint: text("fingerprint"),
 
@@ -170,7 +172,11 @@ export const transactions = pgTable(
     index("transactions_category_idx").on(t.categoryId),
     index("transactions_recurring_idx").on(t.recurringRuleId),
     index("transactions_installment_idx").on(t.installmentGroupId),
+    index("transactions_transfer_group_idx").on(t.transferGroupId),
     uniqueIndex("transactions_user_fingerprint_key").on(t.userId, t.fingerprint),
+    uniqueIndex("transactions_transfer_leg_key")
+      .on(t.transferGroupId, t.kind)
+      .where(sql`${t.transferGroupId} is not null`),
   ],
 );
 

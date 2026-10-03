@@ -85,6 +85,13 @@
       "when": 1790975602053,
       "tag": "0011_superb_wong",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791037022392,
+      "tag": "0012_fast_grandmaster",
+      "breakpoints": true
     }
   ]
 }
