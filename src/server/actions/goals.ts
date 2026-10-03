@@ -55,7 +55,8 @@ export async function createGoal(_prev: ActionState, formData: FormData): Promis
     targetCents,
     savedCents,
     targetDate: d.targetDate ? new Date(`${d.targetDate}T12:00:00.000Z`) : null,
-    color: d.color || "#0ea5e9",
+    // a coluna guarda só hex (#rrggbb); qualquer outra coisa cai na cor padrão
+    color: d.color && /^#[0-9a-fA-F]{6}$/.test(d.color) ? d.color : "#2349C9",
     note: d.note || null,
   });
 

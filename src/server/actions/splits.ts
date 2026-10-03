@@ -33,7 +33,7 @@ const splitPersonSchema = z.object({
   percent: z.number().min(0).max(100).optional(),
 });
 
-export const setTransactionSplitSchema = z.object({
+const setTransactionSplitSchema = z.object({
   mode: z.enum(["EQUAL", "PERCENT", "VALUE"]),
   myIncluded: z.boolean(),
   others: z

@@ -1,5 +1,23 @@
 // Roda testes, tipos e build e imprime só o resumo (ou o erro). Uso: npm run verify
 import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+
+// Arquivos "use server" só podem exportar funções async (e tipos). O `next build` NÃO pega
+// isso: quebra só em runtime, na primeira chamada de qualquer action do arquivo.
+const actionsDir = "src/server/actions";
+const bad = [];
+for (const f of readdirSync(actionsDir).filter((x) => x.endsWith(".ts") && !x.endsWith(".test.ts"))) {
+  const src = readFileSync(`${actionsDir}/${f}`, "utf8");
+  if (!/^["']use server["']/m.test(src)) continue;
+  for (const m of src.matchAll(/^export\s+(?:const|let|var|class|default|function)\b[^\n]*/gm)) {
+    bad.push(`${f}: ${m[0].slice(0, 80)}`);
+  }
+}
+if (bad.length) {
+  console.log(`FAIL use-server (só exportar funções async):\n${bad.join("\n")}`);
+  process.exit(1);
+}
+console.log("OK   use-server — só funções async exportadas");
 
 const steps = [
   ["vitest", "npx vitest run", /Tests\s+(.+)/],

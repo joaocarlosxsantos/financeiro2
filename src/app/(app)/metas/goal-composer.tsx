@@ -8,11 +8,11 @@ import { SubmitButton } from "@/components/ui/button";
 const initial: ActionState = {};
 
 const KINDS = [
-  { value: "PURCHASE", label: "Compra", color: "var(--text-brand)" },
-  { value: "TRIP", label: "Viagem", color: "var(--color-variable)" },
-  { value: "DEBT_PAYOFF", label: "Quitar dívida", color: "var(--color-money-out)" },
-  { value: "INVESTMENT", label: "Investimento", color: "var(--color-money-in)" },
-  { value: "CUSTOM", label: "Outra", color: "var(--text-muted)" },
+  { value: "PURCHASE", label: "Compra", color: "#2349C9" },
+  { value: "TRIP", label: "Viagem", color: "#B8760A" },
+  { value: "DEBT_PAYOFF", label: "Quitar dívida", color: "#C0352B" },
+  { value: "INVESTMENT", label: "Investimento", color: "#0B7A52" },
+  { value: "CUSTOM", label: "Outra", color: "#6B7280" },
 ];
 
 export function GoalComposer() {
