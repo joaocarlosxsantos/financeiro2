@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty";
 import { Money } from "@/components/ui/money";
 import { AccountList } from "./account-list";
 
-export const metadata = { title: "Contas — Financeiro 2.0" };
+export const metadata = { title: "Saldos — Financeiro 2.0" };
 
 export default async function AccountsPage() {
   const userId = await requireUserId();
@@ -18,7 +18,7 @@ export default async function AccountsPage() {
   if (!overview.accounts.length) {
     return (
       <>
-        <PageHeader title="Contas" description="Saldos atuais e patrimônio líquido consolidado." />
+        <PageHeader title="Saldos" description="Saldos atuais e patrimônio líquido consolidado." />
         <Card className="p-0">
           <EmptyState
             icon={Wallet}
@@ -41,7 +41,7 @@ export default async function AccountsPage() {
   return (
     <>
       <PageHeader
-        title="Contas"
+        title="Saldos"
         description="Saldos atuais e patrimônio líquido consolidado."
       />
 
@@ -57,7 +57,7 @@ export default async function AccountsPage() {
           <Card className="p-0">
             <div className="border-b border-[var(--line)] px-5 py-4">
               <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Contas
+                Saldos
               </h2>
               <p className="muted mt-0.5 text-xs">
                 Saldo inicial somado às entradas e saídas de cada conta.

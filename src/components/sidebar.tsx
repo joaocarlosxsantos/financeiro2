@@ -42,7 +42,7 @@ const sections: NavSection[] = [
     items: [
       { href: "/painel", label: "Painel", icon: LayoutDashboard },
       { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
-      { href: "/contas", label: "Contas", icon: Wallet },
+      { href: "/contas", label: "Saldos", icon: Wallet },
       { href: "/contas-a-pagar", label: "Contas a pagar", icon: ReceiptText },
     ],
   },

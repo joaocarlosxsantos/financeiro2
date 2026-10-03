@@ -74,6 +74,22 @@ export default async function SettingsPage() {
             }))}
           />
         </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Dados"
+            subtitle="Exporte um backup completo do seu perfil financeiro em JSON."
+          />
+          <div className="p-4">
+            <a
+              href="/api/exportar/backup"
+              download
+              className="inline-flex items-center justify-center rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
+            >
+              Baixar backup (JSON)
+            </a>
+          </div>
+        </Card>
       </div>
     </>
   );
