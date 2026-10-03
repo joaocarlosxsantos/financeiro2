@@ -83,8 +83,9 @@ export function EmergencyPanel({
             <label className="mb-1.5 block text-[0.8125rem] font-medium">Registrar aporte</label>
             <Input name="amount" inputMode="decimal" placeholder="0,00" required />
           </div>
-          <input type="hidden" name="mode" value="add" />
-          <Button type="submit">Guardar</Button>
+          <Button type="submit" name="mode" value="add">
+            Guardar
+          </Button>
           <Button
             type="submit"
             name="mode"

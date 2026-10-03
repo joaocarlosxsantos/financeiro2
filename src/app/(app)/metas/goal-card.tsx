@@ -142,8 +142,7 @@ export function GoalCard({
             <label className="mb-1.5 block text-xs font-medium">Valor</label>
             <Input name="amount" inputMode="decimal" placeholder="0,00" required />
           </div>
-          <input type="hidden" name="mode" value="add" />
-          <Button type="submit" size="sm">
+          <Button type="submit" name="mode" value="add" size="sm">
             Guardar
           </Button>
           <Button type="submit" name="mode" value="withdraw" variant="outline" size="sm">
