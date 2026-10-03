@@ -10,6 +10,7 @@ import { formatCents, pct } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Hint } from "@/components/ui/hint";
 import { GoalRecurringControl, type PlainGoalRecurringRule } from "./goal-recurring-control";
 
 const KIND_LABEL: Record<string, string> = {
@@ -43,6 +44,7 @@ export function GoalCard({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
   const progress = goal.targetCents ? (goal.savedCents / goal.targetCents) * 100 : 0;
   const done = goal.savedCents >= goal.targetCents;
@@ -75,13 +77,33 @@ export function GoalCard({
               tone: "danger",
             });
             if (!ok) return;
-            start(async () => void (await deleteGoal(goal.id)));
+            start(async () => {
+              const result = await deleteGoal(goal.id);
+              if (result.error) {
+                setError(result.error);
+              }
+            });
           }}
           className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-4" />
         </button>
       </div>
+
+      {error && (
+        <div className="mb-3" role="alert">
+          <Hint tone="warn" className="flex items-center justify-between gap-2">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="ml-auto text-[0.75rem] font-medium hover:underline"
+            >
+              Fechar
+            </button>
+          </Hint>
+        </div>
+      )}
 
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <span className="tnum text-lg font-semibold">{formatCents(goal.savedCents)}</span>

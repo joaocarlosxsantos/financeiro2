@@ -9,6 +9,7 @@ import { formatCents, formatCentsPlain } from "@/lib/money";
 import { DEBT_KIND_LABEL, annualRateFromMonthly, formatRate } from "@/lib/debts";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Hint } from "@/components/ui/hint";
 
 type Debt = {
   id: string;
@@ -36,6 +37,7 @@ export function DebtList({ debts }: { debts: Debt[] }) {
 function Row({ debt }: { debt: Debt }) {
   const [pending, start] = useTransition();
   const [paying, setPaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
   return (
@@ -68,13 +70,33 @@ function Row({ debt }: { debt: Debt }) {
               tone: "danger",
             });
             if (!ok) return;
-            start(async () => void (await deleteDebt(debt.id)));
+            start(async () => {
+              const result = await deleteDebt(debt.id);
+              if (result.error) {
+                setError(result.error);
+              }
+            });
           }}
           className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-4" />
         </button>
       </div>
+
+      {error && (
+        <div className="mb-3" role="alert">
+          <Hint tone="warn" className="flex items-center justify-between gap-2">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="ml-auto text-[0.75rem] font-medium hover:underline"
+            >
+              Fechar
+            </button>
+          </Hint>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <EditableField
