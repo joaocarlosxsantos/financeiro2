@@ -10,6 +10,7 @@ import { fingerprint, suggestCategoryId } from "@/lib/categorize";
 import { resolveImportDate } from "@/lib/import-dates";
 import { isInvoicePaymentLine } from "@/lib/import-filters";
 import { formatDate, monthLabel, monthRange, monthRefFromParam, monthRefToParam, type MonthRef } from "@/lib/dates";
+import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 
 export type PreviewRow = {
   /** Data que vai para o banco — já ajustada quando necessário (parcela de cartão). */
@@ -326,7 +327,12 @@ export async function commitImport(input: {
   const userId = await requireUserId();
 
   const [account] = await db
-    .select({ id: accounts.id, type: accounts.type })
+    .select({
+      id: accounts.id,
+      type: accounts.type,
+      closingDay: accounts.closingDay,
+      dueDay: accounts.dueDay,
+    })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
@@ -425,22 +431,34 @@ export async function commitImport(input: {
     const inserted = await tx
       .insert(transactions)
       .values(
-        rows.map((r) => ({
-          userId,
-          accountId: input.accountId,
-          categoryId: r.categoryId,
-          date: new Date(`${r.date}T12:00:00.000Z`),
-          description: r.description,
-          amountCents: r.amountCents,
-          kind: r.kind,
-          nature: (r.kind === "INCOME" ? "VARIABLE" : r.nature) as "FIXED" | "VARIABLE",
-          isTransfer: r.isTransfer,
-          importBatchId: batch.id,
-          fingerprint: r.fingerprint,
-          installmentNumber: r.installmentNumber,
-          installmentTotal: r.installmentTotal,
-          notes: r.dateAdjusted && r.originalDate ? `Compra realizada em ${formatDate(r.originalDate)}` : null,
-        })),
+        rows.map((r) => {
+          const rowDate = new Date(`${r.date}T12:00:00.000Z`);
+          const rowInvoiceRef = resolveTransactionInvoiceRef({
+            accountType: account.type,
+            closingDay: account.closingDay,
+            dueDay: account.dueDay,
+            date: rowDate,
+            batchInvoiceRef: invoiceParam ?? null,
+          });
+
+          return {
+            userId,
+            accountId: input.accountId,
+            categoryId: r.categoryId,
+            date: rowDate,
+            description: r.description,
+            amountCents: r.amountCents,
+            kind: r.kind,
+            nature: (r.kind === "INCOME" ? "VARIABLE" : r.nature) as "FIXED" | "VARIABLE",
+            isTransfer: r.isTransfer,
+            importBatchId: batch.id,
+            invoiceRef: rowInvoiceRef,
+            fingerprint: r.fingerprint,
+            installmentNumber: r.installmentNumber,
+            installmentTotal: r.installmentTotal,
+            notes: r.dateAdjusted && r.originalDate ? `Compra realizada em ${formatDate(r.originalDate)}` : null,
+          };
+        }),
       )
       .onConflictDoNothing()
       .returning({ id: transactions.id });

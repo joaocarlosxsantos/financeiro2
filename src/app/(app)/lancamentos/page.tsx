@@ -7,6 +7,7 @@ import {
   getRecurringStatus,
   getTransactionSplits,
   getTransactions,
+  getTransferCounterparts,
 } from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
@@ -37,6 +38,7 @@ export default async function TransactionsPage({
     nature?: string;
     q?: string;
     acc?: string;
+    accountId?: string;
     from?: string;
     to?: string;
   }>;
@@ -50,7 +52,11 @@ export default async function TransactionsPage({
       ? { from: sp.from, to: sp.to }
       : null;
 
-  const [accounts, categories, transactions, recurring, receivables] = await Promise.all([
+  const isFilteredByAccount = Boolean(
+    sp.accountId || (sp.acc && sp.acc !== "CARD" && sp.acc !== "OTHER"),
+  );
+
+  const [accounts, categories, rawTransactions, recurring, receivables] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
     getTransactions(
@@ -61,6 +67,7 @@ export default async function TransactionsPage({
         dateTo: customRange?.to,
         categoryId: sp.cat && sp.cat !== "NONE" ? sp.cat : undefined,
         uncategorized: sp.cat === "NONE",
+        accountId: sp.accountId || (sp.acc && sp.acc !== "CARD" && sp.acc !== "OTHER" ? sp.acc : undefined),
         accountKind: sp.acc === "CARD" || sp.acc === "OTHER" ? sp.acc : undefined,
         kind: sp.kind === "INCOME" || sp.kind === "EXPENSE" ? sp.kind : undefined,
         nature: sp.nature === "FIXED" || sp.nature === "VARIABLE" ? sp.nature : undefined,
@@ -72,10 +79,37 @@ export default async function TransactionsPage({
     getReceivablesByPerson(userId, ref),
   ]);
 
-  const txIds = transactions.map((t) => t.id);
-  const splitsMap = await getTransactionSplits(userId, txIds);
+  const txIds = rawTransactions.map((t) => t.id);
+  const transferGroupIds = Array.from(
+    new Set(
+      rawTransactions
+        .map((t) => t.transferGroupId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
 
-  const plain = transactions.map((t) => {
+  const [splitsMap, counterpartsMap] = await Promise.all([
+    getTransactionSplits(userId, txIds),
+    getTransferCounterparts(userId, transferGroupIds),
+  ]);
+
+  // Em 'todas as contas', mostra uma linha por grupo de transferência
+  const seenTransferGroups = new Set<string>();
+  const displayedTransactions: typeof rawTransactions = [];
+
+  for (const t of rawTransactions) {
+    if (t.transferGroupId && !isFilteredByAccount) {
+      if (seenTransferGroups.has(t.transferGroupId)) {
+        continue;
+      }
+      seenTransferGroups.add(t.transferGroupId);
+      displayedTransactions.push(t);
+    } else {
+      displayedTransactions.push(t);
+    }
+  }
+
+  const plain = displayedTransactions.map((t) => {
     const splits = (splitsMap.get(t.id) ?? []).map((s) => ({
       id: s.id,
       name: s.name,
@@ -84,6 +118,14 @@ export default async function TransactionsPage({
     }));
     const othersSum = splits.reduce((acc, s) => acc + s.amountCents, 0);
     const myShareCents = splits.length > 0 ? Math.max(0, t.amountCents - othersSum) : t.amountCents;
+
+    const counterpart = t.transferGroupId ? counterpartsMap.get(t.transferGroupId) : null;
+    let transferRoute: string | null = null;
+    if (t.transferGroupId && counterpart) {
+      const fromName = counterpart.fromAccountName || t.accountName;
+      const toName = counterpart.toAccountName || "Conta destino";
+      transferRoute = `${fromName} → ${toName}`;
+    }
 
     return {
       id: t.id,
@@ -100,6 +142,10 @@ export default async function TransactionsPage({
       isCard: t.accountType === "CREDIT_CARD",
       notes: t.notes,
       isTransfer: t.isTransfer,
+      transferGroupId: t.transferGroupId,
+      transferRoute,
+      fromAccountName: counterpart?.fromAccountName ?? null,
+      toAccountName: counterpart?.toAccountName ?? null,
       recurringRuleId: t.recurringRuleId,
       installmentGroupId: t.installmentGroupId,
       installmentNumber: t.installmentNumber,
@@ -172,6 +218,8 @@ export default async function TransactionsPage({
                 transactions={plain}
                 categories={plainCategories}
                 accounts={plainAccounts}
+                userId={userId}
+                isFilteredByAccount={isFilteredByAccount}
               />
             ) : (
               <EmptyState

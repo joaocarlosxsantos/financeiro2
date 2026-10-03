@@ -561,6 +561,7 @@ export async function getTransactions(userId: string, filters: TransactionFilter
       accountName: accountsTable.name,
       accountType: accountsTable.type,
       isTransfer: txTable.isTransfer,
+      transferGroupId: txTable.transferGroupId,
       recurringRuleId: txTable.recurringRuleId,
       installmentGroupId: txTable.installmentGroupId,
       installmentNumber: txTable.installmentNumber,
@@ -572,6 +573,68 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     .where(and(...conditions))
     .orderBy(desc(txTable.date), desc(txTable.createdAt))
     .limit(take);
+}
+
+/**
+ * Busca a contraparte de cada grupo de transferência em UMA única query extra (sem N+1).
+ * Retorna mapa: groupId -> { fromAccountName, toAccountName, fromAccountId, toAccountId }.
+ */
+export async function getTransferCounterparts(
+  userId: string,
+  groupIds: string[],
+): Promise<
+  Map<
+    string,
+    {
+      fromAccountName: string;
+      toAccountName: string;
+      fromAccountId: string;
+      toAccountId: string;
+    }
+  >
+> {
+  const cleanIds = Array.from(new Set(groupIds.filter(Boolean)));
+  const map = new Map<
+    string,
+    {
+      fromAccountName: string;
+      toAccountName: string;
+      fromAccountId: string;
+      toAccountId: string;
+    }
+  >();
+  if (cleanIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      groupId: txTable.transferGroupId,
+      kind: txTable.kind,
+      accountId: txTable.accountId,
+      accountName: accountsTable.name,
+    })
+    .from(txTable)
+    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .where(and(eq(txTable.userId, userId), inArray(txTable.transferGroupId, cleanIds)));
+
+  for (const r of rows) {
+    if (!r.groupId) continue;
+    const current = map.get(r.groupId) ?? {
+      fromAccountName: "",
+      toAccountName: "",
+      fromAccountId: "",
+      toAccountId: "",
+    };
+    if (r.kind === "EXPENSE") {
+      current.fromAccountName = r.accountName;
+      current.fromAccountId = r.accountId;
+    } else if (r.kind === "INCOME") {
+      current.toAccountName = r.accountName;
+      current.toAccountId = r.accountId;
+    }
+    map.set(r.groupId, current);
+  }
+
+  return map;
 }
 
 export async function getTotalSavedCents(userId: string): Promise<number> {

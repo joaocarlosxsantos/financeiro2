@@ -229,3 +229,31 @@ export function invoiceAlerts(invoices: Invoice[], today: Date = getCivilToday()
   // Ordena por vencimento mais urgente (as mais antigas/vencidas primeiro)
   return alerts.sort((a, b) => a.dueOn.getTime() - b.dueOn.getTime());
 }
+
+/**
+ * Determina o invoiceRef para um lançamento manual, parcelado ou importado.
+ * Retorna null se a conta não tiver closingDay configurado ou não for cartão de crédito.
+ */
+export function resolveTransactionInvoiceRef(params: {
+  accountType?: string;
+  closingDay?: number | null;
+  dueDay?: number | null;
+  date: Date;
+  batchInvoiceRef?: string | null;
+}): string | null {
+  if (params.accountType && params.accountType !== "CREDIT_CARD") return null;
+  if (!params.closingDay) return null;
+
+  // Em importação com lote referenciado
+  if (params.batchInvoiceRef) {
+    return params.batchInvoiceRef;
+  }
+
+  // Lançamento com ciclo de fechamento e vencimento válidos
+  if (params.dueDay) {
+    return invoiceCycle(params.date, params.closingDay, params.dueDay).ref;
+  }
+
+  return null;
+}
+

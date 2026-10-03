@@ -34,11 +34,14 @@ type Account = {
   archived: boolean;
   transactionCount: number;
   recurringCount: number;
+  closingDay?: number | null;
+  dueDay?: number | null;
 };
 
 export function AccountsPanel({ accounts }: { accounts: Account[] }) {
   const [state, formAction] = useActionState(createAccount, initial);
   const [open, setOpen] = useState(false);
+  const [newType, setNewType] = useState("CHECKING");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [, start] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
@@ -98,6 +101,9 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 <p className="muted truncate text-xs">
                   {TYPE_LABEL[a.type] ?? a.type}
                   {a.institution ? ` · ${a.institution}` : ""}
+                  {a.type === "CREDIT_CARD" && a.closingDay && a.dueDay
+                    ? ` · Fecha dia ${a.closingDay}, vence dia ${a.dueDay}`
+                    : ""}
                 </p>
               </div>
               <button
@@ -151,6 +157,9 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     <p className="muted truncate text-xs">
                       {TYPE_LABEL[a.type] ?? a.type}
                       {a.institution ? ` · ${a.institution}` : ""}
+                      {a.type === "CREDIT_CARD" && a.closingDay && a.dueDay
+                        ? ` · Fecha dia ${a.closingDay}, vence dia ${a.dueDay}`
+                        : ""}
                       {` · ${a.transactionCount} lançamento(s)`}
                     </p>
                   </div>
@@ -195,7 +204,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Tipo">
-              <Select name="type" defaultValue="CHECKING">
+              <Select name="type" defaultValue="CHECKING" onChange={(e) => setNewType(e.target.value)}>
                 <option value="CHECKING">Conta corrente</option>
                 <option value="SAVINGS">Poupança</option>
                 <option value="CREDIT_CARD">Cartão de crédito</option>
@@ -207,6 +216,16 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
               <Input name="institution" placeholder="Ex.: Banco Inter" />
             </Field>
           </div>
+          {newType === "CREDIT_CARD" && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Dia de fechamento">
+                <Input name="closingDay" type="number" min={1} max={31} placeholder="Ex.: 25" />
+              </Field>
+              <Field label="Dia de vencimento">
+                <Input name="dueDay" type="number" min={1} max={31} placeholder="Ex.: 5" />
+              </Field>
+            </div>
+          )}
           {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
             <SubmitButton size="sm">Adicionar conta</SubmitButton>
@@ -227,6 +246,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
 
 function EditForm({ account, onDone }: { account: Account; onDone: () => void }) {
   const [state, formAction] = useActionState(updateAccount, initial);
+  const [type, setType] = useState(account.type);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
@@ -242,7 +262,7 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Tipo">
-          <Select name="type" defaultValue={account.type}>
+          <Select name="type" defaultValue={account.type} onChange={(e) => setType(e.target.value)}>
             <option value="CHECKING">Conta corrente</option>
             <option value="SAVINGS">Poupança</option>
             <option value="CREDIT_CARD">Cartão de crédito</option>
@@ -254,6 +274,30 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
           <Input name="institution" defaultValue={account.institution ?? ""} placeholder="Ex.: Banco Inter" />
         </Field>
       </div>
+      {type === "CREDIT_CARD" && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Dia de fechamento">
+            <Input
+              name="closingDay"
+              type="number"
+              min={1}
+              max={31}
+              defaultValue={account.closingDay ?? ""}
+              placeholder="Ex.: 25"
+            />
+          </Field>
+          <Field label="Dia de vencimento">
+            <Input
+              name="dueDay"
+              type="number"
+              min={1}
+              max={31}
+              defaultValue={account.dueDay ?? ""}
+              placeholder="Ex.: 5"
+            />
+          </Field>
+        </div>
+      )}
       <Field label="Cor">
         <Input name="color" type="color" defaultValue={account.color} className="h-11 w-24 p-1" />
       </Field>

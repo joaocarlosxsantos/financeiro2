@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeftRight, CreditCard, Repeat, Trash2, Users } from "lucide-react";
+import { ArrowLeftRight, CreditCard, Plus, Repeat, Trash2, Users } from "lucide-react";
 import {
   deleteTransaction,
   setTransactionCategory,
@@ -11,65 +11,155 @@ import { formatCents } from "@/lib/money";
 import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
 import { SplitDialog } from "./split-dialog";
+import { TransferDialog } from "./transfer-dialog";
 import type { PlainAccount, PlainCategory, PlainTransaction } from "./types";
 
 export function TransactionList({
   transactions,
   categories,
+  accounts,
+  userId,
+  isFilteredByAccount,
 }: {
   transactions: PlainTransaction[];
   categories: PlainCategory[];
   accounts: PlainAccount[];
+  userId?: string;
+  isFilteredByAccount?: boolean;
 }) {
+  const [transferOpen, setTransferOpen] = useState(false);
   const grouped = groupByDate(transactions);
 
   return (
-    <div className="divide-y divide-[var(--line)]">
-      {grouped.map(([date, items]) => {
-        const dayTotalCents = items
-          .filter((t) => !t.isTransfer)
-          .reduce(
-            (acc, t) => acc + (t.kind === "INCOME" ? t.amountCents : -t.amountCents),
-            0,
-          );
-        return (
-          <div key={date}>
-            <div className="flex items-center justify-between border-y border-[var(--line)] bg-[var(--surface-2)]/80 px-4 py-1.5 text-xs font-medium text-[var(--text-muted)]">
-              <span className="capitalize">{formatDayMonth(date)}</span>
-              <span
-                className={cn(
-                  "tnum font-mono text-xs font-semibold",
-                  dayTotalCents > 0
-                    ? "text-[var(--text-in)]"
-                    : dayTotalCents < 0
-                      ? "text-[var(--text-out)]"
-                      : "text-[var(--text-muted)]",
-                )}
-              >
-                {dayTotalCents > 0 ? "+" : dayTotalCents < 0 ? "−" : ""}{" "}
-                {formatCents(Math.abs(dayTotalCents))}
-              </span>
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-2.5">
+        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Lançamentos
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const composer = document.querySelector<HTMLInputElement>('input[name="description"]');
+              composer?.focus();
+              composer?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            className="cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+          >
+            <Plus className="size-3.5" />
+            Novo lançamento
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setTransferOpen(true)}
+            className="cursor-pointer gap-1.5 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--color-save-soft)]"
+          >
+            <ArrowLeftRight className="size-3.5" />
+            Nova transferência
+          </Button>
+        </div>
+      </div>
+
+      <div className="divide-y divide-[var(--line)]">
+        {grouped.map(([date, items]) => {
+          const dayTotalCents = items
+            .filter((t) => !t.isTransfer)
+            .reduce(
+              (acc, t) => acc + (t.kind === "INCOME" ? t.amountCents : -t.amountCents),
+              0,
+            );
+          return (
+            <div key={date}>
+              <div className="flex items-center justify-between border-y border-[var(--line)] bg-[var(--surface-2)]/80 px-4 py-1.5 text-xs font-medium text-[var(--text-muted)]">
+                <span className="capitalize">{formatDayMonth(date)}</span>
+                <span
+                  className={cn(
+                    "tnum font-mono text-xs font-semibold",
+                    dayTotalCents > 0
+                      ? "text-[var(--text-in)]"
+                      : dayTotalCents < 0
+                        ? "text-[var(--text-out)]"
+                        : "text-[var(--text-muted)]",
+                  )}
+                >
+                  {dayTotalCents > 0 ? "+" : dayTotalCents < 0 ? "−" : ""}{" "}
+                  {formatCents(Math.abs(dayTotalCents))}
+                </span>
+              </div>
+              <ul className="divide-y divide-[var(--line)]">
+                {items.map((t) => (
+                  <Row
+                    key={t.id}
+                    tx={t}
+                    categories={categories}
+                    isFilteredByAccount={isFilteredByAccount}
+                  />
+                ))}
+              </ul>
             </div>
-            <ul className="divide-y divide-[var(--line)]">
-              {items.map((t) => (
-                <Row key={t.id} tx={t} categories={categories} />
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {transferOpen ? (
+        <TransferDialog
+          isOpen={transferOpen}
+          onClose={() => setTransferOpen(false)}
+          accounts={accounts}
+          userId={userId ?? ""}
+        />
+      ) : null}
     </div>
   );
 }
 
-function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCategory[] }) {
+function Row({
+  tx,
+  categories,
+  isFilteredByAccount,
+}: {
+  tx: PlainTransaction;
+  categories: PlainCategory[];
+  isFilteredByAccount?: boolean;
+}) {
   const [pending, start] = useTransition();
   const [splitOpen, setSplitOpen] = useState(false);
   const confirm = useConfirm();
   const options = categories.filter((c) => c.kind === tx.kind);
   const canSplit = tx.kind === "EXPENSE" && !tx.isTransfer;
   const isSplit = Boolean(tx.splits && tx.splits.length > 0);
+  const isPairedTransfer = Boolean(tx.transferGroupId);
+
+  // Exibição do sinal e cor:
+  // - Em "todas as contas" (!isFilteredByAccount): valor neutro sem sinal
+  // - Quando filtrado por conta (isFilteredByAccount): perna daquela conta com sinal (EXPENSE -, INCOME +)
+  // - Transferência antiga (isTransfer sem transferGroupId): valor neutro sem sinal como hoje
+  const showSignedTransfer = isPairedTransfer && Boolean(isFilteredByAccount);
+  const isNeutralValue = tx.isTransfer && !showSignedTransfer;
+
+  const valueSignal = isNeutralValue
+    ? ""
+    : tx.kind === "INCOME"
+      ? "+"
+      : "−";
+
+  const valueColorClass = isNeutralValue
+    ? "text-[var(--text-muted)]"
+    : tx.kind === "INCOME"
+      ? "text-[var(--text-in)]"
+      : "text-[var(--text-out)]";
+
+  // Nome da conta / rota exibida
+  const displayName = isPairedTransfer && !isFilteredByAccount && tx.transferRoute
+    ? tx.transferRoute
+    : tx.accountName;
 
   return (
     <li className={cn("flex items-center gap-3 px-4 py-2.5 transition-opacity", pending && "opacity-50")}>
@@ -82,24 +172,27 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.8125rem] font-medium text-[var(--text)]">{tx.description}</p>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
-          <select
-            aria-label="Categoria"
-            value={tx.categoryId ?? ""}
-            disabled={pending}
-            onChange={(e) =>
-              start(async () => {
-                await setTransactionCategory(tx.id, e.target.value || null);
-              })
-            }
-            className="cursor-pointer rounded-[var(--radius-xs)] border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--text)]"
-          >
-            <option value="">Sem categoria</option>
-            {options.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {!tx.isTransfer ? (
+            <select
+              aria-label="Categoria"
+              value={tx.categoryId ?? ""}
+              disabled={pending}
+              onChange={(e) =>
+                start(async () => {
+                  await setTransactionCategory(tx.id, e.target.value || null);
+                })
+              }
+              className="cursor-pointer rounded-[var(--radius-xs)] border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--text)]"
+            >
+              <option value="">Sem categoria</option>
+              {options.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+
           {tx.isTransfer ? (
             <span
               className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]"
@@ -148,7 +241,7 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
               dividido com {tx.splits!.length}
             </span>
           ) : null}
-          <span className="truncate text-[0.6875rem]">{tx.accountName}</span>
+          <span className="truncate text-[0.6875rem]">{displayName}</span>
         </div>
       </div>
 
@@ -156,14 +249,10 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
         <span
           className={cn(
             "tnum font-mono block text-sm font-semibold",
-            tx.isTransfer
-              ? "text-[var(--text-muted)]"
-              : tx.kind === "INCOME"
-                ? "text-[var(--text-in)]"
-                : "text-[var(--text-out)]",
+            valueColorClass,
           )}
         >
-          {tx.isTransfer ? "" : tx.kind === "INCOME" ? "+" : "−"} {formatCents(tx.amountCents)}
+          {valueSignal} {formatCents(tx.amountCents)}
         </span>
         {isSplit ? (
           <span
@@ -199,31 +288,33 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
         </button>
       ) : null}
 
-      <button
-        type="button"
-        aria-label={
-          tx.isTransfer
-            ? `Voltar a contar ${tx.description} nos totais`
-            : `Marcar ${tx.description} como transferência`
-        }
-        title={
-          tx.isTransfer
-            ? "Voltar a contar nos totais"
-            : "Marcar como transferência entre contas suas"
-        }
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            await setTransactionTransfer(tx.id, !tx.isTransfer);
-          })
-        }
-        className={cn(
-          "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
-          tx.isTransfer ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]",
-        )}
-      >
-        <ArrowLeftRight className="size-3.5" />
-      </button>
+      {!isPairedTransfer ? (
+        <button
+          type="button"
+          aria-label={
+            tx.isTransfer
+              ? `Voltar a contar ${tx.description} nos totais`
+              : `Marcar ${tx.description} como transferência`
+          }
+          title={
+            tx.isTransfer
+              ? "Voltar a contar nos totais"
+              : "Marcar como transferência entre contas suas"
+          }
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              await setTransactionTransfer(tx.id, !tx.isTransfer);
+            })
+          }
+          className={cn(
+            "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
+            tx.isTransfer ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]",
+          )}
+        >
+          <ArrowLeftRight className="size-3.5" />
+        </button>
+      ) : null}
 
       <button
         type="button"
@@ -231,7 +322,12 @@ function Row({ tx, categories }: { tx: PlainTransaction; categories: PlainCatego
         disabled={pending}
         onClick={async () => {
           const ok = await confirm({
-            title: `Excluir "${tx.description}"?`,
+            title: isPairedTransfer
+              ? `Excluir transferência "${tx.description}"?`
+              : `Excluir "${tx.description}"?`,
+            description: isPairedTransfer
+              ? "Isto apaga as duas pernas da transferência (origem e destino)."
+              : undefined,
             confirmLabel: "Excluir",
             tone: "danger",
           });

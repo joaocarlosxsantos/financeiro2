@@ -8,6 +8,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -91,10 +92,18 @@ export const accounts = pgTable(
     openingBalanceCents: integer("opening_balance_cents").notNull().default(0),
     /** Data do saldo inicial. Lançamentos anteriores a ela não entram na conta. */
     openingBalanceDate: timestamp("opening_balance_date", { withTimezone: true }),
+    /** Dia de fechamento da fatura (cartões de crédito, 1 a 31). */
+    closingDay: integer("closing_day"),
+    /** Dia de vencimento da fatura (cartões de crédito, 1 a 31). */
+    dueDay: integer("due_day"),
     archived: boolean("archived").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("accounts_user_idx").on(t.userId)],
+  (t) => [
+    index("accounts_user_idx").on(t.userId),
+    check("accounts_closing_day_chk", sql`${t.closingDay} BETWEEN 1 AND 31`),
+    check("accounts_due_day_chk", sql`${t.dueDay} BETWEEN 1 AND 31`),
+  ],
 );
 
 export const categories = pgTable(
@@ -160,6 +169,8 @@ export const transactions = pgTable(
     installmentTotal: integer("installment_total"),
     /** Transferências entre contas: mesmo grupo para as duas pernas (saída e entrada). */
     transferGroupId: varchar("transfer_group_id", { length: 32 }),
+    /** Referência da fatura (YYYY-MM do vencimento) para compras no cartão de crédito. */
+    invoiceRef: varchar("invoice_ref", { length: 7 }),
     /** Hash de conta+data+valor+descrição — impede importar a mesma linha duas vezes. */
     fingerprint: text("fingerprint"),
 
@@ -173,6 +184,7 @@ export const transactions = pgTable(
     index("transactions_recurring_idx").on(t.recurringRuleId),
     index("transactions_installment_idx").on(t.installmentGroupId),
     index("transactions_transfer_group_idx").on(t.transferGroupId),
+    index("transactions_account_invoice_idx").on(t.accountId, t.invoiceRef),
     uniqueIndex("transactions_user_fingerprint_key").on(t.userId, t.fingerprint),
     uniqueIndex("transactions_transfer_leg_key")
       .on(t.transferGroupId, t.kind)

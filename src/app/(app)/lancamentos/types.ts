@@ -32,6 +32,12 @@ export type PlainTransaction = {
   notes: string | null;
   /** Movimento entre contas suas — fica fora dos totais de receita e despesa. */
   isTransfer: boolean;
+  /** Grupo de transferência pareada (transfer_group_id). */
+  transferGroupId?: string | null;
+  /** Rota formatada da transferência (ex.: Conta A → Conta B). */
+  transferRoute?: string | null;
+  fromAccountName?: string | null;
+  toAccountName?: string | null;
   /** Preenchido quando o lançamento nasceu de uma regra recorrente. */
   recurringRuleId: string | null;
   installmentGroupId: string | null;

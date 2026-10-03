@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "node --env-file=.env scripts/seed.mjs",
+    "verify": "node scripts/verify.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -3,6 +3,7 @@ import {
   invoiceAlerts,
   invoiceCycle,
   invoiceRefForInstallment,
+  resolveTransactionInvoiceRef,
   type Invoice,
 } from "./invoices";
 
@@ -345,5 +346,49 @@ describe("invoiceAlerts", () => {
     expect(alerts[0].diffDays).toBe(-3); // mais atrasada primeiro
     expect(alerts[1].diffDays).toBe(0);  // hoje
     expect(alerts[2].diffDays).toBe(3);  // em 3 dias
+  });
+});
+
+describe("resolveTransactionInvoiceRef", () => {
+  it("calcula ref do ciclo para compra em cartão com closingDay e dueDay", () => {
+    const ref = resolveTransactionInvoiceRef({
+      accountType: "CREDIT_CARD",
+      closingDay: 25,
+      dueDay: 5,
+      date: d("2026-04-10"),
+    });
+    expect(ref).toBe("2026-05");
+  });
+
+  it("retorna batchInvoiceRef diretamente se fornecido para cartão com closingDay", () => {
+    const ref = resolveTransactionInvoiceRef({
+      accountType: "CREDIT_CARD",
+      closingDay: 25,
+      dueDay: 5,
+      date: d("2026-04-10"),
+      batchInvoiceRef: "2026-04",
+    });
+    expect(ref).toBe("2026-04");
+  });
+
+  it("retorna null se a conta não tiver closingDay configurado", () => {
+    const ref = resolveTransactionInvoiceRef({
+      accountType: "CREDIT_CARD",
+      closingDay: null,
+      dueDay: 5,
+      date: d("2026-04-10"),
+      batchInvoiceRef: "2026-04",
+    });
+    expect(ref).toBeNull();
+  });
+
+  it("retorna null se a conta não for CREDIT_CARD", () => {
+    const ref = resolveTransactionInvoiceRef({
+      accountType: "CHECKING",
+      closingDay: 25,
+      dueDay: 5,
+      date: d("2026-04-10"),
+    });
+    expect(ref).toBeNull();
   });
 });

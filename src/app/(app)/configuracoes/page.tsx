@@ -54,6 +54,8 @@ export default async function SettingsPage() {
               archived: a.archived,
               transactionCount: a.transactionCount,
               recurringCount: a.recurringCount,
+              closingDay: a.closingDay,
+              dueDay: a.dueDay,
             }))}
           />
         </Card>

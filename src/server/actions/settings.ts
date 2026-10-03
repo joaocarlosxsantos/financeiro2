@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, users } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { accountSchema } from "@/lib/account-schema";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -71,13 +72,6 @@ export async function completeOnboarding(_prev: ActionState, formData: FormData)
   redirect("/painel");
 }
 
-const accountSchema = z.object({
-  name: z.string().trim().min(2, "Dê um nome para a conta."),
-  type: z.enum(["CHECKING", "SAVINGS", "CREDIT_CARD", "CASH", "INVESTMENT"]),
-  institution: z.string().optional(),
-  color: z.string().optional(),
-});
-
 export async function createAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
   const parsed = accountSchema.safeParse({
@@ -85,8 +79,12 @@ export async function createAccount(_prev: ActionState, formData: FormData): Pro
     type: formData.get("type"),
     institution: formData.get("institution") || undefined,
     color: formData.get("color") || undefined,
+    closingDay: formData.get("closingDay"),
+    dueDay: formData.get("dueDay"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
+
+  const isCard = parsed.data.type === "CREDIT_CARD";
 
   await db.insert(accounts).values({
     userId,
@@ -94,6 +92,8 @@ export async function createAccount(_prev: ActionState, formData: FormData): Pro
     type: parsed.data.type,
     institution: parsed.data.institution || null,
     color: parsed.data.color || "#294f59",
+    closingDay: isCard ? (parsed.data.closingDay ?? null) : null,
+    dueDay: isCard ? (parsed.data.dueDay ?? null) : null,
   });
 
   revalidatePath("/configuracoes");
@@ -257,6 +257,8 @@ export async function updateAccount(_prev: ActionState, formData: FormData): Pro
     type: formData.get("type"),
     institution: formData.get("institution") || undefined,
     color: formData.get("color") || undefined,
+    closingDay: formData.get("closingDay"),
+    dueDay: formData.get("dueDay"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
@@ -267,6 +269,8 @@ export async function updateAccount(_prev: ActionState, formData: FormData): Pro
     .limit(1);
   if (!existing) return { error: "Conta não encontrada." };
 
+  const isCard = parsed.data.type === "CREDIT_CARD";
+
   await db
     .update(accounts)
     .set({
@@ -274,6 +278,8 @@ export async function updateAccount(_prev: ActionState, formData: FormData): Pro
       type: parsed.data.type,
       institution: parsed.data.institution || null,
       color: parsed.data.color || "#294f59",
+      closingDay: isCard ? (parsed.data.closingDay ?? null) : null,
+      dueDay: isCard ? (parsed.data.dueDay ?? null) : null,
     })
     .where(and(eq(accounts.id, id), eq(accounts.userId, userId)));
 

@@ -10,6 +10,7 @@ import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { fingerprint } from "@/lib/categorize";
 import { createId } from "@/lib/id";
 import { transferLegs } from "@/lib/transfers";
+import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { insertInstallments } from "@/server/installments";
 
 export type ActionState = { error?: string; ok?: boolean; groupId?: string };
@@ -53,17 +54,22 @@ function refresh() {
  * conta ou categoria de outro usuário vazaria pro seu próprio extrato via
  * JOIN). Mesmo padrão de checagem já usado no resto do código.
  */
-async function verifyAccountAndCategory(
+async function getAccountAndVerify(
   userId: string,
   accountId: string,
   categoryId: string | null,
-): Promise<string | null> {
+): Promise<{ error?: string; account?: { id: string; type: string; closingDay: number | null; dueDay: number | null } }> {
   const [account] = await db
-    .select({ id: accounts.id })
+    .select({
+      id: accounts.id,
+      type: accounts.type,
+      closingDay: accounts.closingDay,
+      dueDay: accounts.dueDay,
+    })
     .from(accounts)
     .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
     .limit(1);
-  if (!account) return "Conta inválida.";
+  if (!account) return { error: "Conta inválida." };
 
   if (categoryId) {
     const [category] = await db
@@ -71,10 +77,10 @@ async function verifyAccountAndCategory(
       .from(categories)
       .where(and(eq(categories.id, categoryId), eq(categories.userId, userId)))
       .limit(1);
-    if (!category) return "Categoria inválida.";
+    if (!category) return { error: "Categoria inválida." };
   }
 
-  return null;
+  return { account };
 }
 
 export async function createTransaction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -87,8 +93,9 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
   if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
 
-  const ownershipError = await verifyAccountAndCategory(userId, d.accountId, d.categoryId || null);
-  if (ownershipError) return { error: ownershipError };
+  const check = await getAccountAndVerify(userId, d.accountId, d.categoryId || null);
+  if (check.error || !check.account) return { error: check.error ?? "Conta inválida." };
+  const account = check.account;
 
   const date = new Date(`${d.date}T12:00:00.000Z`);
   const installments = d.installments ?? 1;
@@ -109,11 +116,20 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
       accountId: d.accountId,
       categoryId: d.categoryId || null,
       notes: d.notes || null,
+      closingDay: account.closingDay,
+      dueDay: account.dueDay,
     });
 
     refresh();
     return created ? { ok: true } : { error: "Não foi possível criar as parcelas." };
   }
+
+  const invoiceRef = resolveTransactionInvoiceRef({
+    accountType: account.type,
+    closingDay: account.closingDay,
+    dueDay: account.dueDay,
+    date,
+  });
 
   await db.insert(transactions).values({
     userId,
@@ -125,6 +141,7 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
     kind: d.kind,
     nature: d.kind === "INCOME" ? "VARIABLE" : d.nature,
     notes: d.notes || null,
+    invoiceRef,
     // sufixo "m" = manual, para não colidir com uma linha importada idêntica
     fingerprint: `${fingerprint({ accountId: d.accountId, date, amountCents, description: d.description })}|m|${Date.now()}`,
   });
@@ -143,20 +160,56 @@ export async function updateTransaction(id: string, formData: FormData): Promise
   if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
 
-  const ownershipError = await verifyAccountAndCategory(userId, d.accountId, d.categoryId || null);
-  if (ownershipError) return { error: ownershipError };
+  const check = await getAccountAndVerify(userId, d.accountId, d.categoryId || null);
+  if (check.error || !check.account) return { error: check.error ?? "Conta inválida." };
+  const account = check.account;
+
+  const date = new Date(`${d.date}T12:00:00.000Z`);
+
+  const [existing] = await db
+    .select({
+      accountId: transactions.accountId,
+      date: transactions.date,
+      installmentGroupId: transactions.installmentGroupId,
+      importBatchId: transactions.importBatchId,
+      transferGroupId: transactions.transferGroupId,
+    })
+    .from(transactions)
+    .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
+    .limit(1);
+  if (!existing) return { error: "Não encontrado." };
+  // Editar uma perna isolada deixaria o par de transferência inconsistente.
+  if (existing.transferGroupId) {
+    return { error: "Transferência: exclua e crie de novo para alterar." };
+  }
+
+  // Parcelas e linhas importadas guardam a fatura do lote/ciclo original (a data da linha não
+  // reproduz o ciclo); só recalcula quando é lançamento manual e data ou conta mudaram.
+  const keepRef =
+    !!existing.installmentGroupId ||
+    !!existing.importBatchId ||
+    (existing.accountId === d.accountId && existing.date.getTime() === date.getTime());
+  const invoiceRef = keepRef
+    ? undefined
+    : resolveTransactionInvoiceRef({
+        accountType: account.type,
+        closingDay: account.closingDay,
+        dueDay: account.dueDay,
+        date,
+      });
 
   const result = await db
     .update(transactions)
     .set({
       accountId: d.accountId,
       categoryId: d.categoryId || null,
-      date: new Date(`${d.date}T12:00:00.000Z`),
+      date,
       description: d.description,
       amountCents,
       kind: d.kind,
       nature: d.kind === "INCOME" ? "VARIABLE" : d.nature,
       notes: d.notes || null,
+      invoiceRef,
       updatedAt: new Date(),
     })
     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
