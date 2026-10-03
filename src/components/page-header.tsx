@@ -17,7 +17,11 @@ export function PageHeader({
           <p className="muted mt-0.5 text-xs font-normal leading-normal">{description}</p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? (
+        <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
+          {action}
+        </div>
+      ) : null}
     </div>
   );
 }

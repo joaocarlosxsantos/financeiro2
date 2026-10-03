@@ -17,7 +17,7 @@ export function MonthSwitcher({ value: current }: { value: MonthRef }) {
   }
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-xl border bg-[var(--surface)] p-1">
+    <div className="inline-flex max-w-full items-center gap-1 rounded-xl border bg-[var(--surface)] p-1">
       <button
         type="button"
         onClick={() => go(-1)}
@@ -26,7 +26,7 @@ export function MonthSwitcher({ value: current }: { value: MonthRef }) {
       >
         <ChevronLeft className="size-4" />
       </button>
-      <span className="min-w-36 px-2 text-center text-[0.8125rem] font-medium first-letter:uppercase">
+      <span className="min-w-28 sm:min-w-36 px-1.5 sm:px-2 text-center text-[0.8125rem] font-medium first-letter:uppercase truncate">
         {monthLabel(current)}
       </span>
       <button

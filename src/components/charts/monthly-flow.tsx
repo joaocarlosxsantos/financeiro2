@@ -16,6 +16,11 @@ import type { SeriesPoint } from "@/server/queries";
 import { formatAxisCents } from "@/lib/money";
 import { MoneyTooltip } from "./tooltip";
 import { VIZ } from "./palette";
+import {
+  isSeriesDataEmpty,
+  getZeroSafeDomain,
+  getZeroSafeTicks,
+} from "./chart-utils";
 
 interface LastPointLabelProps {
   x?: number;
@@ -23,10 +28,11 @@ interface LastPointLabelProps {
   value?: number | string;
   index?: number;
   dataLength?: number;
+  allZero?: boolean;
 }
 
-function LastPointLabel({ x, y, value, index, dataLength }: LastPointLabelProps) {
-  if (index !== (dataLength ?? 0) - 1 || x == null || y == null || value == null) {
+function LastPointLabel({ x, y, value, index, dataLength, allZero }: LastPointLabelProps) {
+  if (allZero || index !== (dataLength ?? 0) - 1 || x == null || y == null || value == null) {
     return null;
   }
   return (
@@ -52,8 +58,10 @@ function LastPointLabel({ x, y, value, index, dataLength }: LastPointLabelProps)
  * rótulo direto no último ponto (sem legenda genérica).
  */
 export function MonthlyFlowChart({ data }: { data: SeriesPoint[] }) {
+  const allZero = isSeriesDataEmpty(data);
+
   return (
-    <div className="h-72 w-full">
+    <div className="relative h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
@@ -68,6 +76,8 @@ export function MonthlyFlowChart({ data }: { data: SeriesPoint[] }) {
             tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
           />
           <YAxis
+            domain={getZeroSafeDomain(allZero)}
+            ticks={getZeroSafeTicks(allZero)}
             tickFormatter={(v) => formatAxisCents(Number(v))}
             tickLine={false}
             axisLine={false}
@@ -85,18 +95,30 @@ export function MonthlyFlowChart({ data }: { data: SeriesPoint[] }) {
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4, fill: VIZ.balance, stroke: "var(--surface)", strokeWidth: 2 }}
-            label={(props: any) => <LastPointLabel {...props} dataLength={data.length} />}
+            label={(props: any) => (
+              <LastPointLabel {...props} dataLength={data.length} allZero={allZero} />
+            )}
           />
         </ComposedChart>
       </ResponsiveContainer>
+
+      {allZero ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] shadow-xs">
+            Sem dados no período
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 /** Barras empilhadas de fixo x variável — hachura fina para fixo e barras sem raio. */
 export function FixedVariableChart({ data }: { data: SeriesPoint[] }) {
+  const allZero = isSeriesDataEmpty(data);
+
   return (
-    <div className="h-56 w-full">
+    <div className="relative h-56 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
           <defs>
@@ -108,7 +130,7 @@ export function FixedVariableChart({ data }: { data: SeriesPoint[] }) {
               patternUnits="userSpaceOnUse"
             >
               <rect width="6" height="6" fill="var(--surface-2)" />
-              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--text-brand)" strokeWidth="1.2" />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--text-brand)" strokeWidth={1.2} />
             </pattern>
           </defs>
           <CartesianGrid stroke="var(--line)" strokeWidth={1} vertical={false} />
@@ -119,6 +141,8 @@ export function FixedVariableChart({ data }: { data: SeriesPoint[] }) {
             tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
           />
           <YAxis
+            domain={getZeroSafeDomain(allZero)}
+            ticks={getZeroSafeTicks(allZero)}
             tickFormatter={(v) => formatAxisCents(Number(v))}
             tickLine={false}
             axisLine={false}
@@ -152,6 +176,14 @@ export function FixedVariableChart({ data }: { data: SeriesPoint[] }) {
           />
         </BarChart>
       </ResponsiveContainer>
+
+      {allZero ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] shadow-xs">
+            Sem dados no período
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

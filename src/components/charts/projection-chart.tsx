@@ -13,6 +13,11 @@ import {
 import { formatAxisCents } from "@/lib/money";
 import { MoneyTooltip } from "./tooltip";
 import { VIZ } from "./palette";
+import {
+  isProjectionDataEmpty,
+  getZeroSafeDomain,
+  getZeroSafeTicks,
+} from "./chart-utils";
 
 export type ProjectionRow = { label: string } & Record<string, number | string>;
 
@@ -23,8 +28,13 @@ export function ProjectionChart({
   data: ProjectionRow[];
   series: { key: string; name: string; color: string }[];
 }) {
+  const allZero = isProjectionDataEmpty(
+    data,
+    series.map((s) => s.key),
+  );
+
   return (
-    <div className="h-80 w-full">
+    <div className="relative h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
           <defs>
@@ -44,6 +54,8 @@ export function ProjectionChart({
             tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
           />
           <YAxis
+            domain={getZeroSafeDomain(allZero)}
+            ticks={getZeroSafeTicks(allZero)}
             tickFormatter={(v) => formatAxisCents(Number(v))}
             tickLine={false}
             axisLine={false}
@@ -78,6 +90,14 @@ export function ProjectionChart({
           ))}
         </AreaChart>
       </ResponsiveContainer>
+
+      {allZero ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] shadow-xs">
+            Sem dados no período
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

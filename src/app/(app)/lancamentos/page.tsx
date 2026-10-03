@@ -21,8 +21,7 @@ import { TransactionComposer } from "./transaction-composer";
 import { TransactionList } from "./transaction-list";
 import { ReceivablesSection } from "./receivables-section";
 import { Filters } from "./filters";
-import { PeriodSwitcher } from "./period-switcher";
-import { ExportMenu } from "./export-menu";
+import { LancamentosHeaderActions } from "./lancamentos-header-actions";
 
 export const metadata = { title: "Lançamentos — Financeiro 2.0" };
 
@@ -180,10 +179,12 @@ export default async function TransactionsPage({
         title="Lançamentos"
         description="Registro de entradas e saídas por conta e categoria."
         action={
-          <div className="flex items-center gap-2">
-            <PeriodSwitcher value={ref} range={customRange} />
-            <ExportMenu />
-          </div>
+          <LancamentosHeaderActions
+            monthRef={ref}
+            customRange={customRange}
+            accounts={plainAccounts}
+            userId={userId}
+          />
         }
       />
 

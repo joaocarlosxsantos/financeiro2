@@ -71,9 +71,9 @@ export function PeriodSwitcher({
 
   if (range) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
+      <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5">
         <CalendarRange className="muted size-4 shrink-0" />
-        <span className="text-[0.8125rem] font-medium font-mono tnum">
+        <span className="text-[0.8125rem] font-medium font-mono tnum truncate">
           {formatBr(range.from)} – {formatBr(range.to)}
         </span>
         <button
@@ -90,8 +90,8 @@ export function PeriodSwitcher({
   }
 
   return (
-    <div className="relative inline-flex items-center gap-1.5" ref={boxRef}>
-      <div className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] p-1">
+    <div className="relative inline-flex max-w-full items-center gap-1.5" ref={boxRef}>
+      <div className="inline-flex max-w-full items-center gap-1 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] p-1">
         <button
           type="button"
           onClick={() => goMonth(-1)}
@@ -100,7 +100,7 @@ export function PeriodSwitcher({
         >
           <ChevronLeft className="size-4" />
         </button>
-        <span className="min-w-36 px-2 text-center text-[0.8125rem] font-medium first-letter:uppercase">
+        <span className="min-w-28 sm:min-w-36 px-1.5 sm:px-2 text-center text-[0.8125rem] font-medium first-letter:uppercase truncate">
           {monthLabel(current)}
         </span>
         <button
