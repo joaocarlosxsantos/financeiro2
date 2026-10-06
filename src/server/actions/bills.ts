@@ -494,6 +494,88 @@ export async function updateBillAmount(_prev: ActionState, formData: FormData): 
   return { ok: true };
 }
 
+async function generateNextMonthForBill(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  bill: {
+    id: string;
+    ruleId: string | null;
+    groupingId: string | null;
+    name: string;
+    type: "INDIVIDUAL" | "GROUP";
+    year: number;
+    month: number;
+    totalCents: number;
+    dueDay: number | null;
+  },
+) {
+  if (!bill.ruleId) return;
+
+  const [rule] = await tx
+    .select({ id: billRules.id, active: billRules.active })
+    .from(billRules)
+    .where(and(eq(billRules.id, bill.ruleId), eq(billRules.userId, userId)))
+    .limit(1);
+
+  if (!rule || !rule.active) return;
+
+  const next = shiftMonth({ year: bill.year, month: bill.month }, 1);
+  const [existing] = await tx
+    .select({ id: bills.id })
+    .from(bills)
+    .where(
+      and(
+        eq(bills.userId, userId),
+        eq(bills.ruleId, bill.ruleId),
+        eq(bills.year, next.year),
+        eq(bills.month, next.month),
+      ),
+    )
+    .limit(1);
+
+  if (existing) return;
+
+  const [newBill] = await tx
+    .insert(bills)
+    .values({
+      userId,
+      ruleId: bill.ruleId,
+      groupingId: bill.groupingId,
+      name: bill.name,
+      type: bill.type,
+      year: next.year,
+      month: next.month,
+      totalCents: bill.totalCents,
+      dueDay: bill.dueDay,
+      paid: false,
+    })
+    .onConflictDoNothing()
+    .returning({ id: bills.id });
+
+  if (newBill && bill.type === "GROUP") {
+    const participants = await tx
+      .select({
+        name: billParticipants.name,
+        phone: billParticipants.phone,
+        amountCents: billParticipants.amountCents,
+      })
+      .from(billParticipants)
+      .where(eq(billParticipants.billId, bill.id));
+
+    if (participants.length > 0) {
+      await tx.insert(billParticipants).values(
+        participants.map((p) => ({
+          billId: newBill.id,
+          name: p.name,
+          phone: p.phone,
+          amountCents: p.amountCents,
+          paid: false, // Participantes clonados sempre nascem com paid = false
+        })),
+      );
+    }
+  }
+}
+
 const togglePaidSchema = z.object({
   billId: z.string().trim().min(1, "Conta inválida."),
   paid: z.boolean(),
@@ -519,69 +601,83 @@ export async function toggleBillPaid(billId: string, paid: boolean): Promise<Act
       .set({ paid: parsed.data.paid, updatedAt: new Date() })
       .where(and(eq(bills.id, bill.id), eq(bills.userId, userId)));
 
-    if (parsed.data.paid && bill.ruleId) {
-      const [rule] = await tx
-        .select({ id: billRules.id, active: billRules.active })
-        .from(billRules)
-        .where(and(eq(billRules.id, bill.ruleId), eq(billRules.userId, userId)))
-        .limit(1);
+    // Se for conta em grupo, atualiza todos os participantes para o mesmo status
+    if (bill.type === "GROUP") {
+      await tx
+        .update(billParticipants)
+        .set({ paid: parsed.data.paid })
+        .where(eq(billParticipants.billId, bill.id));
+    }
 
-      if (rule && rule.active) {
-        const next = shiftMonth({ year: bill.year, month: bill.month }, 1);
-        const [existing] = await tx
-          .select({ id: bills.id })
-          .from(bills)
-          .where(
-            and(
-              eq(bills.userId, userId),
-              eq(bills.ruleId, bill.ruleId),
-              eq(bills.year, next.year),
-              eq(bills.month, next.month),
-            ),
-          )
-          .limit(1);
+    if (parsed.data.paid) {
+      await generateNextMonthForBill(tx, userId, bill);
+    }
 
-        if (!existing) {
-          const [newBill] = await tx
-            .insert(bills)
-            .values({
-              userId,
-              ruleId: bill.ruleId,
-              groupingId: bill.groupingId,
-              name: bill.name,
-              type: bill.type,
-              year: next.year,
-              month: next.month,
-              totalCents: bill.totalCents,
-              dueDay: bill.dueDay,
-              paid: false,
-            })
-            .onConflictDoNothing()
-            .returning({ id: bills.id });
+    return { ok: true };
+  });
 
-          if (newBill && bill.type === "GROUP") {
-            const participants = await tx
-              .select({
-                name: billParticipants.name,
-                phone: billParticipants.phone,
-                amountCents: billParticipants.amountCents,
-              })
-              .from(billParticipants)
-              .where(eq(billParticipants.billId, bill.id));
+  if (result.error) return result;
 
-            if (participants.length > 0) {
-              await tx.insert(billParticipants).values(
-                participants.map((p) => ({
-                  billId: newBill.id,
-                  name: p.name,
-                  phone: p.phone,
-                  amountCents: p.amountCents,
-                })),
-              );
-            }
-          }
-        }
-      }
+  refresh();
+  return { ok: true };
+}
+
+const toggleParticipantPaidSchema = z.object({
+  participantId: z.string().trim().min(1, "Participante inválido."),
+  paid: z.boolean(),
+});
+
+export async function toggleParticipantPaid(participantId: string, paid: boolean): Promise<ActionState> {
+  const parsed = toggleParticipantPaidSchema.safeParse({ participantId, paid });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+
+  const userId = await requireUserId();
+
+  const result = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        participantId: billParticipants.id,
+        billId: bills.id,
+        ruleId: bills.ruleId,
+        groupingId: bills.groupingId,
+        name: bills.name,
+        type: bills.type,
+        year: bills.year,
+        month: bills.month,
+        totalCents: bills.totalCents,
+        dueDay: bills.dueDay,
+      })
+      .from(billParticipants)
+      .innerJoin(bills, eq(bills.id, billParticipants.billId))
+      .where(and(eq(billParticipants.id, parsed.data.participantId), eq(bills.userId, userId)))
+      .limit(1);
+
+    if (!row) return { error: "Participante não encontrado." };
+
+    await tx
+      .update(billParticipants)
+      .set({ paid: parsed.data.paid })
+      .where(eq(billParticipants.id, row.participantId));
+
+    const allParticipants = await tx
+      .select({ id: billParticipants.id, paid: billParticipants.paid })
+      .from(billParticipants)
+      .where(eq(billParticipants.billId, row.billId));
+
+    const allPaid = allParticipants.length > 0 && allParticipants.every((p) => p.paid);
+
+    if (allPaid) {
+      await tx
+        .update(bills)
+        .set({ paid: true, updatedAt: new Date() })
+        .where(and(eq(bills.id, row.billId), eq(bills.userId, userId)));
+
+      await generateNextMonthForBill(tx, userId, { ...row, id: row.billId });
+    } else {
+      await tx
+        .update(bills)
+        .set({ paid: false, updatedAt: new Date() })
+        .where(and(eq(bills.id, row.billId), eq(bills.userId, userId)));
     }
 
     return { ok: true };

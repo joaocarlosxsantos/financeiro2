@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, ChevronDown, ChevronUp, MessageCircle, Phone, Repeat, Trash2, UserPlus } from "lucide-react";
-import { addBillParticipant, deleteBill, removeBillParticipant, toggleBillPaid, updateBillGrouping } from "@/server/actions/bills";
+import { addBillParticipant, deleteBill, removeBillParticipant, toggleBillPaid, toggleParticipantPaid, updateBillGrouping } from "@/server/actions/bills";
 import { getBillStatus } from "@/lib/bills";
 import { Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export type PlainBillParticipant = {
   name: string;
   phone: string | null;
   amountCents: number;
+  paid: boolean;
 };
 
 export type PlainBill = {
@@ -42,6 +43,8 @@ export function BillItem({
   allBills,
   groupings,
   participantShareCents,
+  participantId,
+  participantPaid,
 }: {
   bill: PlainBillRow;
   /** Rótulo do mês pronto (ex. "setembro de 2026"), pra mensagem do WhatsApp. */
@@ -54,14 +57,21 @@ export function BillItem({
   groupings: PlainGroupingOption[];
   /** Se informado, exibe o valor da parte da pessoa em vez do total da conta (usado na visualização Pessoa -> Conta). */
   participantShareCents?: number;
+  /** ID do participante para toggle individual */
+  participantId?: string;
+  /** Status pago do participante para toggle individual */
+  participantPaid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const confirm = useConfirm();
 
   const currentGrouping = groupings.find((g) => g.id === bill.groupingId);
+  const isIndividualParticipant = participantId !== undefined;
+  const isPaid = isIndividualParticipant ? (participantPaid ?? false) : bill.paid;
+
   const status = getBillStatus({
-    paid: bill.paid,
+    paid: isPaid,
     dueDay: bill.dueDay,
     year: bill.year,
     month: bill.month,
@@ -69,7 +79,11 @@ export function BillItem({
 
   function togglePaid() {
     start(async () => {
-      await toggleBillPaid(bill.id, !bill.paid);
+      if (isIndividualParticipant && participantId) {
+        await toggleParticipantPaid(participantId, !isPaid);
+      } else {
+        await toggleBillPaid(bill.id, !bill.paid);
+      }
     });
   }
 
@@ -133,25 +147,25 @@ export function BillItem({
             <button
               type="button"
               role="checkbox"
-              aria-checked={bill.paid}
-              aria-label={bill.paid ? `Marcar ${bill.name} como pendente` : `Marcar ${bill.name} como paga`}
+              aria-checked={isPaid}
+              aria-label={isPaid ? `Marcar ${bill.name} como pendente` : `Marcar ${bill.name} como paga`}
               disabled={pending}
               onClick={togglePaid}
-              className="group flex min-h-[44px] min-w-0 cursor-pointer items-center gap-2 -ml-2 pl-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+              className="group flex min-h-[44px] min-w-0 cursor-pointer items-center gap-2 -ml-2 pl-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)]/60 focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
             >
               <span
                 className={`flex size-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                  bill.paid
+                  isPaid
                     ? "border-[var(--text-in)] bg-[var(--color-money-in-soft)] text-[var(--text-in)]"
                     : "border-[var(--border)] bg-transparent group-hover:border-[var(--text-brand)] text-transparent"
                 }`}
               >
-                <Check className={`size-3.5 stroke-[2.5] ${bill.paid ? "opacity-100" : "opacity-0 group-hover:opacity-20"}`} />
+                <Check className={`size-3.5 stroke-[2.5] ${isPaid ? "opacity-100" : "opacity-0 group-hover:opacity-20"}`} />
               </span>
 
               <span
                 className={`truncate text-[0.875rem] font-medium group-hover:underline ${
-                  bill.paid ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
+                  isPaid ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
                 }`}
               >
                 {bill.name}
@@ -273,7 +287,18 @@ export function BillItem({
                 {bill.participants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 text-[0.8125rem]">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{p.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate font-medium">{p.name}</p>
+                        {p.paid ? (
+                          <span className="inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--color-money-in-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-in)]">
+                            Pago
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-[var(--radius-xs)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-muted)] ring-1 ring-[var(--border)] ring-inset">
+                            Pendente
+                          </span>
+                        )}
+                      </div>
                       {p.phone ? (
                         <p className="muted flex items-center gap-1 text-xs">
                           <Phone className="size-3" />
@@ -346,7 +371,7 @@ function AddParticipantForm({ billId }: { billId: string }) {
   const [pending, start] = useTransition();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
       <Input
         placeholder="Nome"
         aria-label="Nome"
@@ -359,7 +384,7 @@ function AddParticipantForm({ billId }: { billId: string }) {
         aria-label="Telefone (opcional)"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
-        className="h-8 w-32 text-[0.8125rem]"
+        className="h-8 flex-1 min-w-0 text-[0.8125rem]"
       />
       <Button
         type="button"

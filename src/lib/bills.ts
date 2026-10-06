@@ -91,3 +91,98 @@ export function getBillStatus(
 
   return "PENDENTE";
 }
+
+/**
+ * Ordena contas do mês:
+ * 1. Não pagas primeiro (VENCIDAS e PENDENTES); PAGAS vão para o fim.
+ * 2. Entre não pagas: VENCIDAS primeiro, depois por dia de vencimento (menor primeiro, null por último), depois por nome.
+ * 3. Entre pagas: por vencimento (menor primeiro, null por último), depois por nome.
+ */
+export function sortBills<
+  T extends { name: string; paid: boolean; dueDay: number | null; year: number; month: number }
+>(bills: T[], now: Date = new Date()): T[] {
+  return [...bills].sort((a, b) => {
+    // 1. Não pagas primeiro, pagas por último
+    if (a.paid !== b.paid) {
+      return a.paid ? 1 : -1;
+    }
+
+    // 2. Entre não pagas: VENCIDAS primeiro
+    if (!a.paid && !b.paid) {
+      const statusA = getBillStatus(a, now);
+      const statusB = getBillStatus(b, now);
+      if (statusA === "VENCIDA" && statusB !== "VENCIDA") return -1;
+      if (statusB === "VENCIDA" && statusA !== "VENCIDA") return 1;
+    }
+
+    // 3. Por dia de vencimento (menor primeiro, null por último)
+    if (a.dueDay !== null && b.dueDay !== null) {
+      if (a.dueDay !== b.dueDay) return a.dueDay - b.dueDay;
+    } else if (a.dueDay !== null && b.dueDay === null) {
+      return -1;
+    } else if (a.dueDay === null && b.dueDay !== null) {
+      return 1;
+    }
+
+    // 4. Por nome
+    return a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+  });
+}
+
+export type ParticipantShareItem<
+  TBill extends { name: string; dueDay: number | null; year: number; month: number } = {
+    name: string;
+    dueDay: number | null;
+    year: number;
+    month: number;
+  },
+  TParticipant extends { paid: boolean } = { paid: boolean }
+> = {
+  bill: TBill;
+  participant: TParticipant;
+};
+
+/**
+ * Ordena rateios por participante:
+ * 1. Pendentes primeiro (participant.paid === false); Pagas por último (participant.paid === true).
+ * 2. Entre pendentes: VENCIDAS primeiro, depois por dia de vencimento (menor primeiro, null por último), depois por nome da conta.
+ * 3. Entre pagas: por vencimento (menor primeiro, null por último), depois por nome da conta.
+ */
+export function sortParticipantShares<T extends ParticipantShareItem>(
+  shares: T[],
+  now: Date = new Date(),
+): T[] {
+  return [...shares].sort((a, b) => {
+    // 1. Pendentes primeiro (participant.paid === false); Pagas por último (participant.paid === true)
+    if (a.participant.paid !== b.participant.paid) {
+      return a.participant.paid ? 1 : -1;
+    }
+
+    // 2. Entre pendentes: VENCIDAS primeiro
+    if (!a.participant.paid && !b.participant.paid) {
+      const statusA = getBillStatus(
+        { paid: a.participant.paid, dueDay: a.bill.dueDay, year: a.bill.year, month: a.bill.month },
+        now,
+      );
+      const statusB = getBillStatus(
+        { paid: b.participant.paid, dueDay: b.bill.dueDay, year: b.bill.year, month: b.bill.month },
+        now,
+      );
+      if (statusA === "VENCIDA" && statusB !== "VENCIDA") return -1;
+      if (statusB === "VENCIDA" && statusA !== "VENCIDA") return 1;
+    }
+
+    // 3. Por dia de vencimento (menor primeiro, null por último)
+    if (a.bill.dueDay !== null && b.bill.dueDay !== null) {
+      if (a.bill.dueDay !== b.bill.dueDay) return a.bill.dueDay - b.bill.dueDay;
+    } else if (a.bill.dueDay !== null && b.bill.dueDay === null) {
+      return -1;
+    } else if (a.bill.dueDay === null && b.bill.dueDay !== null) {
+      return 1;
+    }
+
+    // 4. Por nome da conta (localeCompare pt-BR)
+    return a.bill.name.localeCompare(b.bill.name, "pt-BR", { sensitivity: "base" });
+  });
+}
+

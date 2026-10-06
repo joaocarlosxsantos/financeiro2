@@ -557,6 +557,7 @@ export const billParticipants = pgTable(
     name: text("name").notNull(),
     phone: text("phone"),
     amountCents: integer("amount_cents").notNull().default(0),
+    paid: boolean("paid").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("bill_participants_bill_idx").on(t.billId)],
