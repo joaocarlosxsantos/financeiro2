@@ -14,9 +14,16 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, formatCents, MAX_CENTS } from "@/lib/money";
 import { checkManualSplit, recalculateSplit, splitBillEqually } from "@/lib/bills";
-import type { MonthRef } from "@/lib/dates";
+import { shiftMonth, type MonthRef } from "@/lib/dates";
 
 export type ActionState = { error?: string; ok?: boolean };
+
+const dueDaySchema = z.preprocess((v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  const num = Number(v);
+  return Number.isFinite(num) ? num : NaN;
+}, z.number({ message: "Dia de vencimento deve estar entre 1 e 31." }).int("Dia de vencimento deve estar entre 1 e 31.").min(1, "Dia de vencimento deve estar entre 1 e 31.").max(31, "Dia de vencimento deve estar entre 1 e 31.").nullable().optional());
+
 
 /**
  * "Contas a pagar" fica inteiramente fora dos lançamentos e relatórios
@@ -110,6 +117,7 @@ const ruleSchema = z.object({
   name: z.string().trim().min(1, "Dê um nome à conta."),
   type: z.enum(["INDIVIDUAL", "GROUP"]),
   groupingId: z.string().optional(),
+  dueDay: dueDaySchema,
 });
 
 /** Cria o molde de uma conta recorrente. Nenhum valor em dinheiro mora aqui — cada mês tem o seu, preenchido na geração. */
@@ -119,6 +127,7 @@ export async function createBillRule(_prev: ActionState, formData: FormData): Pr
     name: formData.get("name"),
     type: formData.get("type"),
     groupingId: formData.get("groupingId") || undefined,
+    dueDay: formData.get("dueDay"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
@@ -134,7 +143,13 @@ export async function createBillRule(_prev: ActionState, formData: FormData): Pr
   await db.transaction(async (tx) => {
     const [rule] = await tx
       .insert(billRules)
-      .values({ userId, name: d.name, type: d.type, groupingId: d.groupingId || null })
+      .values({
+        userId,
+        name: d.name,
+        type: d.type,
+        groupingId: d.groupingId || null,
+        dueDay: d.dueDay ?? null,
+      })
       .returning({ id: billRules.id });
 
     if (participants.length) {
@@ -201,6 +216,8 @@ export async function generateBillsForMonth(
           year: ref.year,
           month: ref.month,
           totalCents: 0,
+          dueDay: rule.dueDay ?? null,
+          paid: false,
         })
         // Uma geração por regra por mês (índice único) — clicar duas vezes não duplica.
         .onConflictDoNothing()
@@ -234,6 +251,7 @@ const oneOffSchema = z.object({
   groupingId: z.string().optional(),
   year: z.coerce.number().int().min(2000).max(2100, "Ano deve estar entre 2000 e 2100."),
   month: z.coerce.number().int().min(1).max(12),
+  dueDay: dueDaySchema,
 });
 
 /**
@@ -252,6 +270,7 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
     groupingId: formData.get("groupingId") || undefined,
     year: formData.get("year"),
     month: formData.get("month"),
+    dueDay: formData.get("dueDay"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
@@ -280,6 +299,8 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
         year: d.year,
         month: d.month,
         totalCents,
+        dueDay: d.dueDay ?? null,
+        paid: false,
       })
       .returning({ id: bills.id });
 
@@ -409,12 +430,29 @@ export async function updateBillAmount(_prev: ActionState, formData: FormData): 
     .limit(1);
   if (!bill) return { error: "Conta não encontrada." };
 
+  let nextDueDay: number | null | undefined = undefined;
+  if (formData.has("dueDay")) {
+    const parsedDue = dueDaySchema.safeParse(formData.get("dueDay"));
+    if (!parsedDue.success) {
+      return { error: parsedDue.error.issues[0]?.message ?? "Dia de vencimento inválido." };
+    }
+    nextDueDay = parsedDue.data ?? null;
+  }
+
   const totalCents = Math.abs(parseMoneyToCents(formData.get("total") as string | null));
   if (totalCents <= 0) return { error: "O valor total precisa ser maior que zero." };
   if (totalCents > MAX_CENTS) return { error: "Valor muito alto." };
 
+  const billUpdates: { totalCents: number; updatedAt: Date; dueDay?: number | null } = {
+    totalCents,
+    updatedAt: new Date(),
+  };
+  if (nextDueDay !== undefined) {
+    billUpdates.dueDay = nextDueDay;
+  }
+
   if (bill.type === "INDIVIDUAL") {
-    await db.update(bills).set({ totalCents, updatedAt: new Date() }).where(eq(bills.id, billId));
+    await db.update(bills).set(billUpdates).where(eq(bills.id, billId));
     refresh();
     return { ok: true };
   }
@@ -446,11 +484,110 @@ export async function updateBillAmount(_prev: ActionState, formData: FormData): 
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(bills).set({ totalCents, updatedAt: new Date() }).where(eq(bills.id, billId));
+    await tx.update(bills).set(billUpdates).where(eq(bills.id, billId));
     for (let i = 0; i < participants.length; i++) {
       await tx.update(billParticipants).set({ amountCents: amounts[i] }).where(eq(billParticipants.id, participants[i].id));
     }
   });
+
+  refresh();
+  return { ok: true };
+}
+
+const togglePaidSchema = z.object({
+  billId: z.string().trim().min(1, "Conta inválida."),
+  paid: z.boolean(),
+});
+
+export async function toggleBillPaid(billId: string, paid: boolean): Promise<ActionState> {
+  const parsed = togglePaidSchema.safeParse({ billId, paid });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+
+  const userId = await requireUserId();
+
+  const result = await db.transaction(async (tx) => {
+    const [bill] = await tx
+      .select()
+      .from(bills)
+      .where(and(eq(bills.id, parsed.data.billId), eq(bills.userId, userId)))
+      .limit(1);
+
+    if (!bill) return { error: "Conta não encontrada." };
+
+    await tx
+      .update(bills)
+      .set({ paid: parsed.data.paid, updatedAt: new Date() })
+      .where(and(eq(bills.id, bill.id), eq(bills.userId, userId)));
+
+    if (parsed.data.paid && bill.ruleId) {
+      const [rule] = await tx
+        .select({ id: billRules.id, active: billRules.active })
+        .from(billRules)
+        .where(and(eq(billRules.id, bill.ruleId), eq(billRules.userId, userId)))
+        .limit(1);
+
+      if (rule && rule.active) {
+        const next = shiftMonth({ year: bill.year, month: bill.month }, 1);
+        const [existing] = await tx
+          .select({ id: bills.id })
+          .from(bills)
+          .where(
+            and(
+              eq(bills.userId, userId),
+              eq(bills.ruleId, bill.ruleId),
+              eq(bills.year, next.year),
+              eq(bills.month, next.month),
+            ),
+          )
+          .limit(1);
+
+        if (!existing) {
+          const [newBill] = await tx
+            .insert(bills)
+            .values({
+              userId,
+              ruleId: bill.ruleId,
+              groupingId: bill.groupingId,
+              name: bill.name,
+              type: bill.type,
+              year: next.year,
+              month: next.month,
+              totalCents: bill.totalCents,
+              dueDay: bill.dueDay,
+              paid: false,
+            })
+            .onConflictDoNothing()
+            .returning({ id: bills.id });
+
+          if (newBill && bill.type === "GROUP") {
+            const participants = await tx
+              .select({
+                name: billParticipants.name,
+                phone: billParticipants.phone,
+                amountCents: billParticipants.amountCents,
+              })
+              .from(billParticipants)
+              .where(eq(billParticipants.billId, bill.id));
+
+            if (participants.length > 0) {
+              await tx.insert(billParticipants).values(
+                participants.map((p) => ({
+                  billId: newBill.id,
+                  name: p.name,
+                  phone: p.phone,
+                  amountCents: p.amountCents,
+                })),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    return { ok: true };
+  });
+
+  if (result.error) return result;
 
   refresh();
   return { ok: true };

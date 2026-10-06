@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, ChevronUp, MessageCircle, Phone, Repeat, Trash2, UserPlus } from "lucide-react";
-import { addBillParticipant, deleteBill, removeBillParticipant, updateBillGrouping } from "@/server/actions/bills";
+import { Check, ChevronDown, ChevronUp, MessageCircle, Phone, Repeat, Trash2, UserPlus } from "lucide-react";
+import { addBillParticipant, deleteBill, removeBillParticipant, toggleBillPaid, updateBillGrouping } from "@/server/actions/bills";
+import { getBillStatus } from "@/lib/bills";
 import { Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -23,6 +24,10 @@ export type PlainBill = {
   name: string;
   type: "INDIVIDUAL" | "GROUP";
   totalCents: number;
+  paid: boolean;
+  dueDay: number | null;
+  year: number;
+  month: number;
   participants: PlainBillParticipant[];
 };
 
@@ -36,6 +41,7 @@ export function BillItem({
   monthLabel,
   allBills,
   groupings,
+  participantShareCents,
 }: {
   bill: PlainBillRow;
   /** Rótulo do mês pronto (ex. "setembro de 2026"), pra mensagem do WhatsApp. */
@@ -46,12 +52,26 @@ export function BillItem({
   allBills: PlainBillRow[];
   /** Agrupamentos existentes, para o seletor de "mover de agrupamento". */
   groupings: PlainGroupingOption[];
+  /** Se informado, exibe o valor da parte da pessoa em vez do total da conta (usado na visualização Pessoa -> Conta). */
+  participantShareCents?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const confirm = useConfirm();
 
   const currentGrouping = groupings.find((g) => g.id === bill.groupingId);
+  const status = getBillStatus({
+    paid: bill.paid,
+    dueDay: bill.dueDay,
+    year: bill.year,
+    month: bill.month,
+  });
+
+  function togglePaid() {
+    start(async () => {
+      await toggleBillPaid(bill.id, !bill.paid);
+    });
+  }
 
   /**
    * Link do WhatsApp com a mensagem já pronta pra essa pessoa. Se a conta tem
@@ -105,24 +125,88 @@ export function BillItem({
   }
 
   return (
-    <li className={pending ? "opacity-60" : undefined}>
-      <div className="flex items-center gap-3 px-4 py-3">
+    <li className={pending ? "opacity-60 transition-opacity" : "transition-opacity"}>
+      <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2">
+        {/* Informações da conta com controle semântico unificado de pago (checkbox + nome) */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[0.875rem] font-medium">
-            {bill.name}
-            {bill.ruleId ? <Repeat className="muted ml-1.5 inline size-3 align-middle" /> : null}
-          </p>
-          {bill.type === "GROUP" && bill.participants.length ? (
-            <p className="muted text-xs">
-              {bill.participants.length} pessoa{bill.participants.length > 1 ? "s" : ""}
-            </p>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={bill.paid}
+              aria-label={bill.paid ? `Marcar ${bill.name} como pendente` : `Marcar ${bill.name} como paga`}
+              disabled={pending}
+              onClick={togglePaid}
+              className="group flex min-h-[44px] min-w-0 cursor-pointer items-center gap-2 -ml-2 pl-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            >
+              <span
+                className={`flex size-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                  bill.paid
+                    ? "border-[var(--text-in)] bg-[var(--color-money-in-soft)] text-[var(--text-in)]"
+                    : "border-[var(--border)] bg-transparent group-hover:border-[var(--text-brand)] text-transparent"
+                }`}
+              >
+                <Check className={`size-3.5 stroke-[2.5] ${bill.paid ? "opacity-100" : "opacity-0 group-hover:opacity-20"}`} />
+              </span>
+
+              <span
+                className={`truncate text-[0.875rem] font-medium group-hover:underline ${
+                  bill.paid ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"
+                }`}
+              >
+                {bill.name}
+              </span>
+            </button>
+
+            {bill.ruleId ? <Repeat className="muted size-3 shrink-0" /> : null}
+
+            {/* Status Badge */}
+            <span
+              className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-xs font-semibold leading-none ${
+                status === "PAGA"
+                  ? "bg-[var(--color-money-in-soft)] text-[var(--text-in)]"
+                  : status === "VENCIDA"
+                    ? "bg-[var(--color-money-out-soft)] text-[var(--text-out)]"
+                    : "bg-[var(--surface-2)] text-[var(--text-muted)]"
+              }`}
+            >
+              {status === "PAGA" ? "Paga" : status === "VENCIDA" ? "Vencida" : "Pendente"}
+            </span>
+          </div>
+
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--text-muted)] pl-7">
+            {bill.dueDay ? <span>Vencimento dia {bill.dueDay}</span> : null}
+            {bill.type === "GROUP" && bill.participants.length && participantShareCents === undefined ? (
+              <span>
+                {bill.participants.length} pessoa{bill.participants.length > 1 ? "s" : ""}
+              </span>
+            ) : null}
+          </div>
         </div>
 
-        <span className="tnum font-mono text-[0.875rem] font-semibold">{formatCents(bill.totalCents)}</span>
+        {/* Valor da conta */}
+        <div className="flex shrink-0 flex-col items-end">
+          {participantShareCents !== undefined ? (
+            <>
+              <span className="tnum font-mono text-[0.875rem] font-semibold text-[var(--text)]">
+                {formatCents(participantShareCents)}
+              </span>
+              {participantShareCents !== bill.totalCents ? (
+                <span className="tnum font-mono text-xs text-[var(--text-muted)]">
+                  total {formatCents(bill.totalCents)}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="tnum font-mono text-[0.875rem] font-semibold text-[var(--text)]">
+              {formatCents(bill.totalCents)}
+            </span>
+          )}
+        </div>
 
         <button
           type="button"
+          aria-expanded={open}
           aria-label={open ? "Fechar detalhes" : "Ver detalhes"}
           onClick={() => setOpen((v) => !v)}
           className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface-2)]"
@@ -178,14 +262,14 @@ export function BillItem({
                 const diff = bill.totalCents - sum;
                 if (diff !== 0) {
                   return (
-                    <p className="mb-2 text-xs font-medium" style={{ color: diff > 0 ? "var(--text-warn)" : "var(--text-out)" }}>
+                    <p className={`mb-2 text-xs font-medium ${diff > 0 ? "text-[var(--text-warn)]" : "text-[var(--text-out)]"}`}>
                       {diff > 0 ? `Falta dividir ${formatCents(diff)}` : `Passou ${formatCents(-diff)} do total`}
                     </p>
                   );
                 }
                 return null;
               })()}
-              <div className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)]">
+              <div className="divide-y divide-[var(--border)] rounded-[var(--radius-card)] border border-[var(--border)]">
                 {bill.participants.map((p) => (
                   <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 text-[0.8125rem]">
                     <div className="min-w-0 flex-1">
@@ -200,26 +284,27 @@ export function BillItem({
                     <span className="tnum font-mono shrink-0 font-medium">{formatCents(p.amountCents)}</span>
                     {(() => {
                       const link = shareLinkFor(p);
-                      return (
+                      return link ? (
                         <a
-                          href={link ?? undefined}
+                          href={link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label={
-                            link ? `Enviar no WhatsApp para ${p.name}` : `Sem telefone válido para ${p.name}`
-                          }
-                          title={link ? "Enviar a parte dele no WhatsApp" : "Cadastre um telefone pra habilitar o WhatsApp"}
-                          onClick={(e) => {
-                            if (!link) e.preventDefault();
-                          }}
-                          className={`shrink-0 rounded-lg p-1.5 ${
-                            link
-                              ? "cursor-pointer text-[var(--text-in)] hover:bg-[var(--color-money-in-soft)]"
-                              : "muted cursor-not-allowed opacity-40"
-                          }`}
+                          aria-label={`Enviar no WhatsApp para ${p.name}`}
+                          title="Enviar a parte dele no WhatsApp"
+                          className="shrink-0 cursor-pointer rounded-lg p-1.5 text-[var(--text-in)] hover:bg-[var(--color-money-in-soft)]"
                         >
                           <MessageCircle className="size-3.5" />
                         </a>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          aria-label={`Sem telefone válido para ${p.name}`}
+                          title="Cadastre um telefone pra habilitar o WhatsApp"
+                          className="muted shrink-0 cursor-not-allowed rounded-lg p-1.5 opacity-40"
+                        >
+                          <MessageCircle className="size-3.5" />
+                        </button>
                       );
                     })()}
                     <button
@@ -240,10 +325,11 @@ export function BillItem({
           ) : null}
 
           <div>
-            <p className="muted mb-1.5 text-xs font-semibold tracking-wide uppercase">Valor</p>
+            <p className="muted mb-1.5 text-xs font-semibold tracking-wide uppercase">Valor e Vencimento</p>
             <BillAmountEditor
               billId={bill.id}
               totalCents={bill.totalCents}
+              dueDay={bill.dueDay}
               participants={bill.participants.map((p) => ({ id: p.id, name: p.name, amountCents: p.amountCents }))}
               onDone={() => setOpen(false)}
             />
@@ -263,12 +349,14 @@ function AddParticipantForm({ billId }: { billId: string }) {
     <div className="flex items-center gap-2">
       <Input
         placeholder="Nome"
+        aria-label="Nome"
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="h-8 flex-1 text-[0.8125rem]"
       />
       <Input
         placeholder="Telefone (opcional)"
+        aria-label="Telefone (opcional)"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         className="h-8 w-32 text-[0.8125rem]"
@@ -277,6 +365,7 @@ function AddParticipantForm({ billId }: { billId: string }) {
         type="button"
         size="sm"
         variant="outline"
+        aria-label="Adicionar pessoa"
         disabled={pending || !name.trim()}
         onClick={() =>
           start(async () => {

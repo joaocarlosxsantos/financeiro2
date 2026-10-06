@@ -8,6 +8,7 @@
  * passar. É a regra que o João pediu.
  */
 import { splitInstallments } from "./installments";
+import { getNowInSaoPaulo } from "./dates";
 
 /** Divide o valor entre N pessoas sem perder centavo. */
 export function splitBillEqually(totalCents: number, count: number): number[] {
@@ -54,4 +55,39 @@ export function recalculateSplit(
     return oldAmounts.filter((_, i) => i !== removedIndex);
   }
   return oldAmounts.slice(0, newCount);
+}
+
+export type BillStatus = "PAGA" | "VENCIDA" | "PENDENTE";
+
+/**
+ * Retorna o status de uma conta a pagar ('PAGA', 'VENCIDA' ou 'PENDENTE').
+ * - Se bill.paid -> 'PAGA'
+ * - Se ano < now.ano ou (ano == now.ano e mes < now.mes) -> 'VENCIDA'
+ * - Se ano == now.ano e mes == now.mes e dueDay != null e now.dia > dueDay -> 'VENCIDA'
+ * - Caso contrário -> 'PENDENTE'
+ */
+export function getBillStatus(
+  bill: { paid: boolean; dueDay: number | null; year: number; month: number },
+  now: Date = new Date(),
+): BillStatus {
+  if (bill.paid) return "PAGA";
+
+  const spDate = getNowInSaoPaulo(now);
+  const nowYear = spDate.getFullYear();
+  const nowMonth = spDate.getMonth() + 1;
+  const nowDay = spDate.getDate();
+
+  if (bill.year < nowYear || (bill.year === nowYear && bill.month < nowMonth)) {
+    return "VENCIDA";
+  }
+
+  if (bill.dueDay != null) {
+    const lastDayOfMonth = new Date(bill.year, bill.month, 0).getDate();
+    const effectiveDueDay = Math.min(bill.dueDay, lastDayOfMonth);
+    if (bill.year === nowYear && bill.month === nowMonth && nowDay > effectiveDueDay) {
+      return "VENCIDA";
+    }
+  }
+
+  return "PENDENTE";
 }

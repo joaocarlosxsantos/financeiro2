@@ -52,7 +52,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
         <Input name="name" required placeholder="Ex.: Conta de luz" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Repetição">
           <Select value={recurring ? "1" : "0"} onChange={(e) => setRecurring(e.target.value === "1")}>
             <option value="1">Repete todo mês</option>
@@ -84,6 +84,10 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
         </p>
       )}
 
+      <Field label="Dia de vencimento" hint="Opcional — dia do mês em que a conta vence (1 a 31).">
+        <Input name="dueDay" type="number" min={1} max={31} placeholder="Ex.: 10" />
+      </Field>
+
       {groupings.length ? (
         <Field label="Agrupamento" hint="Opcional — só para organizar.">
           <Select name="groupingId" defaultValue="">
@@ -102,8 +106,8 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
           <p className="text-[0.8125rem] font-medium">Quem divide essa conta</p>
           {rows.map((key, i) => (
             <div key={key} className="flex items-center gap-2">
-              <Input name="participantName" placeholder="Nome" required className="flex-1" />
-              <Input name="participantPhone" placeholder="Telefone (opcional)" className="w-36" />
+              <Input name="participantName" placeholder="Nome" required className="min-w-0 flex-1" />
+              <Input name="participantPhone" placeholder="Telefone (opcional)" className="w-28 sm:w-36" />
               {rows.length > 1 ? (
                 <button
                   type="button"

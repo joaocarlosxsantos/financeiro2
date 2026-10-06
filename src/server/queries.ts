@@ -1165,6 +1165,7 @@ export type BillRuleRow = {
   name: string;
   type: "INDIVIDUAL" | "GROUP";
   active: boolean;
+  dueDay: number | null;
   groupingId: string | null;
   groupingName: string | null;
   participants: BillRuleParticipantRow[];
@@ -1192,6 +1193,7 @@ export async function getBillRulesStatus(userId: string, ref: MonthRef): Promise
         name: billRulesTable.name,
         type: billRulesTable.type,
         active: billRulesTable.active,
+        dueDay: billRulesTable.dueDay,
         groupingId: billRulesTable.groupingId,
         groupingName: billGroupingsTable.name,
       })
@@ -1260,6 +1262,8 @@ export type BillRow = {
   year: number;
   month: number;
   totalCents: number;
+  paid: boolean;
+  dueDay: number | null;
   note: string | null;
   groupingId: string | null;
   groupingName: string | null;
@@ -1278,6 +1282,8 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
         year: billsTable.year,
         month: billsTable.month,
         totalCents: billsTable.totalCents,
+        paid: billsTable.paid,
+        dueDay: billsTable.dueDay,
         note: billsTable.note,
         groupingId: billsTable.groupingId,
         groupingName: billGroupingsTable.name,

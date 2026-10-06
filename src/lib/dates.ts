@@ -10,7 +10,7 @@ import { ptBR } from "date-fns/locale";
 
 export type MonthRef = { year: number; month: number }; // month: 1-12
 
-function getNowInSaoPaulo(now: Date = new Date()): Date {
+export function getNowInSaoPaulo(now: Date = new Date()): Date {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
     year: "numeric",

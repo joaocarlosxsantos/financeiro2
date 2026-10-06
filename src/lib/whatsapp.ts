@@ -9,9 +9,10 @@ import { formatCents } from "./money";
 export function normalizePhoneForWhatsApp(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const digits = raw.replace(/\D/g, "");
-  if (digits.length < 8) return null; // curto demais pra ser um telefone de verdade
-  if (digits.length === 10 || digits.length === 11) return `55${digits}`; // DDD + número, sem código de país
-  return digits;
+  if (digits.length < 10) return null; // menos de 10 dígitos (ou 9 sem DDD) -> inválido
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`; // DDD + número
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) return digits;
+  return null;
 }
 
 /** Link `https://wa.me/...` pronto pra abrir a conversa já com a mensagem preenchida. `null` quando o telefone não é utilizável. */

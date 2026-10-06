@@ -41,7 +41,7 @@ export function BillRulesManager({ rules, monthRef }: { rules: PlainBillRule[]; 
   }
 
   return (
-    <ul className={`divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)] ${pending ? "opacity-60" : ""}`}>
+    <ul className={`divide-y divide-[var(--border)] rounded-[var(--radius-card)] border border-[var(--border)] ${pending ? "opacity-60" : ""}`}>
       {rules.map((r) => (
         <li key={r.id} className="px-3 py-2.5">
           <div className="flex items-center gap-2">

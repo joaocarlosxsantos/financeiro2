@@ -39,7 +39,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
 
   return (
     <div className="space-y-3">
-      <ul className="divide-y divide-[var(--line)] rounded-[var(--radius-card)] border border-[var(--border)]">
+      <ul className="divide-y divide-[var(--border)] rounded-[var(--radius-card)] border border-[var(--border)]">
         {groupings.map((g) => (
           <li key={g.id} className="flex items-center gap-3 px-3 py-2">
             <span className="size-2.5 shrink-0 rounded-full" style={{ background: g.color }} />

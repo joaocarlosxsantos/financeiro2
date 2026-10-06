@@ -21,16 +21,19 @@ export type EditorParticipant = { id: string; name: string; amountCents: number 
 export function BillAmountEditor({
   billId,
   totalCents,
+  dueDay,
   participants,
   onDone,
 }: {
   billId: string;
   totalCents: number;
+  dueDay?: number | null;
   participants: EditorParticipant[];
   onDone: () => void;
 }) {
   const [state, formAction] = useActionState(updateBillAmount, initial);
   const [total, setTotal] = useState(totalCents ? formatCentsPlain(totalCents) : "");
+  const [dueDayVal, setDueDayVal] = useState(dueDay != null ? String(dueDay) : "");
   const [mode, setMode] = useState<"EQUAL" | "MANUAL">("EQUAL");
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
     Object.fromEntries(participants.map((p) => [p.id, p.amountCents ? formatCentsPlain(p.amountCents) : ""])),
@@ -53,20 +56,34 @@ export function BillAmountEditor({
       <input type="hidden" name="billId" value={billId} />
       <input type="hidden" name="mode" value={mode} />
 
-      <Field label="Valor total">
-        <Input
-          name="total"
-          inputMode="decimal"
-          placeholder="0,00"
-          required
-          value={total}
-          onChange={(e) => setTotal(e.target.value)}
-        />
-      </Field>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="Valor total">
+          <Input
+            name="total"
+            inputMode="decimal"
+            placeholder="0,00"
+            required
+            value={total}
+            onChange={(e) => setTotal(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Dia de vencimento" hint="Opcional (1 a 31).">
+          <Input
+            name="dueDay"
+            type="number"
+            min={1}
+            max={31}
+            placeholder="Ex.: 10"
+            value={dueDayVal}
+            onChange={(e) => setDueDayVal(e.target.value)}
+          />
+        </Field>
+      </div>
 
       {participants.length ? (
         <>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setMode("EQUAL")}
@@ -94,6 +111,7 @@ export function BillAmountEditor({
                   <span className="min-w-0 flex-1 truncate text-[0.8125rem]">{p.name}</span>
                   <Input
                     name={`amount_${p.id}`}
+                    aria-label={`Valor de ${p.name}`}
                     inputMode="decimal"
                     placeholder="0,00"
                     className="w-28"
