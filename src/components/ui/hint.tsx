@@ -3,10 +3,10 @@ import { cn } from "@/lib/cn";
 import type { ReactNode } from "react";
 
 const tones = {
-  tip: { icon: Lightbulb, cls: "bg-[var(--color-warn-soft)] text-[var(--text-warn)] border-[var(--border-warn)]" },
-  info: { icon: Info, cls: "bg-[var(--color-save-soft)] text-[var(--text-brand)] border-[var(--border-brand)]" },
-  warn: { icon: TriangleAlert, cls: "bg-[var(--color-money-out-soft)] text-[var(--text-out)] border-[var(--border-out)]" },
-  good: { icon: CheckCircle2, cls: "bg-[var(--color-money-in-soft)] text-[var(--text-in)] border-[var(--border-in)]" },
+  tip: { icon: Lightbulb, cls: "bg-[var(--warn-soft)] text-[var(--text-warn)]" },
+  info: { icon: Info, cls: "bg-[var(--surface-2)] text-[var(--text-info)]" },
+  warn: { icon: TriangleAlert, cls: "bg-[var(--warn-soft)] text-[var(--text-warn)]" },
+  good: { icon: CheckCircle2, cls: "bg-[var(--in-soft)] text-[var(--text-in)]" },
 } as const;
 
 /** Caixa didática — explica o "porquê" de cada número, não só o número. */
@@ -23,7 +23,7 @@ export function Hint({
 }) {
   const { icon: Icon, cls } = tones[tone];
   return (
-    <div className={cn("flex gap-3 rounded-[var(--radius-card)] border px-3.5 py-3 text-[0.8125rem] leading-relaxed", cls, className)}>
+    <div className={cn("flex gap-3 rounded-[var(--radius-md)] px-3.5 py-3 text-sm leading-relaxed", cls, className)}>
       <Icon className="mt-0.5 size-4 shrink-0" />
       <div className="min-w-0">
         {title ? <p className="mb-0.5 font-semibold">{title}</p> : null}

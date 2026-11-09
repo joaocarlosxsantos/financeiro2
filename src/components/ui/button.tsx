@@ -4,22 +4,27 @@ import { cn } from "@/lib/cn";
 import type { ButtonHTMLAttributes } from "react";
 import { useFormStatus } from "react-dom";
 
-type Variant = "primary" | "ghost" | "outline" | "danger" | "soft";
-type Size = "sm" | "md";
+type Variant = "primary" | "secondary" | "ghost" | "outline" | "danger" | "soft" | "cta";
+type Size = "sm" | "md" | "icon";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2 disabled:bg-brand-300",
-  soft: "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/12 dark:text-brand-300 dark:hover:bg-brand-500/20 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
+    "bg-[var(--acento)] text-[var(--on-acento)] hover:opacity-90",
+  secondary:
+    "border border-[var(--line-strong)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--surface-3)]",
+  soft: "border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--surface-3)]",
   outline:
-    "border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text)] focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
-  ghost: "hover:bg-[var(--surface-2)] text-[var(--text)] focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
-  danger: "bg-[var(--btn-out)] text-white hover:opacity-90 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2",
+    "border border-[var(--line-strong)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--surface-3)]",
+  ghost: "border border-transparent bg-transparent text-[var(--text)] hover:bg-[var(--surface-2)]",
+  danger:
+    "border border-[var(--text-out)] bg-transparent text-[var(--text-out)] hover:bg-[var(--out-soft)]",
+  cta: "glass-cta",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-[0.8125rem] rounded-[var(--radius-input)] gap-1.5",
-  md: "h-10 px-4 text-sm rounded-[var(--radius-card)] gap-2",
+  sm: "h-11 px-3 text-[0.8125rem] rounded-lg gap-1.5 md:h-9",
+  md: "h-12 px-4 text-sm rounded-xl gap-2 md:h-10",
+  icon: "size-11 rounded-xl p-0",
 };
 
 export function Button({
@@ -31,10 +36,9 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center font-medium motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex cursor-pointer items-center justify-center gap-2 font-medium transition-[background-color,color,border-color,opacity,transform] duration-150 active:scale-[.98] motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40",
         variants[variant],
         sizes[size],
-        "dark:rounded-full dark:backdrop-blur-xl",
         className,
       )}
       {...props}

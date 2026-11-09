@@ -3,9 +3,9 @@ import { cn } from "@/lib/cn";
 export function Progress({
   value,
   label,
-  color = "var(--color-brand-600)",
+  color = "var(--text-in)",
   className,
-  height = 4,
+  height = 6,
   ticks,
 }: {
   value: number; // 0-100
@@ -20,7 +20,7 @@ export function Progress({
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-full bg-[var(--surface-2)] ring-1 ring-inset ring-[var(--border)]",
+        "relative w-full overflow-hidden rounded-full bg-[var(--surface-3)]",
         className,
       )}
       style={{ height }}

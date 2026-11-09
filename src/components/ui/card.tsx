@@ -11,7 +11,7 @@ export function Card({
   id?: string;
 }) {
   return (
-    <div id={id} className={cn("card p-5", className)}>
+    <div id={id} className={cn("card p-4 md:p-5", className)}>
       {children}
     </div>
   );
@@ -29,12 +29,39 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-4 flex items-start justify-between gap-4 border-b border-[var(--line)] pb-3", className)}>
+    <div className={cn("mb-4 flex items-start justify-between gap-4", className)}>
       <div className="min-w-0">
-        <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">{title}</h2>
-        {subtitle ? <p className="muted mt-1 text-[0.8125rem] leading-snug normal-case tracking-normal">{subtitle}</p> : null}
+        <h2 className="text-heading font-semibold text-[var(--text)]">{title}</h2>
+        {subtitle ? <p className="muted mt-1 text-sm leading-snug">{subtitle}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
+  );
+}
+
+export function Section({
+  title,
+  subtitle,
+  action,
+  children,
+  className,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn("min-w-0", className)}>
+      <header className="mb-3 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-heading font-semibold text-[var(--text)]">{title}</h2>
+          {subtitle ? <p className="muted mt-1 text-sm leading-snug">{subtitle}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </header>
+      <div className="divide-y divide-[var(--line)]">{children}</div>
+    </section>
   );
 }

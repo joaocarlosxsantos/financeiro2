@@ -141,7 +141,7 @@ function Dialog({
         aria-labelledby={titleId}
         aria-describedby={state.description ? descId : undefined}
         className={cn(
-          "card relative w-full max-w-sm p-5 motion-reduce:transition-none transition-all duration-150",
+          "card sheet-glass relative w-full max-w-sm p-5 motion-reduce:transition-none transition-all duration-300 ease-out sm:duration-150",
           "rounded-b-none pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-b-[var(--radius-card)] sm:pb-5",
           closing
             ? "translate-y-2 opacity-0 sm:translate-y-0 sm:scale-95"
@@ -155,11 +155,11 @@ function Dialog({
             </span>
           ) : null}
           <div className="min-w-0">
-            <h2 id={titleId} className="text-[0.9375rem] font-semibold tracking-tight">
+            <h2 id={titleId} className="text-heading font-semibold tracking-tight">
               {state.title}
             </h2>
             {state.description ? (
-              <p id={descId} className="muted mt-1.5 text-[0.8125rem] leading-relaxed">
+              <p id={descId} className="muted mt-1.5 text-sm leading-relaxed">
                 {state.description}
               </p>
             ) : null}
@@ -171,7 +171,7 @@ function Dialog({
             type="button"
             data-autofocus
             onClick={() => onSettle(false)}
-            className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--text)] motion-reduce:transition-none transition-colors hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+            className="inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-[var(--line-strong)] bg-[var(--surface-2)] px-4 text-sm font-medium text-[var(--text)] motion-reduce:transition-none transition-colors hover:bg-[var(--surface-3)] focus-visible:ring-2 focus-visible:ring-[var(--acento)] focus-visible:ring-offset-2 focus-visible:outline-none sm:h-10 sm:w-auto"
           >
             {state.cancelLabel ?? "Cancelar"}
           </button>
@@ -179,10 +179,10 @@ function Dialog({
             type="button"
             onClick={() => onSettle(true)}
             className={cn(
-              "inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-[var(--radius-input)] px-4 text-sm font-medium text-white motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto",
+              "inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:h-10 sm:w-auto",
               danger
-                ? "bg-[var(--btn-out)] hover:opacity-90 focus-visible:ring-[var(--acento)]"
-                : "bg-brand-600 hover:bg-brand-700 focus-visible:ring-[var(--acento)]",
+                ? "bg-[var(--text-out)] text-[var(--on-acento)] hover:opacity-90 focus-visible:ring-[var(--text-out)]"
+                : "bg-[var(--acento)] text-[var(--on-acento)] hover:opacity-90 focus-visible:ring-[var(--acento)]",
             )}
           >
             {state.confirmLabel ?? "Confirmar"}

@@ -134,8 +134,8 @@ export default async function DashboardPage({
               <Money
                 cents={sobrou}
                 tone={sobrou < 0 ? "out" : undefined}
-                size="lg"
-                className="text-3xl sm:text-4xl font-semibold"
+                size="hero"
+                className="font-semibold"
               />
               <span className="text-xs font-medium text-[var(--text-muted)]">
                 {sobrou >= 0
