@@ -241,8 +241,8 @@ export default async function DashboardPage({
       </div>
 
       {/* 3. Gráfico 6m + ranking categorias lado-a-lado (largura maior) */}
-      <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12" aria-label="Fluxo e categorias">
-        <Card className="lg:col-span-7">
+      <section className="mt-6 grid min-w-0 w-full max-w-full grid-cols-1 gap-4 overflow-x-hidden lg:grid-cols-12" aria-label="Fluxo e categorias">
+        <Card className="min-w-0 max-w-full overflow-x-hidden lg:col-span-7">
           <CardHeader
             title="Entrou, saiu e sobrou nos últimos 6 meses"
             subtitle="Histórico de entradas, saídas e saldo líquido mês a mês."
@@ -250,7 +250,7 @@ export default async function DashboardPage({
           <MonthlyFlowChart data={series} />
         </Card>
 
-        <Card className="lg:col-span-5">
+        <Card className="min-w-0 max-w-full overflow-x-hidden lg:col-span-5">
           <CardHeader
             title={`Para onde foi o dinheiro em ${monthLabel(ref)}`}
             subtitle="Ranking das categorias que mais pesaram no mês."

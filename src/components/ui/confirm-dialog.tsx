@@ -181,7 +181,7 @@ function Dialog({
             className={cn(
               "inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:h-10 sm:w-auto",
               danger
-                ? "bg-[var(--text-out)] text-[var(--on-acento)] hover:opacity-90 focus-visible:ring-[var(--text-out)]"
+                ? "bg-[var(--text-out)] text-[var(--on-danger)] hover:opacity-90 focus-visible:ring-[var(--text-out)]"
                 : "bg-[var(--acento)] text-[var(--on-acento)] hover:opacity-90 focus-visible:ring-[var(--acento)]",
             )}
           >

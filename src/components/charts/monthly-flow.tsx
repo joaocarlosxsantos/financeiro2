@@ -58,8 +58,8 @@ export function MonthlyFlowChart({ data }: { data: SeriesPoint[] }) {
   const allZero = isSeriesDataEmpty(data);
 
   return (
-    <div className="relative h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="relative h-56 min-w-0 w-full max-w-full overflow-hidden md:h-72">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <ComposedChart
           data={data}
           margin={{ top: 12, right: 88, bottom: 0, left: -8 }}
@@ -115,8 +115,8 @@ export function FixedVariableChart({ data }: { data: SeriesPoint[] }) {
   const allZero = isSeriesDataEmpty(data);
 
   return (
-    <div className="relative h-56 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="relative h-56 min-w-0 w-full max-w-full overflow-hidden">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
           <defs>
             <pattern

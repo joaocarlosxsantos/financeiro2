@@ -25,7 +25,7 @@ export function StatTile({
   sparkline?: ReactNode;
 }) {
   return (
-    <div className={cn("min-w-0", className)}>
+    <div className={cn("card min-w-0 p-4 md:p-5", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-caption font-medium text-[var(--text-muted)]">{label}</p>

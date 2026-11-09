@@ -26,7 +26,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
   const hasFilters = Boolean(kind || nature || cat || acc || params.get("q"));
 
   return (
-    <div className="card flex flex-wrap items-center gap-1.5 p-2.5">
+    <div className="card flex flex-wrap items-center gap-2 p-2.5">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -39,7 +39,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar descrição..."
-          className="input-base h-8 py-0 pl-8 text-xs"
+          className="input-base h-12 py-0 pl-8 text-base md:h-8 md:min-h-8 md:text-xs"
         />
       </form>
 
@@ -72,7 +72,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         value={cat}
         onChange={(e) => update("cat", e.target.value)}
         aria-label="Filtrar por categoria"
-        className="input-base h-8 w-auto cursor-pointer py-0 text-xs"
+        className="input-base h-12 w-auto max-w-full cursor-pointer py-0 text-base md:h-8 md:min-h-8 md:text-xs"
       >
         <option value="">Todas as categorias</option>
         <option value="NONE">Sem categoria</option>
@@ -87,7 +87,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         <button
           type="button"
           onClick={() => router.push(pathname)}
-          className="muted inline-flex h-8 cursor-pointer items-center gap-1 rounded-[var(--radius-button)] px-2 text-xs hover:bg-[var(--surface-2)]"
+          className="muted inline-flex h-11 cursor-pointer items-center gap-1 rounded-[var(--radius-button)] px-3 text-sm hover:bg-[var(--surface-2)] md:h-8 md:px-2 md:text-xs"
         >
           <X className="size-3" />
           Limpar
@@ -111,7 +111,7 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-8 cursor-pointer rounded-[var(--radius-button)] border px-2.5 text-xs font-medium transition-colors",
+        "h-11 cursor-pointer rounded-[var(--radius-button)] border px-3 text-sm font-medium transition-colors md:h-8 md:px-2.5 md:text-xs",
         active
           ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]"
           : "border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-muted)]",

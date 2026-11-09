@@ -30,7 +30,7 @@ export function Money({ cents, tone, size = "md", className }: MoneyProps) {
   return (
     <span
       className={cn(
-        "tnum inline-flex items-baseline",
+        "tnum mono inline-flex items-baseline",
         SIZE_VARIANTS[size],
         toneClass,
         className,

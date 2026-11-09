@@ -81,9 +81,9 @@ export function PeriodSwitcher({
           onClick={clearRange}
           aria-label="Voltar para visão por mês"
           title="Voltar para visão por mês"
-          className="muted inline-flex size-6 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)]"
+          className="muted inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-8"
         >
-          <X className="size-3.5" />
+          <X className="size-4 md:size-3.5" />
         </button>
       </div>
     );
@@ -96,7 +96,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(-1)}
           aria-label="Mês anterior"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)]"
+          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -107,7 +107,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(1)}
           aria-label="Próximo mês"
-          className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)]"
+          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
         >
           <ChevronRight className="size-4" />
         </button>
@@ -118,7 +118,7 @@ export function PeriodSwitcher({
         onClick={() => setOpen((v) => !v)}
         aria-label="Período customizado"
         title="Período customizado"
-        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+        className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] md:size-9"
       >
         <CalendarRange className="size-4" />
       </button>
