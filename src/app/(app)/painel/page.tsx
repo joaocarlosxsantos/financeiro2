@@ -290,14 +290,14 @@ export default async function DashboardPage({
         className="mt-8 border-t border-[var(--border)] pt-8"
         aria-label="Planejamento e saúde financeira"
       >
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-2">
           {/* Coluna 1: Saúde Financeira, Orçamento & Fixo x Variável */}
-          <div className="space-y-8 [&_.card]:border-0 [&_.card]:bg-transparent [&_.card]:p-0 [&_.card]:shadow-none [&_.card]:rounded-none">
+          <div className="min-w-0 space-y-8 [&_.card]:border-0 [&_.card]:bg-transparent [&_.card]:p-0 [&_.card]:shadow-none [&_.card]:rounded-none">
             <div>
               <HealthCard health={health} className="border-0 bg-transparent p-0 rounded-none shadow-none" />
             </div>
 
-            <div className="border-t border-[var(--border)] pt-6">
+            <div className="min-w-0 border-t border-[var(--border)] pt-6">
               <BudgetCard overview={budget} monthRef={ref} className="border-0 bg-transparent p-0 rounded-none shadow-none" />
             </div>
 
@@ -310,7 +310,9 @@ export default async function DashboardPage({
                   Evolução de compromissos fixos e gastos controláveis nos últimos 6 meses.
                 </p>
               </div>
-              <FixedVariableChart data={series} />
+              <div className="min-w-0 max-w-full overflow-hidden">
+                <FixedVariableChart data={series} />
+              </div>
               <div className="mt-3">
                 <Hint tone={fixedShare > 60 ? "warn" : "tip"}>
                   {fixedShare > 0 ? (
@@ -329,7 +331,7 @@ export default async function DashboardPage({
           </div>
 
           {/* Coluna 2: Reserva de Emergência, Dívidas & 50/30/20 */}
-          <div className="space-y-8 [&_.card]:border-0 [&_.card]:bg-transparent [&_.card]:p-0 [&_.card]:shadow-none [&_.card]:rounded-none">
+          <div className="min-w-0 space-y-8 [&_.card]:border-0 [&_.card]:bg-transparent [&_.card]:p-0 [&_.card]:shadow-none [&_.card]:rounded-none">
             {/* Reserva de Emergência */}
             <div id="reserva-emergencia" className="scroll-mt-20">
               <div className="mb-4 flex items-start justify-between gap-4 border-b border-[var(--line)] pb-3">

@@ -133,16 +133,16 @@ export function Sidebar({ userName, userEmail }: { userName: string; userEmail: 
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md border"
+            className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md border"
           >
             {open ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
         </div>
       </div>
-      <div className="h-14 lg:hidden" />
+      <div className="h-[69px] lg:hidden" />
 
       {open ? (
-        <div className="fixed inset-x-0 top-14 z-30 max-h-[calc(100vh-3.5rem)] overflow-y-auto border-b bg-[var(--surface)] p-4 lg:hidden">
+        <div className="fixed inset-x-0 top-[69px] z-30 max-h-[calc(100dvh-69px)] overflow-y-auto border-b bg-[var(--surface)] p-4 lg:hidden">
           {links}
           <form action={logoutAction} className="mt-4 border-t pt-3">
             <button className="flex w-full cursor-pointer items-center gap-2.5 border-l-2 border-transparent px-2.5 py-1.5 text-[0.8125rem] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]">

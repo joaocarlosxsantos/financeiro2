@@ -79,6 +79,7 @@
 
   --text-in: #0A7A50;
   --text-out: #C23A2C;
+  --danger-fill: #A52A22;
   --on-danger: #FFFFFF;
   --text-warn: #8A5A00;
   --text-info: #2349C9;
@@ -136,6 +137,7 @@
 
   --text-in: #4FD6A0;
   --text-out: #FF7A6B;
+  --danger-fill: #FF7A6B;
   --on-danger: #000000;
   --text-warn: #F2B84B;
   --text-info: #8FB0FF;
