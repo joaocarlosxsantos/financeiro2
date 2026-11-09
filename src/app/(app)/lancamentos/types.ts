@@ -32,6 +32,10 @@ export type PlainTransaction = {
   notes: string | null;
   /** Movimento entre contas suas — fica fora dos totais de receita e despesa. */
   isTransfer: boolean;
+  externalStatus?: string | null;
+  origin?: string;
+  isCardPayment?: boolean;
+  possibleCardPayment?: boolean;
   /** Grupo de transferência pareada (transfer_group_id). */
   transferGroupId?: string | null;
   /** Rota formatada da transferência (ex.: Conta A → Conta B). */

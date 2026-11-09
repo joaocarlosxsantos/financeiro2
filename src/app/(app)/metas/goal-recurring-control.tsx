@@ -40,6 +40,7 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
+// eslint-disable-next-line react-hooks/set-state-in-effect -- After recurring goal creation succeeds, reset its form and close the dialog.
       setOpen(false);
     }
   }, [state]);

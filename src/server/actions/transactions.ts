@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { accounts, categories, transactions } from "@/db/schema";
+import { accounts, categories, categoryRules, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { fingerprint } from "@/lib/categorize";
@@ -12,6 +12,7 @@ import { createId } from "@/lib/id";
 import { transferLegs } from "@/lib/transfers";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { insertInstallments } from "@/server/installments";
+import { normalizeDescription } from "@/server/categorization";
 
 export type ActionState = { error?: string; ok?: boolean; groupId?: string };
 
@@ -58,13 +59,14 @@ async function getAccountAndVerify(
   userId: string,
   accountId: string,
   categoryId: string | null,
-): Promise<{ error?: string; account?: { id: string; type: string; closingDay: number | null; dueDay: number | null } }> {
+): Promise<{ error?: string; account?: { id: string; type: string; closingDay: number | null; dueDay: number | null; financeMode: string } }> {
   const [account] = await db
     .select({
       id: accounts.id,
       type: accounts.type,
       closingDay: accounts.closingDay,
       dueDay: accounts.dueDay,
+      financeMode: accounts.financeMode,
     })
     .from(accounts)
     .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
@@ -96,6 +98,7 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
   const check = await getAccountAndVerify(userId, d.accountId, d.categoryId || null);
   if (check.error || !check.account) return { error: check.error ?? "Conta inválida." };
   const account = check.account;
+  if (account.financeMode === "integracao") return { error: "Esta conta recebe lançamentos automaticamente. Troque o modo em Configurações → Integração para lançar manualmente." };
 
   const date = new Date(`${d.date}T12:00:00.000Z`);
   const installments = d.installments ?? 1;
@@ -173,11 +176,17 @@ export async function updateTransaction(id: string, formData: FormData): Promise
       installmentGroupId: transactions.installmentGroupId,
       importBatchId: transactions.importBatchId,
       transferGroupId: transactions.transferGroupId,
+      origin: transactions.origin,
     })
     .from(transactions)
     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
     .limit(1);
   if (!existing) return { error: "Não encontrado." };
+  if (existing.origin === "PLUGGY") {
+    await db.update(transactions).set({ categoryId: d.categoryId || null, notes: d.notes || null, updatedAt: new Date() }).where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+    refresh();
+    return { ok: true };
+  }
   // Editar uma perna isolada deixaria o par de transferência inconsistente.
   if (existing.transferGroupId) {
     return { error: "Transferência: exclua e crie de novo para alterar." };
@@ -224,12 +233,13 @@ export async function deleteTransaction(id: string) {
   const userId = await requireUserId();
 
   const [tx] = await db
-    .select({ id: transactions.id, transferGroupId: transactions.transferGroupId })
+    .select({ id: transactions.id, transferGroupId: transactions.transferGroupId, origin: transactions.origin })
     .from(transactions)
     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
     .limit(1);
 
   if (!tx) return;
+  if (tx.origin === "PLUGGY") return;
 
   if (tx.transferGroupId) {
     // Apaga o grupo inteiro (2 DELETE em db.transaction, exige 2 linhas)
@@ -277,6 +287,9 @@ export async function deleteTransaction(id: string) {
 export async function setTransactionTransfer(id: string, isTransfer: boolean): Promise<ActionState> {
   const userId = await requireUserId();
 
+  const [source] = await db.select({ origin: transactions.origin }).from(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, userId))).limit(1);
+  if (source?.origin === "PLUGGY") return { error: "Movimentos Pluggy não podem ser reclassificados como transferência manual." };
+
   if (!isTransfer) {
     const [tx] = await db
       .select({ transferGroupId: transactions.transferGroupId })
@@ -295,6 +308,17 @@ export async function setTransactionTransfer(id: string, isTransfer: boolean): P
     .where(and(eq(transactions.id, id), eq(transactions.userId, userId)))
     .returning({ id: transactions.id });
   if (result.length === 0) return { error: "Não encontrado." };
+  refresh();
+  revalidatePath("/orcamento");
+  return { ok: true };
+}
+
+/** Marker manual para que um débito bancário de fatura fique no cash e fora do accrual. */
+export async function setTransactionCardPayment(id: string, isCardPayment: boolean): Promise<ActionState> {
+  const userId = await requireUserId();
+  const [row] = await db.select({ id: transactions.id, origin: transactions.origin, kind: transactions.kind, accountType: accounts.type }).from(transactions).innerJoin(accounts, eq(accounts.id, transactions.accountId)).where(and(eq(transactions.id, id), eq(transactions.userId, userId))).limit(1);
+  if (!row || row.origin === "MANUAL" || row.accountType === "CREDIT_CARD" || row.kind !== "EXPENSE") return { error: "O marcador só se aplica a débitos importados de contas bancárias." };
+  await db.update(transactions).set({ isCardPayment, updatedAt: new Date() }).where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
   refresh();
   revalidatePath("/orcamento");
   return { ok: true };
@@ -341,13 +365,14 @@ export async function createTransfer(
 
   // Verifica que ambas as contas existem e pertencem ao usuário
   const userAccounts = await db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, financeMode: accounts.financeMode })
     .from(accounts)
     .where(and(eq(accounts.userId, effectiveUserId), inArray(accounts.id, [fromAccountId, toAccountId])));
 
   if (userAccounts.length !== 2) {
     return { error: "Contas inválidas ou não pertencem ao usuário." };
   }
+  if (userAccounts.some((a) => a.financeMode === "integracao")) return { error: "Troque as contas integradas para o modo manual antes de criar transferência." };
 
   const parsedDate =
     typeof date === "string"
@@ -541,6 +566,10 @@ export async function updateTransfer(
 export async function setTransactionCategory(id: string, categoryId: string | null): Promise<ActionState> {
   const userId = await requireUserId();
 
+  const [ownedTransaction] = await db.select({ description: transactions.description })
+    .from(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, userId))).limit(1);
+  if (!ownedTransaction) return { error: "NÃ£o encontrado." };
+
   let nature: "FIXED" | "VARIABLE" | undefined;
   if (categoryId) {
     const [cat] = await db
@@ -559,6 +588,11 @@ export async function setTransactionCategory(id: string, categoryId: string | nu
     .returning({ id: transactions.id });
 
   if (result.length === 0) return { error: "Não encontrado." };
+  if (categoryId) {
+    const normalizedPattern = normalizeDescription(ownedTransaction.description).key;
+    await db.insert(categoryRules).values({ userId, normalizedPattern, categoryId, source: "USER", updatedAt: new Date() })
+      .onConflictDoUpdate({ target: [categoryRules.userId, categoryRules.normalizedPattern], set: { categoryId, source: "USER", updatedAt: new Date() } });
+  }
   refresh();
   return { ok: true };
 }

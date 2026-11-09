@@ -41,6 +41,7 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
   useEffect(() => {
     if (state.ok) {
       ref.current?.reset();
+// eslint-disable-next-line react-hooks/set-state-in-effect -- On successful category creation, reset the native form and close its dialog.
       setOpen(false);
     }
   }, [state]);
@@ -182,6 +183,7 @@ function Group({
 function EditForm({ category, onDone }: { category: Cat; onDone: () => void }) {
   const [state, formAction] = useActionState(updateCategory, initial);
   const doneRef = useRef(onDone);
+// eslint-disable-next-line react-hooks/refs -- Keep the latest callback without retriggering the success effect when its identity changes.
   doneRef.current = onDone;
 
   useEffect(() => {

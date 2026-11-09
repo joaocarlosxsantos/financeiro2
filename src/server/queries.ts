@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, sql } from "drizzle-orm";
+﻿import { redirect } from "next/navigation";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts as accountsTable,
@@ -14,6 +14,7 @@ import {
   debts as debtsTable,
   goalContributions,
   goalRecurringRules as goalRecurringRulesTable,
+  openFinanceInvoices,
   recurringRules as recurringRulesTable,
   goals as goalsTable,
   transactions as txTable,
@@ -27,7 +28,7 @@ import { accountBalance, netWorth } from "@/lib/balances";
 /**
  * O usuário da sessão.
  *
- * Se o id da sessão não existe mais no banco, a sessão está órfã — conta
+ * Se o id da sessão não existe mais no banco, a sessão está órfã â€” conta
  * apagada, banco trocado, cookie antigo. Isso não é erro do sistema: é alguém
  * deslogado segurando um cookie velho. Mandamos limpar a sessão em vez de
  * estourar um 500 (e mandar direto para /login criaria um laço, porque de lá
@@ -55,7 +56,7 @@ export type OnboardingChecklist = {
 /**
  * Base do onboarding guiado do Painel: a calibragem de renda/metas em
  * /onboarding já existe e roda uma vez só; isso aqui cobre o que falta
- * depois dela — criar conta e lançar os primeiros dados — e alguém pode
+ * depois dela â€” criar conta e lançar os primeiros dados â€” e alguém pode
  * revisitar quantas vezes precisar até fazer os dois.
  */
 export async function getOnboardingChecklist(userId: string): Promise<OnboardingChecklist> {
@@ -67,7 +68,7 @@ export async function getOnboardingChecklist(userId: string): Promise<Onboarding
 }
 
 /**
- * Todas as contas do usuário — ativas e arquivadas — com quantos lançamentos
+ * Todas as contas do usuário â€” ativas e arquivadas â€” com quantos lançamentos
  * e recorrências cada uma tem. Usado na tela de configurações, que precisa
  * mostrar as arquivadas separadas e avisar o tanto de coisa que some junto
  * se a conta for excluída de vez (a exclusão em cascata leva lançamentos,
@@ -116,12 +117,12 @@ export async function getCategories(userId: string) {
 export type CardMode = "accrual" | "cash";
 
 /**
- * accrual (padrão): compra no cartão conta no mês da compra — é o custo real,
+ * accrual (padrão): compra no cartão conta no mês da compra â€” é o custo real,
  * mesmo que a fatura só vença depois. Usado em orçamento, projeções e reserva
  * de emergência, onde subestimar o cartão distorceria o número.
  *
  * cash: pensado só para o resumo principal do painel. A compra no cartão vira
- * só demonstrativo (não soma aqui — tem um gráfico próprio para isso); em vez
+ * só demonstrativo (não soma aqui â€” tem um gráfico próprio para isso); em vez
  * dela, conta o pagamento da fatura no mês em que ele sai de fato da conta.
  */
 export async function getMonthSummary(
@@ -144,9 +145,11 @@ export async function getMonthSummary(
       and(
         eq(txTable.userId, userId),
         eq(txTable.isTransfer, false),
+        or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         gte(txTable.date, start),
         lt(txTable.date, end),
         cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+        cash ? sql`true` : eq(txTable.isCardPayment, false),
       ),
     )
     .groupBy(txTable.kind, txTable.nature);
@@ -204,9 +207,11 @@ export async function getMonthlySeries(
       and(
         eq(txTable.userId, userId),
         eq(txTable.isTransfer, false),
+        or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         gte(txTable.date, first),
         lt(txTable.date, last),
         cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+        cash ? sql`true` : eq(txTable.isCardPayment, false),
       ),
     )
     .groupBy(sql`1`, txTable.kind, txTable.nature);
@@ -265,9 +270,11 @@ export async function getCategoryBreakdown(
         eq(txTable.userId, userId),
         eq(txTable.kind, "EXPENSE"),
         eq(txTable.isTransfer, false),
+        or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         gte(txTable.date, start),
         lt(txTable.date, end),
         cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
+        cash ? sql`true` : eq(txTable.isCardPayment, false),
       ),
     )
     .groupBy(txTable.categoryId, categoriesTable.name, categoriesTable.color, categoriesTable.nature);
@@ -285,10 +292,10 @@ export async function getCategoryBreakdown(
 }
 
 /**
- * O mesmo ranking por categoria, só que olhando só para o cartão — pra você
- * ver onde o dinheiro do cartão está indo. É demonstrativo: essas compras já
+ * O mesmo ranking por categoria, só que olhando só para o cartão â€” pra você
+ * ver onde o dinheiro do cartão está indo. �‰ demonstrativo: essas compras já
  * não entram no resumo principal do painel (ficaram de fora pra não contar
- * a mesma compra duas vezes — uma como compra, outra quando a fatura é paga).
+ * a mesma compra duas vezes â€” uma como compra, outra quando a fatura é paga).
  */
 export async function getCardCategoryBreakdown(userId: string, ref: MonthRef): Promise<CategorySlice[]> {
   const { start, end } = monthRange(ref);
@@ -309,6 +316,7 @@ export async function getCardCategoryBreakdown(userId: string, ref: MonthRef): P
         eq(txTable.userId, userId),
         eq(txTable.kind, "EXPENSE"),
         eq(txTable.isTransfer, false),
+        or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         eq(accountsTable.type, "CREDIT_CARD"),
         gte(txTable.date, start),
         lt(txTable.date, end),
@@ -339,7 +347,7 @@ export type TopExpense = {
 };
 
 /**
- * Os maiores gastos individuais do mês (cartão incluso — aqui o interesse é
+ * Os maiores gastos individuais do mês (cartão incluso â€” aqui o interesse é
  * "qual foi a compra mais pesada", não bater com o resumo em dinheiro do
  * Painel, que separa cartão pra não contar a fatura duas vezes).
  */
@@ -364,8 +372,10 @@ export async function getTopExpenses(userId: string, ref: MonthRef, limit = 6): 
         eq(txTable.userId, userId),
         eq(txTable.kind, "EXPENSE"),
         eq(txTable.isTransfer, false),
+        or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         gte(txTable.date, start),
         lt(txTable.date, end),
+        eq(txTable.isCardPayment, false),
       ),
     )
     .orderBy(desc(txTable.amountCents))
@@ -438,7 +448,7 @@ export type GoalRecurringStatus = {
  * metas: "guarde R$ 200 todo dia 5 na meta X" em vez de lançamento. Uma
  * regra está "pendente" no mês quando está ativa, dentro da janela de
  * início/fim, e ainda não gerou um `goalContributions` com o seu id neste
- * mês — do jeito que uma recorrência de lançamento pendente é detectada.
+ * mês â€” do jeito que uma recorrência de lançamento pendente é detectada.
  */
 export async function getGoalRecurringStatus(
   userId: string,
@@ -508,7 +518,7 @@ export type TransactionFilters = {
   ref?: MonthRef;
   /**
    * Período customizado ("AAAA-MM-DD", inclusivo dos dois lados). Quando os
-   * dois vêm preenchidos, manda mais que `ref` — é o que permite ver ou
+   * dois vêm preenchidos, manda mais que `ref` â€” é o que permite ver ou
    * buscar lançamentos além de um único mês.
    */
   dateFrom?: string;
@@ -530,7 +540,7 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   if (filters.dateFrom && filters.dateTo) {
     const start = new Date(`${filters.dateFrom}T00:00:00.000Z`);
     const end = new Date(`${filters.dateTo}T00:00:00.000Z`);
-    end.setUTCDate(end.getUTCDate() + 1); // limite superior exclusivo — inclui o dia "até" inteiro
+    end.setUTCDate(end.getUTCDate() + 1); // limite superior exclusivo â€” inclui o dia "até" inteiro
     conditions.push(gte(txTable.date, start), lt(txTable.date, end));
   } else if (filters.ref) {
     const { start, end } = monthRange(filters.ref);
@@ -544,6 +554,8 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   if (filters.kind) conditions.push(eq(txTable.kind, filters.kind));
   if (filters.nature) conditions.push(eq(txTable.nature, filters.nature));
   if (filters.search) conditions.push(ilike(txTable.description, `%${filters.search}%`));
+  const validExternalStatus = or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED"), eq(txTable.externalStatus, "PENDING"));
+  if (validExternalStatus) conditions.push(validExternalStatus);
 
   return db
     .select({
@@ -561,11 +573,14 @@ export async function getTransactions(userId: string, filters: TransactionFilter
       accountName: accountsTable.name,
       accountType: accountsTable.type,
       isTransfer: txTable.isTransfer,
+      isCardPayment: txTable.isCardPayment,
       transferGroupId: txTable.transferGroupId,
       recurringRuleId: txTable.recurringRuleId,
       installmentGroupId: txTable.installmentGroupId,
       installmentNumber: txTable.installmentNumber,
       installmentTotal: txTable.installmentTotal,
+      externalStatus: txTable.externalStatus,
+      origin: txTable.origin,
     })
     .from(txTable)
     .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
@@ -573,6 +588,11 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     .where(and(...conditions))
     .orderBy(desc(txTable.date), desc(txTable.createdAt))
     .limit(take);
+}
+
+export async function getOpenFinanceInvoices(userId: string) {
+  return db.select({ invoiceRef: openFinanceInvoices.invoiceRef, totalAmountCents: openFinanceInvoices.totalAmountCents })
+    .from(openFinanceInvoices).where(eq(openFinanceInvoices.userId, userId)).then((rows) => rows.filter((row): row is typeof row & { totalAmountCents: number } => row.totalAmountCents !== null));
 }
 
 /**
@@ -646,7 +666,7 @@ export async function getTotalSavedCents(userId: string): Promise<number> {
 }
 
 /**
- * Só o saldo guardado na meta de reserva de emergência (kind = EMERGENCY_FUND) —
+ * Só o saldo guardado na meta de reserva de emergência (kind = EMERGENCY_FUND) â€”
  * diferente de `getTotalSavedCents`, que soma TODAS as metas. Usado onde o
  * número precisa representar especificamente "quanto já tenho de colchão", não
  * o total guardado em tudo (reserva + viagem + o que for). Misturar os dois
@@ -685,7 +705,7 @@ export type BudgetRow = {
   status: BudgetStatus;
   /**
    * Estimativa de quanto a categoria vai fechar o mês mantendo o ritmo atual.
-   * Só faz sentido no mês corrente — nos outros vem igual ao gasto real.
+   * Só faz sentido no mês corrente â€” nos outros vem igual ao gasto real.
    */
   projectedCents: number;
 };
@@ -695,7 +715,7 @@ export type BudgetOverview = {
   totalLimitCents: number;
   /** Gasto total do mês, incluindo o que está fora do orçamento. */
   totalSpentCents: number;
-  /** Gasto apenas nas categorias que têm limite — é o que o orçamento acompanha. */
+  /** Gasto apenas nas categorias que têm limite â€” é o que o orçamento acompanha. */
   budgetedSpentCents: number;
   /** Gasto em categorias que ainda não têm limite. */
   unbudgetedSpentCents: number;
@@ -708,7 +728,7 @@ export type BudgetOverview = {
   monthProgress: number;
 };
 
-/** Quanto do mês já passou — usado para projetar o fechamento. */
+/** Quanto do mês já passou â€” usado para projetar o fechamento. */
 function monthProgressFor(ref: MonthRef): number {
   const now = new Date();
   const current = now.getFullYear() === ref.year && now.getMonth() + 1 === ref.month;
@@ -731,7 +751,7 @@ function statusFor(limitCents: number | null, usedPct: number): BudgetStatus {
 
 /**
  * Limite x gasto real por categoria no mês.
- * Traz também as categorias que gastaram sem ter limite definido — são
+ * Traz também as categorias que gastaram sem ter limite definido â€” são
  * exatamente as que o usuário precisa enxergar para fechar o orçamento.
  */
 export async function getBudgetOverview(userId: string, ref: MonthRef): Promise<BudgetOverview> {
@@ -785,7 +805,7 @@ export async function getBudgetOverview(userId: string, ref: MonthRef): Promise<
   const spentById = new Map(spending.map((s) => [s.id, s.totalCents]));
   const progress = monthProgressFor(ref);
 
-  // Todas as categorias de gasto aparecem — é aqui que o usuário define o teto,
+  // Todas as categorias de gasto aparecem â€” é aqui que o usuário define o teto,
   // inclusive das que ainda não tiveram movimento no mês.
   const rows: BudgetRow[] = allCategories.map((c) => {
     const limitCents = limitById.get(c.id) ?? null;
@@ -1034,10 +1054,13 @@ export type AccountBalance = {
   expenseCents: number;
   balanceCents: number;
   transactionCount: number;
+  financeMode: string;
+  bankBalanceCents: number | null;
+  bankBalanceAt: Date | null;
 };
 
 export type BalancesOverview = {
-  /** Só contas comuns — cartão de crédito é só demonstrativo, sem saldo aqui. */
+  /** Só contas comuns â€” cartão de crédito é só demonstrativo, sem saldo aqui. */
   accounts: AccountBalance[];
   availableCents: number;
   savedInGoalsCents: number;
@@ -1045,6 +1068,7 @@ export type BalancesOverview = {
   netWorthCents: number;
   /** Alguma conta ainda está sem saldo inicial informado? */
   needsOpeningBalance: boolean;
+  totalIncomplete: boolean;
 };
 
 export async function getBalances(userId: string): Promise<BalancesOverview> {
@@ -1064,6 +1088,7 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       debtBalanceCents: 0,
       netWorthCents: 0,
       needsOpeningBalance: false,
+      totalIncomplete: false,
     };
   }
 
@@ -1081,6 +1106,7 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       .where(
         and(
           eq(txTable.userId, userId),
+          or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
           sql`(${accountsTable.openingBalanceDate} is null or ${txTable.date} >= ${accountsTable.openingBalanceDate})`,
         ),
       )
@@ -1118,12 +1144,16 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       openingBalanceDate: a.openingBalanceDate ? new Date(a.openingBalanceDate) : null,
       incomeCents,
       expenseCents,
-      balanceCents: accountBalance({ openingCents: a.openingBalanceCents, incomeCents, expenseCents }),
+      balanceCents: a.financeMode === "integracao" ? (a.bankBalanceCents ?? 0) : accountBalance({ openingCents: a.openingBalanceCents, incomeCents, expenseCents }),
       transactionCount: counts.get(a.id) ?? 0,
+      financeMode: a.financeMode,
+      bankBalanceCents: a.bankBalanceCents,
+      bankBalanceAt: a.bankBalanceAt,
     };
   });
 
-  const availableCents = accounts.reduce((acc, a) => acc + a.balanceCents, 0);
+  const totalIncomplete = accounts.some((a) => a.financeMode === "integracao" && a.bankBalanceCents === null);
+  const availableCents = accounts.reduce((acc, a) => acc + (a.financeMode === "integracao" ? (a.bankBalanceCents ?? 0) : a.balanceCents), 0);
   const debtBalanceCents = Number(debtRows[0]?.total ?? 0);
 
   return {
@@ -1137,8 +1167,9 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       debtBalanceCents,
     }),
     needsOpeningBalance: accounts.some(
-      (a) => a.openingBalanceCents === 0 && a.openingBalanceDate === null,
+      (a) => a.financeMode === "manual" && a.openingBalanceCents === 0 && a.openingBalanceDate === null,
     ),
+    totalIncomplete,
   };
 }
 
@@ -1180,10 +1211,10 @@ export type BillRulesStatus = {
 
 /**
  * Regras de conta recorrente ("Conta de luz", "Assinatura X") e se já geraram
- * a conta deste mês — mesmo espírito de `getRecurringStatus`/
+ * a conta deste mês â€” mesmo espírito de `getRecurringStatus`/
  * `getGoalRecurringStatus`, mas sem valor fixo (o valor de uma conta varia
  * todo mês, então não tem "amountCents" pendente pra somar) e sem janela de
- * início/fim (só ativa/pausada — ver `src/lib/bills.ts` pra divisão de valor).
+ * início/fim (só ativa/pausada â€” ver `src/lib/bills.ts` pra divisão de valor).
  */
 export async function getBillRulesStatus(userId: string, ref: MonthRef): Promise<BillRulesStatus> {
   const [rules, participants, generated] = await Promise.all([

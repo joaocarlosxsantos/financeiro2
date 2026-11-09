@@ -1,0 +1,12 @@
+node_modules/
+.next/
+build/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+.vercel/
+.maestri/
+
+package-lock.json
+drizzle/meta/

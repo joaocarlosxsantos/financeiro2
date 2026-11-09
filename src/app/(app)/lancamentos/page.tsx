@@ -7,9 +7,11 @@ import {
   getRecurringStatus,
   getTransactionSplits,
   getTransactions,
+  getOpenFinanceInvoices,
   getTransferCounterparts,
 } from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
+import { hasPossibleCardPaymentMatch } from "@/server/open-finance/schemas";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { RecurringBanner } from "@/components/recurring-banner";
@@ -55,7 +57,7 @@ export default async function TransactionsPage({
     sp.accountId || (sp.acc && sp.acc !== "CARD" && sp.acc !== "OTHER"),
   );
 
-  const [accounts, categories, rawTransactions, recurring, receivables] = await Promise.all([
+  const [accounts, categories, rawTransactions, recurring, receivables, invoices] = await Promise.all([
     getAccounts(userId),
     getCategories(userId),
     getTransactions(
@@ -76,6 +78,7 @@ export default async function TransactionsPage({
     ),
     getRecurringStatus(userId, ref),
     getReceivablesByPerson(userId, ref),
+    getOpenFinanceInvoices(userId),
   ]);
 
   const txIds = rawTransactions.map((t) => t.id);
@@ -141,6 +144,10 @@ export default async function TransactionsPage({
       isCard: t.accountType === "CREDIT_CARD",
       notes: t.notes,
       isTransfer: t.isTransfer,
+      externalStatus: t.externalStatus,
+      origin: t.origin,
+      isCardPayment: t.isCardPayment,
+      possibleCardPayment: false,
       transferGroupId: t.transferGroupId,
       transferRoute,
       fromAccountName: counterpart?.fromAccountName ?? null,
@@ -153,6 +160,10 @@ export default async function TransactionsPage({
       myShareCents,
     };
   });
+
+  for (const transaction of plain) {
+    transaction.possibleCardPayment = !transaction.isCard && transaction.kind === "EXPENSE" && hasPossibleCardPaymentMatch({ date: transaction.date, amountCents: transaction.amountCents, origin: transaction.origin ?? "", isCardPayment: Boolean(transaction.isCardPayment) }, invoices);
+  }
 
   const plainCategories = categories.map((c) => ({
     id: c.id,

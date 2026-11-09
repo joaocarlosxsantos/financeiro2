@@ -41,6 +41,8 @@ export const goalKind = pgEnum("goal_kind", [
   "CUSTOM",
 ]);
 export const importSource = pgEnum("import_source", ["CSV", "OFX"]);
+export const transactionOrigin = pgEnum("transaction_origin", ["MANUAL", "CSV", "OFX", "PLUGGY"]);
+export const financeMode = pgEnum("finance_mode", ["manual", "integracao"]);
 
 export const debtKind = pgEnum("debt_kind", [
   "CARD_REVOLVING",
@@ -96,6 +98,14 @@ export const accounts = pgTable(
     closingDay: integer("closing_day"),
     /** Dia de vencimento da fatura (cartões de crédito, 1 a 31). */
     dueDay: integer("due_day"),
+    financeMode: financeMode("finance_mode").notNull().default("manual"),
+    externalAccountId: text("external_account_id"),
+    externalConnectionId: varchar("external_connection_id", { length: 32 }).references(() => openFinanceConnections.id, { onDelete: "set null" }),
+    bankBalanceCents: integer("bank_balance_cents"),
+    bankBalanceAt: timestamp("bank_balance_at", { withTimezone: true }),
+    creditLimitCents: integer("credit_limit_cents"),
+    availableCreditCents: integer("available_credit_cents"),
+    creditSnapshotAt: timestamp("credit_snapshot_at", { withTimezone: true }),
     archived: boolean("archived").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -124,6 +134,25 @@ export const categories = pgTable(
   (t) => [
     index("categories_user_idx").on(t.userId),
     uniqueIndex("categories_user_name_kind_key").on(t.userId, t.name, t.kind),
+  ],
+);
+
+/** Regras aprendidas do usuÃ¡rio e cache semÃ¢ntico opcional do provider de IA. */
+export const categoryRules = pgTable(
+  "category_rules",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+    normalizedPattern: text("normalized_pattern").notNull(),
+    categoryId: varchar("category_id", { length: 32 }).notNull().references(() => categories.id, { onDelete: "cascade" }),
+    source: text("source").notNull().default("USER"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("category_rules_user_pattern_key").on(t.userId, t.normalizedPattern),
+    index("category_rules_user_idx").on(t.userId),
+    check("category_rules_source_chk", sql`${t.source} in ('USER', 'AI')`),
   ],
 );
 
@@ -173,6 +202,10 @@ export const transactions = pgTable(
     invoiceRef: varchar("invoice_ref", { length: 7 }),
     /** Hash de conta+data+valor+descrição — impede importar a mesma linha duas vezes. */
     fingerprint: text("fingerprint"),
+    origin: transactionOrigin("origin").notNull().default("MANUAL"),
+    externalId: text("external_id"),
+    externalStatus: text("external_status"),
+    isCardPayment: boolean("is_card_payment").notNull().default(false),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -186,11 +219,52 @@ export const transactions = pgTable(
     index("transactions_transfer_group_idx").on(t.transferGroupId),
     index("transactions_account_invoice_idx").on(t.accountId, t.invoiceRef),
     uniqueIndex("transactions_user_fingerprint_key").on(t.userId, t.fingerprint),
+    uniqueIndex("transactions_pluggy_identity_key").on(t.userId, t.accountId, t.externalId).where(sql`${t.externalId} is not null`),
     uniqueIndex("transactions_transfer_leg_key")
       .on(t.transferGroupId, t.kind)
       .where(sql`${t.transferGroupId} is not null`),
   ],
 );
+
+export const openFinanceCredentials = pgTable("open_finance_credentials", {
+  userId: varchar("user_id", { length: 32 }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  clientIdEnvelope: text("client_id_envelope").notNull(),
+  clientSecretEnvelope: text("client_secret_envelope").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const openFinanceConnections = pgTable("open_finance_connections", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemIdEnvelope: text("item_id_envelope").notNull(),
+  itemIdHash: text("item_id_hash").notNull(),
+  label: text("label"),
+  status: text("status").notNull().default("NOT_SYNCED"),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  lastErrorCode: text("last_error_code"),
+  importFromDate: timestamp("import_from_date", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("open_finance_connections_user_item_key").on(t.userId, t.itemIdHash)]);
+
+export const openFinanceInvoices = pgTable("open_finance_invoices", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  accountId: varchar("account_id", { length: 32 }).notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  externalId: text("external_id").notNull(),
+  invoiceRef: varchar("invoice_ref", { length: 7 }).notNull(),
+  dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
+  totalAmountCents: integer("total_amount_cents"),
+  minimumPaymentCents: integer("minimum_payment_cents"),
+  syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("open_finance_invoices_identity_key").on(t.userId, t.accountId, t.externalId)]);
+
+export const openFinanceDeleted = pgTable("open_finance_deleted", {
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  accountId: varchar("account_id", { length: 32 }).notNull().references(() => accounts.id, { onDelete: "cascade" }),
+  externalId: text("external_id").notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("open_finance_deleted_identity_key").on(t.userId, t.accountId, t.externalId)]);
 
 export const goals = pgTable(
   "goals",

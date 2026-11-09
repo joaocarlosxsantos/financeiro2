@@ -32,11 +32,11 @@ function result(e: Entry | undefined, max: number, now: number) {
 }
 
 /** Conta cada chamada como uma tentativa (ex.: cadastro). */
-export function checkRateLimit(key: string, max = MAX_ATTEMPTS, now = Date.now()) {
+export function checkRateLimit(key: string, max = MAX_ATTEMPTS, now = Date.now(), windowMs = WINDOW_MS) {
   purge(now);
   const e = live(key, now);
   if (!e) {
-    store.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    store.set(key, { count: 1, resetAt: now + windowMs });
     return { allowed: true } as { allowed: boolean; retryAfterSeconds?: number };
   }
   const r = result(e, max, now);

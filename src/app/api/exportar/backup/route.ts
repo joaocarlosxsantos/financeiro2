@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { requireUserId } from "@/lib/auth";
 import { db } from "@/db";
 import {
@@ -36,15 +35,13 @@ function isTableMissingError(err: unknown): boolean {
   return false;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const userId = await requireUserId();
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) return new Response("User not found", { status: 404 });
 
   const [accounts] = await Promise.all([db.select().from(accountsTable).where(eq(accountsTable.userId, userId))]);
-
-  const accountIds = accounts.map((a) => a.id);
 
   const [
     categories,

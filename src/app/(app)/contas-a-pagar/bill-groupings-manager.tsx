@@ -22,6 +22,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
+// eslint-disable-next-line react-hooks/set-state-in-effect -- After group creation succeeds, reset the form and close the create dialog.
       setOpen(false);
     }
   }, [state]);

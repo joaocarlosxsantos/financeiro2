@@ -1,8 +1,8 @@
-"use server";
+﻿"use server";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, recurringRules, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
@@ -59,11 +59,12 @@ export async function createRecurringRule(
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
 
   const [account] = await db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, financeMode: accounts.financeMode })
     .from(accounts)
     .where(and(eq(accounts.id, d.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!account) return { error: "Conta inválida." };
+  if (account.financeMode === "integracao") return { error: "Esta conta está integrada. Troque para modo manual antes de criar recorrências." };
 
   const [startYear, startMonth] = d.startMonth.split("-").map(Number);
   const end = d.endMonth && /^\d{4}-\d{2}$/.test(d.endMonth) ? d.endMonth.split("-").map(Number) : null;
@@ -102,7 +103,7 @@ export async function toggleRecurringRule(id: string, active: boolean) {
 }
 
 /**
- * Apaga a regra. Os lançamentos já gerados continuam onde estão — apagar
+ * Apaga a regra. Os lançamentos já gerados continuam onde estão â€” apagar
  * histórico junto seria destrutivo demais e mudaria meses já fechados.
  */
 export async function deleteRecurringRule(id: string) {
@@ -117,14 +118,23 @@ export async function deleteRecurringRule(id: string) {
 export async function generateRecurring(
   ref: MonthRef,
   ruleId?: string,
-): Promise<{ created: number; error?: string }> {
+): Promise<{ created: number; skippedIntegrated?: number; error?: string }> {
   const userId = await requireUserId();
   const { getRecurringStatus } = await import("@/server/queries");
 
   const status = await getRecurringStatus(userId, ref);
-  const target = ruleId ? status.pending.filter((r) => r.id === ruleId) : status.pending;
+  let target = ruleId ? status.pending.filter((r) => r.id === ruleId) : status.pending;
+  let skippedIntegrated = 0;
 
-  if (!target.length) return { created: 0, error: "Nada pendente para gerar neste mês." };
+  const targetAccountIds = [...new Set(target.map((r) => r.accountId))];
+  if (targetAccountIds.length) {
+    const integrated = await db.select({ id: accounts.id }).from(accounts).where(and(inArray(accounts.id, targetAccountIds), eq(accounts.financeMode, "integracao"), eq(accounts.userId, userId)));
+    const integratedIds = new Set(integrated.map((a) => a.id));
+    skippedIntegrated = target.filter((r) => integratedIds.has(r.accountId)).length;
+    target = target.filter((r) => !integratedIds.has(r.accountId));
+  }
+
+  if (!target.length) return { created: 0, skippedIntegrated, error: skippedIntegrated ? "As recorrencias de contas integradas foram ignoradas." : "Nada pendente para gerar neste mes." };
 
   const inserted = await db
     .insert(transactions)
@@ -140,7 +150,7 @@ export async function generateRecurring(
         nature: rule.nature,
         notes: rule.notes,
         recurringRuleId: rule.id,
-        // Uma ocorrência por regra por mês — a chave única cuida do resto.
+        // Uma ocorrência por regra por mês â€” a chave única cuida do resto.
         fingerprint: `rule:${rule.id}|${ref.year}-${String(ref.month).padStart(2, "0")}`,
       })),
     )
@@ -148,7 +158,7 @@ export async function generateRecurring(
     .returning({ id: transactions.id });
 
   refresh();
-  return { created: inserted.length };
+  return { created: inserted.length, ...(skippedIntegrated ? { skippedIntegrated } : {}) };
 }
 
 /** Apaga todas as parcelas de uma compra parcelada. */

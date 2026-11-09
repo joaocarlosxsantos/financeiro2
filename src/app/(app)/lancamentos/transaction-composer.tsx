@@ -37,6 +37,7 @@ export function TransactionComposer({
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
+// eslint-disable-next-line react-hooks/set-state-in-effect -- After transaction creation succeeds, clear the controlled category selection.
       setCategoryId("");
       setInstallments(1);
       setAmount("");

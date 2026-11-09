@@ -28,4 +28,14 @@ describe("rate limit", () => {
     expect(isRateLimited("c", 5, t0 + 1).allowed).toBe(false);
     expect(isRateLimited("c", 5, t0 + WINDOW_MS).allowed).toBe(true);
   });
+
+  it("supports ten setup attempts per user per hour", () => {
+    const key = "open-finance-setup:test-user";
+    const start = 50_000;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      expect(checkRateLimit(key, 10, start + attempt, 60 * 60 * 1000).allowed).toBe(true);
+    }
+    expect(checkRateLimit(key, 10, start + 11, 60 * 60 * 1000).allowed).toBe(false);
+    expect(checkRateLimit(key, 10, start + 60 * 60 * 1000, 60 * 60 * 1000).allowed).toBe(true);
+  });
 });

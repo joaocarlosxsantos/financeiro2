@@ -5,6 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ProfileForm } from "./profile-form";
 import { AccountsPanel } from "./accounts-panel";
 import { CategoriesPanel } from "./categories-panel";
+import Link from "next/link";
 
 export const metadata = { title: "Configurações — Financeiro 2.0" };
 
@@ -24,6 +25,10 @@ export default async function SettingsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="lg:col-span-2">
+          <CardHeader title="Open Finance" subtitle="Conecte o Pluggy e escolha a fonte de cada conta." />
+          <div className="p-4 pt-0"><Link className="text-sm font-medium text-[var(--text-brand)] underline" href="/configuracoes/integracao">Configurar integração</Link></div>
+        </Card>
         <Card>
           <CardHeader
             title="Perfil financeiro"

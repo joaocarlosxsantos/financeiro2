@@ -17,6 +17,7 @@ export function DebtComposer() {
   useEffect(() => {
     if (state.ok) {
       formRef.current?.reset();
+// eslint-disable-next-line react-hooks/set-state-in-effect -- After debt creation succeeds, restore the default debt kind selection.
       setKind("CARD_REVOLVING");
       setRate("13,00");
     }

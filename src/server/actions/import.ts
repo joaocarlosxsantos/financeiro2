@@ -11,6 +11,7 @@ import { resolveImportDate } from "@/lib/import-dates";
 import { isInvoicePaymentLine } from "@/lib/import-filters";
 import { formatDate, monthLabel, monthRange, monthRefFromParam, monthRefToParam, type MonthRef } from "@/lib/dates";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
+import { commitImportInputSchema, MAX_IMPORT_ROWS, previewImportInputSchema } from "@/server/import/validation";
 
 export type PreviewRow = {
   /** Data que vai para o banco — já ajustada quando necessário (parcela de cartão). */
@@ -88,22 +89,19 @@ function invoicePeriodRange(ref: MonthRef): { start: string; end: string } {
  * Lê o arquivo, sugere categoria para cada linha e marca duplicatas.
  * Nada é gravado aqui — o usuário confere antes.
  */
-export async function previewImport(input: {
-  fileName: string;
-  content: string;
-  accountId: string;
-  invertSign?: boolean;
-  /** Mês/ano da fatura, formato "AAAA-MM". Obrigatório quando a conta é cartão. */
-  invoiceMonth?: string;
-}): Promise<PreviewResult> {
+export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
   const userId = await requireUserId();
+  const parsedInput = previewImportInputSchema.safeParse(rawInput);
+  if (!parsedInput.success) return { error: "Arquivo ou dados de importação inválidos. Confira o tamanho, nome e campos do arquivo." };
+  const input = parsedInput.data;
 
   const [account] = await db
-    .select({ id: accounts.id, type: accounts.type })
+    .select({ id: accounts.id, type: accounts.type, financeMode: accounts.financeMode })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!account) return { error: "Escolha uma conta válida para receber os lançamentos." };
+  if (account.financeMode === "integracao") return { error: "Esta conta está integrada. Troque para modo manual em Configurações → Integração antes de importar." };
 
   const isCard = account.type === "CREDIT_CARD";
   const invoiceRef = isCard && input.invoiceMonth ? monthRefFromParam(input.invoiceMonth) : undefined;
@@ -118,6 +116,7 @@ export async function previewImport(input: {
       warnings: parsed.warnings,
     };
   }
+  if (parsed.rows.length > MAX_IMPORT_ROWS) return { error: `O arquivo excede o limite de ${MAX_IMPORT_ROWS} lançamentos.` };
 
   // Fatura de cartão traz linha de confirmação de pagamento (o banco
   // avisando que a fatura anterior foi paga) — não é gasto, e com o cartão
@@ -307,24 +306,11 @@ export async function previewImport(input: {
   };
 }
 
-export async function commitImport(input: {
-  fileName: string;
-  accountId: string;
-  source: "CSV" | "OFX";
-  rows: PreviewRow[];
-  /** Mês/ano da fatura, formato "AAAA-MM". Obrigatório quando a conta é cartão. */
-  invoiceMonth?: string;
-  /**
-   * Reimportar o mesmo período? Por padrão troca tudo: apaga os lançamentos
-   * que vieram de importação anterior nesse mesmo período e grava os novos
-   * no lugar — é o comportamento esperado quando você baixa o arquivo de
-   * novo (arquivo corrigido, ou só reprocessando). Passe false pra manter os
-   * antigos e só acrescentar (arrisca duplicar quem não bate fingerprint
-   * exata).
-   */
-  replacePeriod?: boolean;
-}): Promise<{ error?: string; saved?: number; replaced?: number }> {
+export async function commitImport(rawInput: unknown): Promise<{ error?: string; saved?: number; replaced?: number }> {
   const userId = await requireUserId();
+  const parsedInput = commitImportInputSchema.safeParse(rawInput);
+  if (!parsedInput.success) return { error: "Dados da importação inválidos. Revise o arquivo antes de confirmar." };
+  const input = parsedInput.data;
 
   const [account] = await db
     .select({
@@ -332,11 +318,13 @@ export async function commitImport(input: {
       type: accounts.type,
       closingDay: accounts.closingDay,
       dueDay: accounts.dueDay,
+      financeMode: accounts.financeMode,
     })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!account) return { error: "Conta inválida." };
+  if (account.financeMode === "integracao") return { error: "Esta conta está integrada. Troque para modo manual em Configurações → Integração antes de importar." };
 
   const isCard = account.type === "CREDIT_CARD";
   const invoiceRef = isCard && input.invoiceMonth ? monthRefFromParam(input.invoiceMonth) : undefined;
@@ -372,7 +360,7 @@ export async function commitImport(input: {
       const oldBatches = await tx
         .select({ id: importBatches.id })
         .from(importBatches)
-        .where(and(eq(importBatches.accountId, input.accountId), eq(importBatches.invoiceRef, invoiceParam)));
+        .where(and(eq(importBatches.userId, userId), eq(importBatches.accountId, input.accountId), eq(importBatches.invoiceRef, invoiceParam)));
       const oldBatchIds = oldBatches.map((b) => b.id);
 
       if (oldBatchIds.length) {
@@ -383,7 +371,7 @@ export async function commitImport(input: {
         replaced = removed.length;
         // Todo lançamento desses lotes acabou de ser apagado — pode limpar
         // os lotes junto, sem precisar checar se sobrou algo.
-        await tx.delete(importBatches).where(inArray(importBatches.id, oldBatchIds));
+        await tx.delete(importBatches).where(and(eq(importBatches.userId, userId), inArray(importBatches.id, oldBatchIds)));
       }
     } else if (replacePeriod && period) {
       const removed = await tx
@@ -407,9 +395,9 @@ export async function commitImport(input: {
         const [{ count }] = await tx
           .select({ count: sql<number>`count(*)::int` })
           .from(transactions)
-          .where(eq(transactions.importBatchId, oldBatchId));
+          .where(and(eq(transactions.userId, userId), eq(transactions.importBatchId, oldBatchId)));
         if (count === 0) {
-          await tx.delete(importBatches).where(eq(importBatches.id, oldBatchId));
+          await tx.delete(importBatches).where(and(eq(importBatches.id, oldBatchId), eq(importBatches.userId, userId)));
         }
       }
     }
@@ -452,6 +440,7 @@ export async function commitImport(input: {
             nature: (r.kind === "INCOME" ? "VARIABLE" : r.nature) as "FIXED" | "VARIABLE",
             isTransfer: r.isTransfer,
             importBatchId: batch.id,
+            origin: input.source,
             invoiceRef: rowInvoiceRef,
             fingerprint: r.fingerprint,
             installmentNumber: r.installmentNumber,
@@ -494,7 +483,7 @@ export async function deleteImportBatch(batchId: string): Promise<{ error?: stri
     .where(and(eq(transactions.userId, userId), eq(transactions.importBatchId, batchId)))
     .returning({ id: transactions.id });
 
-  await db.delete(importBatches).where(eq(importBatches.id, batchId));
+  await db.delete(importBatches).where(and(eq(importBatches.id, batchId), eq(importBatches.userId, userId)));
 
   revalidatePath("/lancamentos");
   revalidatePath("/painel");

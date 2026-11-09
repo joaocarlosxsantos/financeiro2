@@ -126,20 +126,20 @@ export type BackupData = {
 };
 
 export function buildBackup(rows: {
-  user: Array<any>;
-  accounts: Array<any>;
-  categories: Array<any>;
-  transactions: Array<any>;
-  goals: Array<any>;
-  goalContributions: Array<any>;
-  debts: Array<any>;
-  debtPayments: Array<any>;
-  budgets: Array<any>;
-  recurringRules: Array<any>;
-  bills: Array<any>;
-  billParticipants: Array<any>;
-  billGroupings: Array<any>;
-  transactionSplits: Array<any>;
+  user: Array<Pick<typeof usersTable.$inferSelect, "id" | "name" | "email" | "passwordHash" | "monthlyIncomeCents" | "emergencyMonths" | "savingsTargetPct">>;
+  accounts: Array<Pick<typeof accountsTable.$inferSelect, "id" | "name" | "type" | "institution" | "color" | "openingBalanceCents" | "archived">>;
+  categories: Array<Pick<typeof categoriesTable.$inferSelect, "id" | "name" | "kind" | "nature" | "color" | "keywords" | "archived">>;
+  transactions: Array<Pick<typeof transactionsTable.$inferSelect, "id" | "date" | "description" | "amountCents" | "kind" | "nature" | "notes" | "isTransfer" | "installmentNumber" | "installmentTotal">>;
+  goals: Array<Pick<typeof goalsTable.$inferSelect, "id" | "name" | "kind" | "targetCents" | "savedCents" | "targetDate" | "color" | "note" | "archived">>;
+  goalContributions: Array<Pick<typeof goalContributionsTable.$inferSelect, "id" | "goalId" | "deltaCents" | "date" | "note">>;
+  debts: Array<Pick<typeof debtsTable.$inferSelect, "id" | "name" | "creditor" | "kind" | "balanceCents" | "monthlyRateBps" | "minimumPaymentCents" | "dueDay" | "note" | "archived">>;
+  debtPayments: Array<Pick<typeof debtPaymentsTable.$inferSelect, "id" | "debtId" | "amountCents" | "date" | "note">>;
+  budgets: Array<Pick<typeof budgetsTable.$inferSelect, "id" | "categoryId" | "periodYear" | "periodMonth" | "limitCents">>;
+  recurringRules: Array<Pick<typeof recurringRulesTable.$inferSelect, "id" | "accountId" | "categoryId" | "description" | "amountCents" | "kind" | "nature" | "dayOfMonth" | "active" | "notes">>;
+  bills: Array<Pick<typeof billsTable.$inferSelect, "id" | "name" | "type" | "year" | "month" | "totalCents" | "note">>;
+  billParticipants: Array<Pick<typeof billParticipantsTable.$inferSelect, "id" | "billId" | "name" | "phone" | "amountCents">>;
+  billGroupings: Array<Pick<typeof billGroupingsTable.$inferSelect, "id" | "name" | "color" | "archived">>;
+  transactionSplits: Array<Pick<typeof transactionSplitsTable.$inferSelect, "id" | "transactionId" | "name" | "phone" | "amountCents">>;
 }): BackupData {
   const user = rows.user[0];
   if (!user) throw new Error("User not found");
@@ -271,3 +271,20 @@ export function buildBackup(rows: {
     })),
   };
 }
+import type {
+  accounts as accountsTable,
+  billGroupings as billGroupingsTable,
+  billParticipants as billParticipantsTable,
+  bills as billsTable,
+  budgets as budgetsTable,
+  categories as categoriesTable,
+  debts as debtsTable,
+  debtPayments as debtPaymentsTable,
+  goalContributions as goalContributionsTable,
+  goals as goalsTable,
+  recurringRules as recurringRulesTable,
+  transactionSplits as transactionSplitsTable,
+  transactions as transactionsTable,
+  users as usersTable,
+} from "@/db/schema";
+

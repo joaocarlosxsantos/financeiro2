@@ -50,6 +50,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
   useEffect(() => {
     if (state.ok) {
       ref.current?.reset();
+// eslint-disable-next-line react-hooks/set-state-in-effect -- On successful account creation, reset the native form and close its dialog.
       setOpen(false);
     }
   }, [state]);
@@ -248,6 +249,7 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
   const [state, formAction] = useActionState(updateAccount, initial);
   const [type, setType] = useState(account.type);
   const doneRef = useRef(onDone);
+// eslint-disable-next-line react-hooks/refs -- Keep the latest callback without retriggering the success effect when its identity changes.
   doneRef.current = onDone;
 
   useEffect(() => {

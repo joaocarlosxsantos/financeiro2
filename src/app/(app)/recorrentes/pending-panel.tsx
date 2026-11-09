@@ -36,8 +36,8 @@ export function PendingPanel({
 
   function generate(ruleId?: string) {
     start(async () => {
-      const { created, error } = await generateRecurring(monthRef, ruleId);
-      setDone(error ?? `${created} lançamento(s) criado(s).`);
+      const { created, skippedIntegrated, error } = await generateRecurring(monthRef, ruleId);
+      setDone(error ?? `${created} lan\u00e7amento(s) criado(s).${skippedIntegrated ? ` ${skippedIntegrated} conta(s) integrada(s) ignorada(s).` : ""}`);
       setTimeout(() => setDone(null), 4000);
     });
   }

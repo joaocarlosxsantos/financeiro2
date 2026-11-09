@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import { formatAxisCents } from "@/lib/money";
 import { MoneyTooltip } from "./tooltip";
-import { VIZ } from "./palette";
 import {
   isProjectionDataEmpty,
   getZeroSafeDomain,

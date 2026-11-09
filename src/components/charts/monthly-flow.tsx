@@ -12,6 +12,7 @@ import {
   YAxis,
   ComposedChart,
 } from "recharts";
+import type { LabelProps } from "recharts";
 import type { SeriesPoint } from "@/server/queries";
 import { formatAxisCents } from "@/lib/money";
 import { MoneyTooltip } from "./tooltip";
@@ -22,11 +23,7 @@ import {
   getZeroSafeTicks,
 } from "./chart-utils";
 
-interface LastPointLabelProps {
-  x?: number;
-  y?: number;
-  value?: number | string;
-  index?: number;
+interface LastPointLabelProps extends Pick<LabelProps, "x" | "y" | "value" | "index"> {
   dataLength?: number;
   allZero?: boolean;
 }
@@ -37,7 +34,7 @@ function LastPointLabel({ x, y, value, index, dataLength, allZero }: LastPointLa
   }
   return (
     <text
-      x={x + 6}
+      x={Number(x) + 6}
       y={y}
       fill="var(--text-brand)"
       fontSize={11}
@@ -95,7 +92,7 @@ export function MonthlyFlowChart({ data }: { data: SeriesPoint[] }) {
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4, fill: VIZ.balance, stroke: "var(--surface)", strokeWidth: 2 }}
-            label={(props: any) => (
+            label={(props: LastPointLabelProps) => (
               <LastPointLabel {...props} dataLength={data.length} allZero={allZero} />
             )}
           />

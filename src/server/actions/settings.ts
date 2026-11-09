@@ -156,11 +156,12 @@ export async function saveOpeningBalance(input: {
   const userId = await requireUserId();
 
   const [account] = await db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, financeMode: accounts.financeMode })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
   if (!account) return { error: "Conta não encontrada." };
+  if (account.financeMode === "integracao") return { error: "O saldo inicial fica preservado enquanto a conta está integrada." };
 
   const openingBalanceCents = parseMoneyToCents(input.amount);
   if (Math.abs(openingBalanceCents) > MAX_CENTS) return { error: "Valor muito alto." };
@@ -171,7 +172,7 @@ export async function saveOpeningBalance(input: {
       openingBalanceCents,
       openingBalanceDate: input.date ? new Date(`${input.date}T00:00:00.000Z`) : null,
     })
-    .where(eq(accounts.id, input.accountId));
+    .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)));
 
   revalidatePath("/contas");
   revalidatePath("/configuracoes");
@@ -263,11 +264,12 @@ export async function updateAccount(_prev: ActionState, formData: FormData): Pro
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
   const [existing] = await db
-    .select({ id: accounts.id })
+    .select({ id: accounts.id, financeMode: accounts.financeMode })
     .from(accounts)
     .where(and(eq(accounts.id, id), eq(accounts.userId, userId)))
     .limit(1);
   if (!existing) return { error: "Conta não encontrada." };
+  if (existing.financeMode === "integracao") return { error: "Desvincule a conta em Configurações → Integração antes de alterar o tipo." };
 
   const isCard = parsed.data.type === "CREDIT_CARD";
 

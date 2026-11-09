@@ -5,8 +5,11 @@ import { ArrowLeftRight, CreditCard, Plus, Repeat, Trash2, Users } from "lucide-
 import {
   deleteTransaction,
   setTransactionCategory,
+  setTransactionCardPayment,
   setTransactionTransfer,
 } from "@/server/actions/transactions";
+import { deletePluggyTransaction } from "@/server/actions/open-finance";
+import { recategorizeUncategorizedTransactions } from "@/server/actions/categorization";
 import { formatCents } from "@/lib/money";
 import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
@@ -30,6 +33,8 @@ export function TransactionList({
   isFilteredByAccount?: boolean;
 }) {
   const [transferOpen, setTransferOpen] = useState(false);
+  const [recategorizing, startRecategorizing] = useTransition();
+  const [categorizationMessage, setCategorizationMessage] = useState("");
   const grouped = groupByDate(transactions);
 
   return (
@@ -39,6 +44,14 @@ export function TransactionList({
           Lançamentos
         </span>
         <div className="flex items-center gap-2">
+          {transactions.some((transaction) => !transaction.categoryId && !transaction.isTransfer) ? (
+            <Button type="button" variant="outline" size="sm" disabled={recategorizing} onClick={() => startRecategorizing(async () => {
+              const result = await recategorizeUncategorizedTransactions();
+              setCategorizationMessage("error" in result ? String(result.error ?? "Falha ao categorizar.") : `${result.updated} categorizados · ${result.counts.user} por seu histórico, ${result.counts.rule + result.counts.dictionary} por regras`);
+            })} className="text-xs">
+              {recategorizing ? "Categorizando…" : "Categorizar não categorizados"}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -66,6 +79,7 @@ export function TransactionList({
           </Button>
         </div>
       </div>
+      {categorizationMessage ? <p role="status" className="border-b border-[var(--line)] px-4 py-2 text-xs text-[var(--text-muted)]">{categorizationMessage}</p> : null}
 
       <div className="divide-y divide-[var(--line)]">
         {grouped.map(([date, items]) => {
@@ -172,7 +186,7 @@ function Row({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.8125rem] font-medium text-[var(--text)]">{tx.description}</p>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
-          {!tx.isTransfer ? (
+          {!tx.isTransfer || tx.origin === "PLUGGY" ? (
             <select
               aria-label="Categoria"
               value={tx.categoryId ?? ""}
@@ -192,6 +206,8 @@ function Row({
               ))}
             </select>
           ) : null}
+
+          {tx.externalStatus === "PENDING" ? <span className="rounded bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-warn)]">provisório · pendente</span> : null}
 
           {tx.isTransfer ? (
             <span
@@ -215,6 +231,9 @@ function Row({
               cartão
             </span>
           ) : null}
+          {tx.isCardPayment ? <span className="rounded bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]" title="Conta no cash; excluído do accrual">pagamento de fatura</span> : null}
+          {tx.possibleCardPayment ? <span className="muted text-[0.6875rem]" title="Mesmo valor e mês de uma compra no cartão; sugestão sem classificação automática">possível pagamento de fatura</span> : null}
+          {tx.origin && tx.origin !== "MANUAL" && !tx.isCard && tx.kind === "EXPENSE" ? <button type="button" disabled={pending} aria-pressed={Boolean(tx.isCardPayment)} onClick={() => start(async () => { await setTransactionCardPayment(tx.id, !tx.isCardPayment); })} className="cursor-pointer rounded border px-1.5 py-0.5 text-[0.6875rem] text-[var(--text-brand)] hover:bg-[var(--surface-2)]">{tx.isCardPayment ? "Desmarcar pagamento" : "Marcar pagamento"}</button> : null}
           {tx.installmentNumber && tx.installmentTotal ? (
             <span
               className="rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]"
@@ -288,7 +307,7 @@ function Row({
         </button>
       ) : null}
 
-      {!isPairedTransfer ? (
+      {!isPairedTransfer && tx.origin !== "PLUGGY" ? (
         <button
           type="button"
           aria-label={
@@ -316,7 +335,7 @@ function Row({
         </button>
       ) : null}
 
-      <button
+      {tx.origin !== "PLUGGY" ? <button
         type="button"
         aria-label={`Excluir ${tx.description}`}
         disabled={pending}
@@ -339,7 +358,24 @@ function Row({
         className="shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-3.5" />
-      </button>
+      </button> : <button
+        type="button"
+        aria-label={`Excluir lan\u00e7amento Pluggy ${tx.description}`}
+        disabled={pending}
+        onClick={async () => {
+          const ok = await confirm({
+            title: `Excluir lan\u00e7amento importado "${tx.description}"?`,
+            description: "Este lan\u00e7amento ser\u00e1 removido e ficar\u00e1 bloqueado contra reimporta\u00e7\u00e3o na pr?xima sincroniza\u00e7\u00e3o. Esta a\u00e7\u00e3o n\u00e3o pode ser desfeita.",
+            confirmLabel: "Excluir lan\u00e7amento",
+            tone: "danger",
+          });
+          if (!ok) return;
+          start(async () => { await deletePluggyTransaction({ transactionId: tx.id, confirmation: "EXCLUIR LANCAMENTO PLUGGY" }); });
+        }}
+        className="shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+      >
+        <Trash2 className="size-4" />
+      </button>}
 
       {splitOpen ? (
         <SplitDialog

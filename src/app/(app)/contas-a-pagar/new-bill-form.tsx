@@ -36,6 +36,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
       // certa), então precisam ser resetados aqui também. Sem isso, criar uma
       // conta avulsa uma vez faz a próxima criação "grudar" nessa escolha,
       // mesmo o formulário parecendo limpo.
+// eslint-disable-next-line react-hooks/set-state-in-effect -- After bill creation succeeds, restore the recurrence toggle to its default value.
       setRecurring(true);
       setType("INDIVIDUAL");
       setRows([0]);

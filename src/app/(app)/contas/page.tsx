@@ -53,15 +53,14 @@ export default async function AccountsPage() {
               conciliação correta com o extrato bancário.
             </Hint>
           ) : null}
+          {overview.totalIncomplete ? <Hint tone="info" title="Total incompleto">Há conta integrada sem snapshot bancário disponível. O consolidado fica incompleto até a próxima sincronização.</Hint> : null}
 
           <Card className="p-0">
             <div className="border-b border-[var(--line)] px-5 py-4">
               <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                 Saldos
               </h2>
-              <p className="muted mt-0.5 text-xs">
-                Saldo inicial somado às entradas e saídas de cada conta.
-              </p>
+              <p className="muted mt-0.5 text-xs">Contas manuais usam saldo inicial e movimentações; contas integradas usam snapshot bancário.</p>
             </div>
             <AccountList
               accounts={overview.accounts.map((a) => ({
@@ -71,6 +70,9 @@ export default async function AccountsPage() {
                 institution: a.institution,
                 color: a.color,
                 balanceCents: a.balanceCents,
+                financeMode: a.financeMode,
+                bankBalanceCents: a.bankBalanceCents,
+                bankBalanceAt: a.bankBalanceAt?.toISOString() ?? null,
                 openingBalanceCents: a.openingBalanceCents,
                 openingBalanceDate: a.openingBalanceDate
                   ? a.openingBalanceDate.toISOString().slice(0, 10)
@@ -90,22 +92,22 @@ export default async function AccountsPage() {
               subtitle="Total em contas menos saldo de dívidas."
             />
             <div className="mb-4">
-              <Money
+              {!overview.totalIncomplete ? <Money
                 cents={overview.netWorthCents}
                 size="lg"
                 className="text-3xl font-semibold"
                 tone={overview.netWorthCents < 0 ? "out" : undefined}
-              />
+              /> : <p className="text-2xl font-semibold">Total incompleto</p>}
             </div>
 
             <ul className="space-y-2.5 text-[0.8125rem]">
-              <Row label="Disponível em contas" value={overview.availableCents} />
+              <Row label="Disponível em contas" value={overview.availableCents} incomplete={overview.totalIncomplete} />
               <Row label="Guardado em metas" value={overview.savedInGoalsCents} />
               <Row label="Dívidas" value={-overview.debtBalanceCents} negative />
             </ul>
 
             <p className="muted mt-4 text-xs leading-relaxed">
-              Consolidação baseada exclusivamente nos registros do sistema.
+              {overview.totalIncomplete ? "Total incompleto: falta snapshot bancário de uma ou mais contas integradas." : "Consolidação baseada em saldos manuais e snapshots bancários disponíveis."}
             </p>
           </Card>
 
@@ -123,20 +125,22 @@ function Row({
   label,
   value,
   negative,
+  incomplete,
 }: {
   label: string;
   value: number;
   negative?: boolean;
+  incomplete?: boolean;
 }) {
   return (
     <li className="flex items-baseline justify-between gap-3">
       <span className="muted">{label}</span>
-      <Money
+      {incomplete && label === "Disponível em contas" ? <span className="text-xs font-medium">Total incompleto</span> : <Money
         cents={value}
         size="sm"
         className="font-semibold"
         tone={negative && value !== 0 ? "out" : undefined}
-      />
+      />}
     </li>
   );
 }

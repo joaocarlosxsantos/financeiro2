@@ -23,6 +23,9 @@ type Account = {
   incomeCents: number;
   expenseCents: number;
   transactionCount: number;
+  financeMode?: string;
+  bankBalanceCents?: number | null;
+  bankBalanceAt?: string | null;
 };
 
 const ICONS: Record<string, LucideIcon> = {
@@ -85,41 +88,41 @@ function Row({ account }: { account: Account }) {
         </div>
 
         <div className="text-right">
-          <Money
+          {account.financeMode === "integracao" && account.bankBalanceCents === null ? <span className="text-sm font-medium">Indisponível</span> : <Money
             cents={account.balanceCents}
             size="md"
             className="text-base font-semibold"
             tone={negativo ? "out" : undefined}
-          />
-          <p className="muted text-xs">saldo atual</p>
+          />}
+          <p className="muted text-xs">{account.financeMode === "integracao" ? `snapshot Pluggy${account.bankBalanceAt ? ` · ${formatDate(account.bankBalanceAt.slice(0, 10))}` : " indisponível"}` : "saldo atual"}</p>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-        <span className="muted">
+        {account.financeMode === "manual" ? <span className="muted">
           Inicial {formatCents(account.openingBalanceCents)}
           {account.openingBalanceDate ? ` em ${formatDate(account.openingBalanceDate)}` : ""}
-        </span>
-        <span className="muted">
+        </span> : null}
+        {account.financeMode === "manual" ? <span className="muted">
           + {formatCents(account.incomeCents)} entraram · − {formatCents(account.expenseCents)}{" "}
           saíram
-        </span>
+        </span> : null}
         {saved ? (
           <span className="inline-flex items-center gap-1 text-[var(--text-in)]">
             <Check className="size-3.5" />
             salvo
           </span>
         ) : null}
-        <button
+        {account.financeMode === "manual" ? <button
           type="button"
           onClick={() => setEditing((v) => !v)}
           className="ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
         >
           {editing ? "Fechar" : "Ajustar saldo inicial"}
-        </button>
+        </button> : null}
       </div>
 
-      {editing ? (
+      {editing && account.financeMode === "manual" ? (
         <form
           className="mt-3 grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
           action={(formData) => {

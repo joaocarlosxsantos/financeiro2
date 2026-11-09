@@ -4,7 +4,6 @@ import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, users } from "@/db/schema";
 import { signIn, signOut } from "@/lib/auth";
