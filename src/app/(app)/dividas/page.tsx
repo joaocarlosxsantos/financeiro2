@@ -38,7 +38,7 @@ export default async function DebtsPage() {
       />
 
       {!overview.debts.length ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Card className="p-0">
             <EmptyState
               icon={TrendingDown}
@@ -52,8 +52,8 @@ export default async function DebtsPage() {
           </Card>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
-          <div className="space-y-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0 space-y-4">
             <Card>
               <CardHeader
                 title="O tamanho do buraco"

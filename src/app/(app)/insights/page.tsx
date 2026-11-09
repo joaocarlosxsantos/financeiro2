@@ -160,7 +160,7 @@ export default async function InsightsPage({
               ) : null}
             </Card>
 
-            <Card>
+            <Card className="min-w-0">
               <CardHeader title="Fixo x variável" subtitle="Últimos 6 meses." />
               <FixedVariableChart data={series} />
               {withExpense.length > 1 ? (

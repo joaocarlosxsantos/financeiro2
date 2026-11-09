@@ -4,6 +4,10 @@
  * quando todos os valores da série são 0.
  */
 
+import { formatCents } from "@/lib/money";
+
+export const chartMoney = (value: number) => formatCents(value).replace("-", "−");
+
 export type FlowPointLike = {
   entrou?: number;
   saiu?: number;
@@ -59,4 +63,24 @@ export function getZeroSafeDomain(allZero: boolean): [number, number] | ["auto",
  */
 export function getZeroSafeTicks(allZero: boolean): number[] | undefined {
   return allZero ? [0, 1000] : undefined;
+}
+
+/** Integer-cent scale with a zero baseline and at most four horizontal ticks. */
+export function getMoneyScale(values: number[]): { domain: [number, number]; ticks: number[] } {
+  const finite = values.filter(Number.isFinite);
+  const min = Math.min(0, ...finite);
+  const max = Math.max(0, ...finite);
+  if (min === max) return { domain: [0, 1000], ticks: [0, 1000] };
+  const raw = (max - min) / 3;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  let step = Math.max(1, ([1, 2, 5, 10].find((factor) => factor * power >= raw) ?? 10) * power);
+  let low = Math.floor(min / step) * step;
+  let high = Math.ceil(max / step) * step;
+  while (Math.round((high - low) / step) > 3) {
+    step *= 2;
+    low = Math.floor(min / step) * step;
+    high = Math.ceil(max / step) * step;
+  }
+  const ticks = Array.from({ length: Math.round((high - low) / step) + 1 }, (_, i) => low + i * step);
+  return { domain: [low || 0, high], ticks };
 }

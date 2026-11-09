@@ -1,186 +1,84 @@
-"use client";
+﻿"use client";
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  ComposedChart,
-} from "recharts";
-import type { LabelProps } from "recharts";
+import { useId } from "react";
+import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SeriesPoint } from "@/server/queries";
 import { formatAxisCents } from "@/lib/money";
 import { MoneyTooltip } from "./tooltip";
 import { VIZ } from "./palette";
-import {
-  isSeriesDataEmpty,
-  getZeroSafeDomain,
-  getZeroSafeTicks,
-} from "./chart-utils";
+import { ChartFrame, useChartTouch } from "./chart-frame";
+import { getMoneyScale } from "./chart-utils";
 
-interface LastPointLabelProps extends Pick<LabelProps, "x" | "y" | "value" | "index"> {
-  dataLength?: number;
-  allZero?: boolean;
-}
+const axisTick = { fontSize: 12, fill: VIZ.axis, fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums" };
+const flowSeries = [
+  { key: "entrou", name: "Entrou", color: VIZ.in },
+  { key: "saiu", name: "Saiu (listrado)", color: VIZ.out, dash: "2 2" },
+  { key: "sobrou", name: "Sobrou (linha)", color: VIZ.balance },
+];
+const fixedSeries = [
+  { key: "fixo", name: "Fixo (listrado)", color: VIZ.fixed, dash: "2 2" },
+  { key: "variavel", name: "Variável", color: VIZ.variable },
+];
 
-function LastPointLabel({ x, y, value, index, dataLength, allZero }: LastPointLabelProps) {
-  if (allZero || index !== (dataLength ?? 0) - 1 || x == null || y == null || value == null) {
-    return null;
-  }
+export function MonthlyFlowChart({ data, loading = false }: { data: SeriesPoint[]; loading?: boolean }) {
+  const id = `flow-${useId()}`;
+  const touch = useChartTouch(data.length, true);
+  const scale = getMoneyScale(data.flatMap((row) => [row.entrou, row.saiu, row.sobrou]));
+  const empty = !data.some((row) => row.entrou || row.saiu || row.sobrou);
   return (
-    <text
-      x={Number(x) + 6}
-      y={y}
-      fill="var(--text-brand)"
-      fontSize={11}
-      fontWeight={600}
-      fontFamily="var(--font-mono), monospace"
-      textAnchor="start"
-      dominantBaseline="central"
-    >
-      Sobrou {formatAxisCents(Number(value))}
-    </text>
-  );
-}
-
-/**
- * Entrou x saiu por mês, com a linha do que sobrou.
- * Um só eixo — as três séries são reais em BRL.
- * Gramática "caderno de contas": barras sem raio, linha sem pontos,
- * rótulo direto no último ponto (sem legenda genérica).
- */
-export function MonthlyFlowChart({ data }: { data: SeriesPoint[] }) {
-  const allZero = isSeriesDataEmpty(data);
-
-  return (
-    <div className="relative h-56 min-w-0 w-full max-w-full overflow-hidden md:h-72">
+    <ChartFrame title="Entradas, saídas e saldo mensal" data={data} series={flowSeries} empty={empty} loading={loading} interaction={touch}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <ComposedChart
-          data={data}
-          margin={{ top: 12, right: 88, bottom: 0, left: -8 }}
-          barGap={2}
-        >
-          <CartesianGrid stroke="var(--line)" strokeWidth={1} vertical={false} />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
-          />
-          <YAxis
-            domain={getZeroSafeDomain(allZero)}
-            ticks={getZeroSafeTicks(allZero)}
-            tickFormatter={(v) => formatAxisCents(Number(v))}
-            tickLine={false}
-            axisLine={false}
-            width={72}
-            tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
-          />
-          <Tooltip content={<MoneyTooltip />} cursor={{ fill: "var(--line)", opacity: 0.15 }} />
-          <Bar dataKey="entrou" name="Entrou" fill={VIZ.in} maxBarSize={26} />
-          <Bar dataKey="saiu" name="Saiu" fill={VIZ.out} maxBarSize={26} />
-          <Line
-            type="monotone"
-            dataKey="sobrou"
-            name="Sobrou"
-            stroke={VIZ.balance}
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, fill: VIZ.balance, stroke: "var(--surface)", strokeWidth: 2 }}
-            label={(props: LastPointLabelProps) => (
-              <LastPointLabel {...props} dataLength={data.length} allZero={allZero} />
-            )}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-
-      {allZero ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] shadow-xs">
-            Sem dados no período
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** Barras empilhadas de fixo x variável — hachura fina para fixo e barras sem raio. */
-export function FixedVariableChart({ data }: { data: SeriesPoint[] }) {
-  const allZero = isSeriesDataEmpty(data);
-
-  return (
-    <div className="relative h-56 min-w-0 w-full max-w-full overflow-hidden">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barGap={6} barCategoryGap="30%" accessibilityLayer>
           <defs>
-            <pattern
-              id="hatch-fixed"
-              width="6"
-              height="6"
-              patternTransform="rotate(45)"
-              patternUnits="userSpaceOnUse"
-            >
-              <rect width="6" height="6" fill="var(--surface-2)" />
-              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--text-brand)" strokeWidth={1.2} />
+            <pattern id={id} width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <rect width="6" height="6" fill={VIZ.out} />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--surface)" strokeWidth={1.5} />
             </pattern>
           </defs>
-          <CartesianGrid stroke="var(--line)" strokeWidth={1} vertical={false} />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
-          />
-          <YAxis
-            domain={getZeroSafeDomain(allZero)}
-            ticks={getZeroSafeTicks(allZero)}
-            tickFormatter={(v) => formatAxisCents(Number(v))}
-            tickLine={false}
-            axisLine={false}
-            width={72}
-            tick={{ fontSize: 11, fill: "var(--text-muted)", fontFamily: "var(--font-mono)" }}
-          />
-          <Tooltip content={<MoneyTooltip />} cursor={{ fill: "var(--line)", opacity: 0.15 }} />
-          <Legend
-            verticalAlign="top"
-            align="left"
-            height={32}
-            iconType="rect"
-            iconSize={10}
-            wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)", opacity: 0.85 }}
-          />
-          <Bar
-            dataKey="fixo"
-            stackId="g"
-            name="Gasto fixo"
-            fill="url(#hatch-fixed)"
-            stroke="var(--text-brand)"
-            strokeWidth={0.5}
-            maxBarSize={30}
-          />
-          <Bar
-            dataKey="variavel"
-            stackId="g"
-            name="Gasto variável"
-            fill={VIZ.variable}
-            maxBarSize={30}
-          />
+          <CartesianGrid stroke={VIZ.grid} strokeWidth={1} strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={12} tick={axisTick} />
+          <YAxis domain={scale.domain} ticks={scale.ticks} tickFormatter={(value) => formatAxisCents(Number(value)).replace("-", "−")} tickLine={false} axisLine={false} width={76} tick={axisTick} />
+          <Tooltip active={touch.active === undefined ? undefined : false} position={{ x: 0, y: 0 }} isAnimationActive={false} wrapperStyle={{ maxWidth: "100%" }} content={<MoneyTooltip />} cursor={{ stroke: VIZ.axis, strokeWidth: 1 }} />
+          <Bar dataKey="entrou" name="Entrou" fill={VIZ.in} maxBarSize={12} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+            {data.map((row, index) => <Cell key={row.key} className={index === data.length - 1 ? "opacity-100" : "dark:opacity-55"} />)}
+          </Bar>
+          <Bar dataKey="saiu" name="Saiu" fill={`url(#${id})`} maxBarSize={12} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+            {data.map((row, index) => <Cell key={row.key} className={index === data.length - 1 ? "opacity-100" : "dark:opacity-55"} />)}
+          </Bar>
+          <Line type="monotone" dataKey="sobrou" name="Sobrou" stroke={VIZ.balance} strokeWidth={1.75} strokeLinecap="round" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+}
+
+export function FixedVariableChart({ data, loading = false }: { data: SeriesPoint[]; loading?: boolean }) {
+  const id = `fixed-${useId()}`;
+  const touch = useChartTouch(data.length, true);
+  const scale = getMoneyScale(data.map((row) => row.fixo + row.variavel));
+  const empty = !data.some((row) => row.fixo || row.variavel);
+  return (
+    <ChartFrame title="Gastos fixos e variáveis por mês" data={data} series={fixedSeries} empty={empty} loading={loading} interaction={touch}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} accessibilityLayer>
+          <defs>
+            <pattern id={id} width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <rect width="6" height="6" fill={VIZ.fixed} />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--surface)" strokeWidth={1.5} />
+            </pattern>
+          </defs>
+          <CartesianGrid stroke={VIZ.grid} strokeWidth={1} strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={12} tick={axisTick} />
+          <YAxis domain={scale.domain} ticks={scale.ticks} tickFormatter={(value) => formatAxisCents(Number(value))} tickLine={false} axisLine={false} width={76} tick={axisTick} />
+          <Tooltip active={touch.active === undefined ? undefined : false} position={{ x: 0, y: 0 }} isAnimationActive={false} wrapperStyle={{ maxWidth: "100%" }} content={<MoneyTooltip />} cursor={{ stroke: VIZ.axis, strokeWidth: 1 }} />
+          <Bar dataKey="fixo" stackId="expenses" name="Gasto fixo" fill={`url(#${id})`} maxBarSize={12} isAnimationActive={false}>
+            {data.map((row, index) => <Cell key={row.key} className={index === data.length - 1 ? "opacity-100" : "dark:opacity-55"} />)}
+          </Bar>
+          <Bar dataKey="variavel" stackId="expenses" name="Gasto variável" fill={VIZ.variable} maxBarSize={12} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+            {data.map((row, index) => <Cell key={row.key} className={index === data.length - 1 ? "opacity-100" : "dark:opacity-55"} />)}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
-
-      {allZero ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] shadow-xs">
-            Sem dados no período
-          </span>
-        </div>
-      ) : null}
-    </div>
+    </ChartFrame>
   );
 }

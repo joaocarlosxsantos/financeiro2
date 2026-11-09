@@ -32,7 +32,7 @@ export function ProjectionStudio({
   const months = years * 12;
 
   const { rows, finals } = useMemo(() => {
-    const label = (i: number) => (i % 12 === 0 ? `${i / 12}a` : "");
+    const label = (i: number) => (i === 0 ? "hoje" : i % 12 === 0 ? `${i / 12}a` : `${i}m`);
     const series = SCENARIOS.map((s) => ({
       ...s,
       points: projectBalance(startC, monthlyC, s.rate, months, label),
@@ -62,8 +62,8 @@ export function ProjectionStudio({
   const earnings = realistic - invested;
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
-      <div className="space-y-4">
+    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader title="Seus números" subtitle="Preenchemos com o que já sabemos sobre você." />
           <div className="space-y-4">
@@ -101,7 +101,7 @@ export function ProjectionStudio({
         </Hint>
       </div>
 
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader
             title={`Patrimônio projetado em ${years} ano${years === 1 ? "" : "s"}`}

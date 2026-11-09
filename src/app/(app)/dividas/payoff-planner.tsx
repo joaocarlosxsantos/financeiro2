@@ -2,22 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Award, CalendarCheck } from "lucide-react";
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
-import { MoneyTooltip } from "@/components/charts/tooltip";
+import { ProjectionChart } from "@/components/charts/projection-chart";
 import { VIZ } from "@/components/charts/palette";
-import { formatAxisCents, formatCents, parseMoneyToCents } from "@/lib/money";
+import { formatCents, parseMoneyToCents } from "@/lib/money";
 import { compareStrategies, type DebtInput, type PayoffResult } from "@/lib/debts";
 import { cn } from "@/lib/cn";
 
@@ -99,55 +89,17 @@ export function PayoffPlanner({
 
       {!impossible ? (
         <>
-          <div className="mt-5 h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
-                <CartesianGrid stroke={VIZ.grid} vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={32}
-                  tick={{ fontSize: 11, fill: "currentColor", opacity: 0.65 }}
-                />
-                <YAxis
-                  tickFormatter={(v) => formatAxisCents(Number(v))}
-                  tickLine={false}
-                  axisLine={false}
-                  width={76}
-                  tick={{ fontSize: 11, fill: "currentColor", opacity: 0.6 }}
-                />
-                <Tooltip content={<MoneyTooltip />} />
-                <Legend
-                  verticalAlign="top"
-                  align="left"
-                  height={32}
-                  iconType="circle"
-                  iconSize={8}
-                  itemSorter={() => 0}
-                  wrapperStyle={{ fontSize: 12, opacity: 0.85 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="avalanche"
-                  name="Avalanche"
-                  stroke={AVALANCHE_COLOR}
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="snowball"
-                  name="Bola de neve"
-                  stroke={SNOWBALL_COLOR}
-                  strokeWidth={2}
-                  strokeDasharray="5 4"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="mt-5 min-w-0 max-w-full">
+            <ProjectionChart
+              title="Saldo devedor: avalanche e bola de neve"
+              data={chartData}
+              area={false}
+              series={[
+                { key: "avalanche", name: "Avalanche", color: AVALANCHE_COLOR },
+                { key: "snowball", name: "Bola de neve", color: SNOWBALL_COLOR, dash: "4 4" },
+              ]}
+            />
           </div>
-
           <div className="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2">
             <Hint tone={interestSavedCents > 0 ? "info" : "good"}>
               {interestSavedCents > 0 ? (

@@ -5,6 +5,7 @@ import {
   isProjectionDataEmpty,
   getZeroSafeDomain,
   getZeroSafeTicks,
+  getMoneyScale,
 } from "./chart-utils";
 
 test("isSeriesDataEmpty detecta dados zerados ou vazios", () => {
@@ -35,6 +36,18 @@ test("isSeriesDataEmpty detecta dados zerados ou vazios", () => {
     ]),
     false,
   );
+});
+
+test("escala monetária contém zero, negativos e extremos sem mais de quatro ticks", () => {
+  for (const values of [[], [0], [1, 2], [100, 200], [-200, -100], [-105, 107], [-2000000000, 1900000000], [NaN, Infinity, 99]]) {
+    const { domain, ticks } = getMoneyScale(values);
+    assert.ok(domain[0] <= 0 && domain[1] >= 0 && domain[1] > domain[0]);
+    assert.ok(ticks.length >= 2 && ticks.length <= 4);
+    assert.ok(ticks.every(Number.isInteger));
+    for (const value of values.filter(Number.isFinite)) {
+      assert.ok(value >= domain[0] && value <= domain[1]);
+    }
+  }
 });
 
 test("isProjectionDataEmpty detecta dados de projecao zerados", () => {

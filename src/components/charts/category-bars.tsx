@@ -1,69 +1,41 @@
-import { formatCents, pct } from "@/lib/money";
+﻿import { formatCents, pct } from "@/lib/money";
 import type { CategorySlice } from "@/server/queries";
+import { CHART_CATEGORY_PALETTE } from "./palette";
 
-/**
- * Ranking de gastos por categoria.
- * Barras horizontais com nome e valor rotulados — a identidade vem do texto,
- * a cor é só apoio (nunca a única forma de distinguir).
- */
-export function CategoryBars({ slices, limit = 8 }: { slices: CategorySlice[]; limit?: number }) {
-  const total = slices.reduce((acc, s) => acc + s.totalCents, 0);
-  const top = slices.slice(0, limit);
-  const rest = slices.slice(limit);
-  const restTotal = rest.reduce((acc, s) => acc + s.totalCents, 0);
-
-  const rows = restTotal
-    ? [
-        ...top,
-        {
-          id: "outras",
-          name: `Outras ${rest.length} categorias`,
-          color: "var(--text-muted)",
-          nature: "VARIABLE" as const,
-          totalCents: restTotal,
-        },
-      ]
-    : top;
-
-  const max = Math.max(...rows.map((r) => r.totalCents), 1);
+/** Ranked, directly labelled bars: names and ranks carry meaning without color. */
+export function CategoryBars({ slices, limit = 5, loading = false }: { slices: CategorySlice[]; limit?: number; loading?: boolean }) {
+  if (loading || !slices.some((row) => row.totalCents > 0)) {
+    return <p role="status" aria-busy={loading} className="flex h-56 items-center justify-center px-4 text-center text-sm text-[var(--text-muted)]">{loading ? "Carregando categorias…" : "Sem despesas no período"}</p>;
+  }
+  const sorted = slices.filter((row) => row.totalCents > 0).toSorted((a, b) => b.totalCents - a.totalCents);
+  const total = sorted.reduce((sum, row) => sum + row.totalCents, 0);
+  const count = Math.max(1, Math.min(5, Math.floor(limit) || 5));
+  const rows = sorted.slice(0, count);
+  const rest = sorted.slice(count);
+  if (rest.length) rows.push({ id: "chart-others", name: `Outras ${rest.length} categorias`, color: "", nature: "VARIABLE", totalCents: rest.reduce((sum, row) => sum + row.totalCents, 0) });
+  const max = Math.max(...rows.map((row) => row.totalCents));
 
   return (
-    <ol className="space-y-3" role="list">
-      {rows.map((row, idx) => (
-        <li key={row.id}>
-          <div className="mb-1 flex items-baseline justify-between gap-3 text-[0.8125rem]">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="tnum font-mono text-xs text-[var(--text-muted)] w-4 shrink-0 text-right select-none">
-                {idx + 1}.
+    <figure className="min-w-0 w-full" aria-label={`Despesas por categoria: ${formatCents(total)} no total.`}>
+      <ol className="space-y-4" role="list">
+        {rows.map((row, index) => (
+          <li key={row.id}>
+            <div className="mb-2 flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
+              <span className="min-w-0 break-words font-medium">
+                <span className="tnum mr-2 text-[var(--text-muted)]">{index + 1}.</span>
+                {row.name}{row.nature === "FIXED" ? " · fixo" : ""}
               </span>
-              <span className="truncate font-medium text-[var(--text)]">{row.name}</span>
-              <span
-                className={
-                  row.nature === "FIXED"
-                    ? "shrink-0 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wider text-[var(--text-muted)] ring-1 ring-[var(--line)]"
-                    : "hidden"
-                }
-              >
-                fixo
+              <span className="tnum flex flex-wrap gap-x-3 gap-y-1">
+                <span className="font-medium">{formatCents(row.totalCents)}</span>
+                <span className="text-[var(--text-muted)]">{pct(row.totalCents, total)}%</span>
               </span>
-            </span>
-            <span className="flex items-baseline gap-2 shrink-0">
-              <span className="tnum font-mono font-semibold text-[var(--text)]">
-                {formatCents(row.totalCents)}
-              </span>
-              <span className="tnum font-mono text-[0.6875rem] text-[var(--text-muted)] w-9 text-right">
-                {pct(row.totalCents, total)}%
-              </span>
-            </span>
-          </div>
-          <div className="h-[2px] w-full overflow-hidden bg-[var(--surface-2)]">
-            <div
-              className="h-full motion-reduce:transition-none transition-[width] duration-300"
-              style={{ width: `${(row.totalCents / max) * 100}%`, background: row.color }}
-            />
-          </div>
-        </li>
-      ))}
-    </ol>
+            </div>
+            <div aria-hidden="true" className="h-2 w-full overflow-hidden rounded-sm bg-[var(--surface-2)]">
+              <div className="h-full rounded-sm" style={{ width: `${(row.totalCents / max) * 100}%`, background: CHART_CATEGORY_PALETTE[index] }} />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </figure>
   );
 }
