@@ -36,7 +36,7 @@ export function OnboardingCard({
       aria-label="Primeiros passos"
     >
       <div className="mb-2 flex items-center justify-between border-b border-[var(--line)] pb-1.5">
-        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <h2 className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">
           Primeiros passos
         </h2>
       </div>
@@ -45,7 +45,7 @@ export function OnboardingCard({
           <li key={s.title} className="flex items-center gap-3 py-2 first:pt-1 last:pb-0.5">
             <span
               className={cn(
-                "flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold",
+                "flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                 s.done
                   ? "bg-[var(--color-money-in-soft)] text-[var(--text-in)]"
                   : "bg-[var(--color-save-soft)] text-[var(--text-brand)]",

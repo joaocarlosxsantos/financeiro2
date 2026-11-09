@@ -209,10 +209,10 @@ function SplitDialogContent({
     preview.ok;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+        className="absolute inset-0 bg-black/50  transition-opacity"
         onClick={onClose}
         aria-hidden
       />
@@ -223,7 +223,7 @@ function SplitDialogContent({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="card relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow-overlay)]"
+        className="card sheet-glass rounded-b-none pb-[max(12px,env(safe-area-inset-bottom))] sm:rounded-b-2xl relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow-overlay)]"
       >
         {/* Cabeçalho */}
         <div className="flex items-start justify-between border-b border-[var(--line)] px-5 py-4">
@@ -247,7 +247,7 @@ function SplitDialogContent({
             type="button"
             aria-label="Fechar"
             onClick={onClose}
-            className="muted cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            className="min-h-11 min-w-11 muted cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
           >
             <X className="size-4" />
           </button>
@@ -257,7 +257,7 @@ function SplitDialogContent({
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {/* Modo de divisão */}
           <div>
-            <label className="muted mb-1.5 block text-xs font-semibold uppercase tracking-wider">
+            <label className="muted mb-1.5 block text-xs font-semibold tracking-normal">
               Modo de divisão
             </label>
             <div className="grid grid-cols-3 gap-1 rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--surface-2)] p-1 text-xs">
@@ -272,12 +272,12 @@ function SplitDialogContent({
                   key={m.key}
                   type="button"
                   onClick={() => setMode(m.key)}
-                  className={cn(
+                  className={["min-h-11 min-w-11", cn(
                     "cursor-pointer rounded-[var(--radius-xs)] py-1.5 font-medium transition-colors",
                     mode === m.key
                       ? "bg-[var(--surface)] text-[var(--text)] shadow-xs"
                       : "text-[var(--text-muted)] hover:text-[var(--text)]",
-                  )}
+                  )].filter(Boolean).join(" ")}
                 >
                   {m.label}
                 </button>
@@ -301,14 +301,14 @@ function SplitDialogContent({
           {/* Lista de pessoas */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="muted text-xs font-semibold uppercase tracking-wider">
+              <label className="muted text-xs font-semibold tracking-normal">
                 Outras pessoas ({people.length})
               </label>
               {people.length < 20 ? (
                 <button
                   type="button"
                   onClick={addPerson}
-                  className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-[var(--text-brand)] hover:underline"
+                  className="min-h-11 min-w-11 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-[var(--text-brand)] hover:underline"
                 >
                   <Plus className="size-3" />
                   Adicionar pessoa
@@ -325,45 +325,45 @@ function SplitDialogContent({
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
-                        <label className="muted mb-1 block text-[0.6875rem]">Nome</label>
-                        <input
+                        <label className="muted mb-1 block text-xs">Nome</label>
+                        <input aria-label="Ex.: Mariana"
                           type="text"
                           required
                           data-autofocus={idx === 0 ? "" : undefined}
                           value={p.name}
                           onChange={(e) => updatePerson(idx, { name: e.target.value })}
                           placeholder="Ex.: Mariana"
-                          className="input-base h-8 py-0 text-xs"
+                          className="min-h-12 min-w-0 max-w-full text-base! input-base h-8 py-0 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="muted mb-1 block text-[0.6875rem]">
+                        <label className="muted mb-1 block text-xs">
                           Telefone / WhatsApp (opcional)
                         </label>
-                        <input
+                        <input aria-label="(11) 99999-9999"
                           type="tel"
                           value={p.phone}
                           onChange={(e) => updatePerson(idx, { phone: e.target.value })}
                           placeholder="(11) 99999-9999"
-                          className="input-base h-8 py-0 text-xs"
+                          className="min-h-12 min-w-0 max-w-full text-base! input-base h-8 py-0 text-xs"
                         />
                       </div>
                     </div>
 
                     {mode === "VALUE" ? (
                       <div>
-                        <label className="muted mb-1 block text-[0.6875rem]">Valor (R$)</label>
+                        <label className="muted mb-1 block text-xs">Valor (R$)</label>
                         <div className="relative">
                           <span className="muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
                             R$
                           </span>
-                          <input
+                          <input aria-label="0,00"
                             type="text"
                             inputMode="decimal"
                             value={p.amount}
                             onChange={(e) => updatePerson(idx, { amount: e.target.value })}
                             placeholder="0,00"
-                            className="input-base tnum font-mono h-8 py-0 pl-8 text-xs"
+                            className="min-h-12 min-w-0 max-w-full text-base! input-base tnum font-mono h-8 py-0 pl-8 text-xs"
                           />
                         </div>
                       </div>
@@ -371,15 +371,15 @@ function SplitDialogContent({
 
                     {mode === "PERCENT" ? (
                       <div>
-                        <label className="muted mb-1 block text-[0.6875rem]">Porcentagem (%)</label>
+                        <label className="muted mb-1 block text-xs">Porcentagem (%)</label>
                         <div className="relative">
-                          <input
+                          <input aria-label="Ex.: 50"
                             type="text"
                             inputMode="decimal"
                             value={p.percent}
                             onChange={(e) => updatePerson(idx, { percent: e.target.value })}
                             placeholder="Ex.: 50"
-                            className="input-base tnum font-mono h-8 py-0 pr-7 text-xs"
+                            className="min-h-12 min-w-0 max-w-full text-base! input-base tnum font-mono h-8 py-0 pr-7 text-xs"
                           />
                           <span className="muted pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs">
                             %
@@ -394,7 +394,7 @@ function SplitDialogContent({
                       type="button"
                       aria-label={`Remover pessoa ${idx + 1}`}
                       onClick={() => removePerson(idx)}
-                      className="muted mt-5 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                      className="min-h-11 min-w-11 muted mt-5 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -451,7 +451,7 @@ function SplitDialogContent({
         </div>
 
         {/* Rodapé com Ações */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface-2)]/50 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface-2)] px-5 py-3">
           <div>
             {hasExistingSplits ? (
               <Button
@@ -460,7 +460,7 @@ function SplitDialogContent({
                 size="sm"
                 disabled={pending}
                 onClick={handleClear}
-                className="cursor-pointer text-[var(--text-out)] hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                className="min-h-11 min-w-11 cursor-pointer text-[var(--text-out)] hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 Remover divisão
               </Button>
@@ -474,7 +474,7 @@ function SplitDialogContent({
               size="sm"
               disabled={pending}
               onClick={onClose}
-              className="cursor-pointer"
+              className="min-h-11 min-w-11 cursor-pointer"
             >
               Cancelar
             </Button>
@@ -483,7 +483,7 @@ function SplitDialogContent({
               size="sm"
               disabled={pending || !isFormValid}
               onClick={handleSave}
-              className="cursor-pointer"
+              className="min-h-11 min-w-11 cursor-pointer"
             >
               {pending ? "Salvando..." : "Salvar divisão"}
             </Button>

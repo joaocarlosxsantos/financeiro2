@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+const SheetCloseContext = createContext<() => void>(() => {});
+export const useSheetClose = () => useContext(SheetCloseContext);
 
 /** Native modal semantics keep the background inert and keyboard focus inside. */
 export function Sheet({ title, children, onClose }: {
@@ -105,7 +108,9 @@ export function Sheet({ title, children, onClose }: {
             </button>
           </div>
         </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pb-2">{children}</div>
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pb-2">
+          <SheetCloseContext.Provider value={() => requestCloseRef.current()}>{children}</SheetCloseContext.Provider>
+        </div>
       </section>
     </dialog>
   );

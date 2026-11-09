@@ -62,14 +62,14 @@ export function TransactionComposer({
               setKind(k);
               setCategoryId("");
             }}
-            className={cn(
+            className={["min-h-11 min-w-11", cn(
               "cursor-pointer rounded-[var(--radius-button)] py-2 text-[0.8125rem] font-medium transition-colors",
               kind === k
                 ? k === "EXPENSE"
-                  ? "bg-[var(--btn-out)] text-white shadow-sm"
-                  : "bg-[var(--btn-in)] text-white shadow-sm"
+                  ? "bg-[var(--btn-out)] text-[var(--on-acento)] shadow-sm"
+                  : "bg-[var(--btn-in)] text-[var(--on-acento)] shadow-sm"
                 : "hover:bg-[var(--surface)] text-[var(--text-muted)]",
-            )}
+            )].filter(Boolean).join(" ")}
           >
             {k === "EXPENSE" ? "Saiu" : "Entrou"}
           </button>
@@ -79,12 +79,12 @@ export function TransactionComposer({
       <input type="hidden" name="nature" value={nature} />
 
       <Field label="Descrição">
-        <Input name="description" required placeholder="Ex.: Mercado do mês" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="description" required placeholder="Ex.: Mercado do mês" />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label={installments > 1 ? "Valor total (R$)" : "Valor (R$)"}>
-          <Input
+          <Input className="min-h-12 min-w-0 max-w-full text-base!"
             name="amount"
             inputMode="decimal"
             required
@@ -94,12 +94,12 @@ export function TransactionComposer({
           />
         </Field>
         <Field label="Data">
-          <Input name="date" type="date" required defaultValue={todayRef()} />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="date" type="date" required defaultValue={todayRef()} />
         </Field>
       </div>
 
       <Field label="Categoria">
-        <Select name="categoryId" value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
+        <Select className="min-h-12 min-w-0 max-w-full text-base!" name="categoryId" value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
           <option value="">Sem categoria</option>
           {visible.map((c) => (
             <option key={c.id} value={c.id}>
@@ -117,10 +117,10 @@ export function TransactionComposer({
                 key={n}
                 type="button"
                 onClick={() => setNature(n)}
-                className={cn(
+                className={["min-h-11 min-w-11", cn(
                   "cursor-pointer rounded-[var(--radius-button)] py-2 text-[0.8125rem] font-medium transition-colors",
                   nature === n ? "bg-[var(--surface)] shadow-sm ring-1 ring-[var(--border)]" : "muted",
-                )}
+                )].filter(Boolean).join(" ")}
               >
                 {n === "FIXED" ? "Fixo" : "Variável"}
               </button>
@@ -138,7 +138,7 @@ export function TransactionComposer({
               : "Para compras parceladas no cartão."
           }
         >
-          <Select
+          <Select className="min-h-12 min-w-0 max-w-full text-base!"
             value={String(installments)}
             onChange={(e) => setInstallments(Number(e.target.value))}
           >
@@ -163,7 +163,7 @@ export function TransactionComposer({
       <input type="hidden" name="installments" value={kind === "EXPENSE" ? installments : 1} />
 
       <Field label="Conta">
-        <Select name="accountId" required defaultValue={accounts[0]?.id ?? ""}>
+        <Select className="min-h-12 min-w-0 max-w-full text-base!" name="accountId" required defaultValue={accounts[0]?.id ?? ""}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -178,7 +178,7 @@ export function TransactionComposer({
         </p>
       ) : null}
 
-      <SubmitButton className="w-full" pendingLabel="Lançando...">
+      <SubmitButton className="min-h-11 min-w-11 w-full" pendingLabel="Lançando...">
         {installments > 1 && kind === "EXPENSE"
           ? `Lançar ${installments} parcelas`
           : "Adicionar lançamento"}

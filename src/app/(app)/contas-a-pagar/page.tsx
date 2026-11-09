@@ -44,7 +44,7 @@ export default async function BillsPage({
 
       <BillsPendingBanner monthRef={ref} monthName={monthLabel(ref)} pending={rulesStatus.pending} />
 
-      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <BillsTabs
             activeTab={activeTab}
@@ -58,7 +58,7 @@ export default async function BillsPage({
             id={activeTab === "contas" ? "tabpanel-contas" : "tabpanel-compartilhadas"}
             aria-labelledby={activeTab === "contas" ? "tab-contas" : "tab-compartilhadas"}
           >
-            <Card className="p-0">
+            <Card className="min-w-0 p-0">
               {bills.length ? (
                 <BillList
                   bills={bills}
@@ -78,18 +78,18 @@ export default async function BillsPage({
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <Card>
-            <h2 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Nova conta</h2>
+          <Card className="min-w-0">
+            <h2 className="mb-3 text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">Nova conta</h2>
             <NewBillForm groupings={groupings} monthRef={ref} />
           </Card>
 
-          <Card>
-            <h2 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Contas recorrentes</h2>
+          <Card className="min-w-0">
+            <h2 className="mb-3 text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">Contas recorrentes</h2>
             <BillRulesManager rules={rulesStatus.rules} monthRef={ref} />
           </Card>
 
-          <Card>
-            <h2 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Agrupamentos</h2>
+          <Card className="min-w-0">
+            <h2 className="mb-3 text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">Agrupamentos</h2>
             <BillGroupingsManager groupings={groupings} />
           </Card>
         </div>

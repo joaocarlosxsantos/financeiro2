@@ -66,7 +66,7 @@ export function BillRulesManager({ rules, monthRef }: { rules: PlainBillRule[]; 
               type="button"
               title={r.active ? "Pausar" : "Retomar"}
               onClick={() => start(async () => void (await toggleBillRule(r.id, !r.active)))}
-              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface-2)]"
+              className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface-2)]"
             >
               {r.active ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
             </button>
@@ -74,7 +74,7 @@ export function BillRulesManager({ rules, monthRef }: { rules: PlainBillRule[]; 
               type="button"
               title="Excluir regra"
               onClick={() => void remove(r.id, r.name)}
-              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+              className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-3.5" />
             </button>

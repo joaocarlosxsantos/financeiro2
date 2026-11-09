@@ -127,7 +127,7 @@ export default async function DashboardPage({
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <span className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            <span className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
               Sobrou no mês
             </span>
             <div className="mt-1 flex flex-wrap items-baseline gap-3">
@@ -146,9 +146,9 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 divide-x divide-[var(--border)] border-t border-[var(--border)] pt-4">
+        <div className="mt-5 grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[var(--border)]">
           <div className="min-w-0 pr-2 sm:pr-4">
-            <p className="text-[0.75rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Entrou
             </p>
             <div className="mt-1">
@@ -165,7 +165,7 @@ export default async function DashboardPage({
           </div>
 
           <div className="min-w-0 px-2 sm:px-4">
-            <p className="text-[0.75rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Saiu
             </p>
             <div className="mt-1">
@@ -182,7 +182,7 @@ export default async function DashboardPage({
           </div>
 
           <div className="min-w-0 pl-2 sm:pl-4">
-            <p className="text-[0.75rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Fixo
             </p>
             <div className="mt-1">
@@ -214,7 +214,7 @@ export default async function DashboardPage({
         <AlertsCard alerts={alerts} />
 
         {!hasData ? (
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <EmptyState
               icon={Receipt}
               title={`Nenhum lançamento em ${monthLabel(ref)}`}
@@ -223,7 +223,7 @@ export default async function DashboardPage({
                 <div className="flex flex-wrap justify-center gap-2">
                   <Link
                     href="/lancamentos"
-                    className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+                    className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-[var(--on-acento)] hover:bg-brand-700"
                   >
                     Adicionar lançamento
                   </Link>
@@ -242,7 +242,7 @@ export default async function DashboardPage({
 
       {/* 3. Gráfico 6m + ranking categorias lado-a-lado (largura maior) */}
       <section className="mt-6 grid min-w-0 w-full max-w-full grid-cols-1 gap-4 overflow-x-hidden lg:grid-cols-12" aria-label="Fluxo e categorias">
-        <Card className="min-w-0 max-w-full overflow-x-hidden lg:col-span-7">
+        <Card className="min-w-0 min-w-0 max-w-full overflow-x-hidden lg:col-span-7">
           <CardHeader
             title="Entrou, saiu e sobrou nos últimos 6 meses"
             subtitle="Histórico de entradas, saídas e saldo líquido mês a mês."
@@ -250,7 +250,7 @@ export default async function DashboardPage({
           <MonthlyFlowChart data={series} />
         </Card>
 
-        <Card className="min-w-0 max-w-full overflow-x-hidden lg:col-span-5">
+        <Card className="min-w-0 min-w-0 max-w-full overflow-x-hidden lg:col-span-5">
           <CardHeader
             title={`Para onde foi o dinheiro em ${monthLabel(ref)}`}
             subtitle="Ranking das categorias que mais pesaram no mês."
@@ -267,7 +267,7 @@ export default async function DashboardPage({
 
       {cardBreakdown.length ? (
         <section className="mt-4" aria-label="Gastos no cartão de crédito">
-          <Card>
+          <Card className="min-w-0">
             <CardHeader
               title={`Gastos no cartão em ${monthLabel(ref)}`}
               subtitle="Demonstrativo de compras faturadas no cartão de crédito."
@@ -303,7 +303,7 @@ export default async function DashboardPage({
 
             <div className="border-t border-[var(--border)] pt-6">
               <div className="mb-4 border-b border-[var(--line)] pb-3">
-                <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                   Gasto fixo x variável
                 </h2>
                 <p className="muted mt-1 text-[0.8125rem] leading-snug">
@@ -336,7 +336,7 @@ export default async function DashboardPage({
             <div id="reserva-emergencia" className="scroll-mt-20">
               <div className="mb-4 flex items-start justify-between gap-4 border-b border-[var(--line)] pb-3">
                 <div className="min-w-0">
-                  <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                     Reserva de emergência
                   </h2>
                   <p className="muted mt-1 text-[0.8125rem] leading-snug">
@@ -391,7 +391,7 @@ export default async function DashboardPage({
             {/* 50/30/20 */}
             <div className="border-t border-[var(--border)] pt-6">
               <div className="mb-4 border-b border-[var(--line)] pb-3">
-                <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                   Como dividir a sua renda
                 </h2>
                 <p className="muted mt-1 text-[0.8125rem] leading-snug">

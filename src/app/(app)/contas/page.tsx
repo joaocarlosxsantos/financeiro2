@@ -19,7 +19,7 @@ export default async function AccountsPage() {
     return (
       <>
         <PageHeader title="Saldos" description="Saldos atuais e patrimônio líquido consolidado." />
-        <Card className="p-0">
+        <Card className="min-w-0 p-0">
           <EmptyState
             icon={Wallet}
             title="Nenhuma conta cadastrada"
@@ -27,7 +27,7 @@ export default async function AccountsPage() {
             action={
               <Link
                 href="/configuracoes"
-                className="inline-flex h-10 items-center rounded-[var(--radius-button)] bg-[var(--btn-brand)] px-4 text-sm font-medium text-white hover:opacity-90"
+                className="inline-flex h-10 items-center rounded-[var(--radius-button)] bg-[var(--btn-brand)] px-4 text-sm font-medium text-[var(--on-acento)] hover:opacity-90"
               >
                 Ir para configurações
               </Link>
@@ -45,7 +45,7 @@ export default async function AccountsPage() {
         description="Saldos atuais e patrimônio líquido consolidado."
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {overview.needsOpeningBalance ? (
             <Hint tone="tip" title="Informe o saldo inicial">
@@ -55,9 +55,9 @@ export default async function AccountsPage() {
           ) : null}
           {overview.totalIncomplete ? <Hint tone="info" title="Total incompleto">Há conta integrada sem snapshot bancário disponível. O consolidado fica incompleto até a próxima sincronização.</Hint> : null}
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <div className="border-b border-[var(--line)] px-5 py-4">
-              <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                 Saldos
               </h2>
               <p className="muted mt-0.5 text-xs">Contas manuais usam saldo inicial e movimentações; contas integradas usam snapshot bancário.</p>
@@ -86,7 +86,7 @@ export default async function AccountsPage() {
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <Card>
+          <Card className="min-w-0">
             <CardHeader
               title="Patrimônio líquido"
               subtitle="Total em contas menos saldo de dívidas."
@@ -94,8 +94,8 @@ export default async function AccountsPage() {
             <div className="mb-4">
               {!overview.totalIncomplete ? <Money
                 cents={overview.netWorthCents}
-                size="lg"
-                className="text-3xl font-semibold"
+                size="hero"
+                className="font-medium"
                 tone={overview.netWorthCents < 0 ? "out" : undefined}
               /> : <p className="text-2xl font-semibold">Total incompleto</p>}
             </div>

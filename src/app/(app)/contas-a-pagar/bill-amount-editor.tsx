@@ -58,7 +58,7 @@ export function BillAmountEditor({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Valor total">
-          <Input
+          <Input className="min-h-12 min-w-0 max-w-full text-base!"
             name="total"
             inputMode="decimal"
             placeholder="0,00"
@@ -69,7 +69,7 @@ export function BillAmountEditor({
         </Field>
 
         <Field label="Dia de vencimento" hint="Opcional (1 a 31).">
-          <Input
+          <Input className="min-h-12 min-w-0 max-w-full text-base!"
             name="dueDay"
             type="number"
             min={1}
@@ -87,18 +87,18 @@ export function BillAmountEditor({
             <button
               type="button"
               onClick={() => setMode("EQUAL")}
-              className={`flex-1 rounded-[var(--radius-button)] border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
+              className={["min-h-11 min-w-11", `flex-1 rounded-[var(--radius-button)] border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
                 mode === "EQUAL" ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]" : "border-[var(--border)] text-[var(--text-muted)]"
-              }`}
+              }`].filter(Boolean).join(" ")}
             >
               Dividir igualmente
             </button>
             <button
               type="button"
               onClick={() => setMode("MANUAL")}
-              className={`flex-1 rounded-[var(--radius-button)] border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
+              className={["min-h-11 min-w-11", `flex-1 rounded-[var(--radius-button)] border px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
                 mode === "MANUAL" ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]" : "border-[var(--border)] text-[var(--text-muted)]"
-              }`}
+              }`].filter(Boolean).join(" ")}
             >
               Dividir manualmente
             </button>
@@ -114,7 +114,7 @@ export function BillAmountEditor({
                     aria-label={`Valor de ${p.name}`}
                     inputMode="decimal"
                     placeholder="0,00"
-                    className="w-28"
+                    className="min-h-12 min-w-0 max-w-full text-base! w-28"
                     value={amounts[p.id] ?? ""}
                     onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: e.target.value }))}
                   />
@@ -143,10 +143,10 @@ export function BillAmountEditor({
       {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
 
       <div className="flex gap-2">
-        <SubmitButton size="sm" pendingLabel="Salvando...">
+        <SubmitButton className="min-h-11 min-w-11" size="sm" pendingLabel="Salvando...">
           Salvar
         </SubmitButton>
-        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        <Button className="min-h-11 min-w-11" type="button" size="sm" variant="ghost" onClick={onDone}>
           Cancelar
         </Button>
       </div>

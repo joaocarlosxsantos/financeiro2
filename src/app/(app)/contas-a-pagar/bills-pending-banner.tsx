@@ -45,7 +45,7 @@ export function BillsPendingBanner({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <Button
+        <Button className="min-h-11 min-w-11"
           size="sm"
           disabled={busy}
           onClick={() =>

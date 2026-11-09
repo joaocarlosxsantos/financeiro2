@@ -32,7 +32,7 @@ export function HealthCard({
     <section aria-label="Saúde financeira" className={cn("h-full", className)}>
       <div className="mb-4 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
         <div>
-          <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
             Saúde financeira
           </h2>
           <p className="text-xs font-medium" style={{ color: textColor }}>
@@ -63,12 +63,12 @@ export function HealthCard({
                 ) : (
                   <span className="font-medium text-[var(--text)]">{part.label}</span>
                 )}
-                <span className="tnum font-mono text-[var(--text-muted)] text-[0.6875rem]">
+                <span className="tnum font-mono text-[var(--text-muted)] text-xs">
                   {part.score}/{part.max}
                 </span>
               </div>
               {isReserve ? (
-                <p className="text-[0.6875rem] text-[var(--text-muted)] leading-snug">
+                <p className="text-xs text-[var(--text-muted)] leading-snug">
                   {part.score} de {part.max} pts. Detalhes em{" "}
                   <a href="#reserva-emergencia" className="font-medium text-[var(--text-brand)] underline">
                     Reserva de emergência
@@ -82,7 +82,7 @@ export function HealthCard({
                     color={color}
                     height={4}
                   />
-                  <p className="mt-1 text-[0.6875rem] text-[var(--text-muted)] leading-snug">{part.hint}</p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)] leading-snug">{part.hint}</p>
                 </>
               )}
             </li>

@@ -151,7 +151,7 @@ export function BillItem({
               aria-label={isPaid ? `Marcar ${bill.name} como pendente` : `Marcar ${bill.name} como paga`}
               disabled={pending}
               onClick={togglePaid}
-              className="group flex min-h-[44px] min-w-0 cursor-pointer items-center gap-2 -ml-2 pl-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)]/60 focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
+              className="min-h-11 min-w-11 group flex min-h-[44px] min-w-0 cursor-pointer items-center gap-2 -ml-2 pl-2 rounded-lg text-left transition-colors hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
             >
               <span
                 className={`flex size-5 shrink-0 items-center justify-center rounded border transition-colors ${
@@ -223,7 +223,7 @@ export function BillItem({
           aria-expanded={open}
           aria-label={open ? "Fechar detalhes" : "Ver detalhes"}
           onClick={() => setOpen((v) => !v)}
-          className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface-2)]"
+          className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface-2)]"
         >
           {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
         </button>
@@ -231,7 +231,7 @@ export function BillItem({
           type="button"
           aria-label={`Excluir ${bill.name}`}
           onClick={() => void remove()}
-          className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+          className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-3.5" />
         </button>
@@ -255,7 +255,7 @@ export function BillItem({
                   onChange={(e) =>
                     start(async () => void (await updateBillGrouping(bill.id, e.target.value || null)))
                   }
-                  className="pl-7"
+                  className="min-h-12 min-w-0 max-w-full text-base! pl-7"
                 >
                   <option value="">Sem agrupamento</option>
                   {groupings.map((g) => (
@@ -326,7 +326,7 @@ export function BillItem({
                           disabled
                           aria-label={`Sem telefone válido para ${p.name}`}
                           title="Cadastre um telefone pra habilitar o WhatsApp"
-                          className="muted shrink-0 cursor-not-allowed rounded-lg p-1.5 opacity-40"
+                          className="min-h-11 min-w-11 muted shrink-0 cursor-not-allowed rounded-lg p-1.5 opacity-40"
                         >
                           <MessageCircle className="size-3.5" />
                         </button>
@@ -336,7 +336,7 @@ export function BillItem({
                       type="button"
                       aria-label={`Remover ${p.name}`}
                       onClick={() => start(async () => void (await removeBillParticipant(p.id)))}
-                      className="muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                      className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -377,16 +377,16 @@ function AddParticipantForm({ billId }: { billId: string }) {
         aria-label="Nome"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="h-8 flex-1 text-[0.8125rem]"
+        className="min-h-12 min-w-0 max-w-full text-base! h-8 flex-1 text-[0.8125rem]"
       />
       <Input
         placeholder="Telefone (opcional)"
         aria-label="Telefone (opcional)"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
-        className="h-8 flex-1 min-w-0 text-[0.8125rem]"
+        className="min-h-12 min-w-0 max-w-full text-base! h-8 flex-1 min-w-0 text-[0.8125rem]"
       />
-      <Button
+      <Button className="min-h-11 min-w-11"
         type="button"
         size="sm"
         variant="outline"

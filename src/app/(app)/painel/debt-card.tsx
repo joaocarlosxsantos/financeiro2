@@ -30,7 +30,7 @@ export function DebtCard({
           <TrendingDown className="size-4" />
         </span>
         <div>
-          <p className="text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+          <p className="text-xs font-medium tracking-normal text-[var(--text-muted)]">
             Saldo devedor
           </p>
           <p className="tnum font-mono text-base font-semibold tracking-tight text-[var(--text)]">
@@ -40,7 +40,7 @@ export function DebtCard({
       </div>
 
       <div className="border-l border-[var(--line)] pl-4">
-        <p className="text-[0.6875rem] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+        <p className="text-xs font-medium tracking-normal text-[var(--text-muted)]">
           Juros por mês
         </p>
         <p className="tnum font-mono text-base font-semibold text-[var(--text-out)]">

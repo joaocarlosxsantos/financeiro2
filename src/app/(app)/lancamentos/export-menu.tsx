@@ -36,7 +36,7 @@ export function ExportMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[0.8125rem] font-medium hover:bg-[var(--surface-2)]"
+        className="min-h-11 min-w-11 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[0.8125rem] font-medium hover:bg-[var(--surface-2)]"
       >
         <Download className="size-3.5" />
         Exportar
@@ -53,7 +53,7 @@ export function ExportMenu() {
             <FileText className="muted size-4" />
             <span>
               CSV
-              <span className="muted block text-[0.6875rem]">Lançamentos filtrados</span>
+              <span className="muted block text-xs">Lançamentos filtrados</span>
             </span>
           </a>
           <a
@@ -64,7 +64,7 @@ export function ExportMenu() {
             <FileSpreadsheet className="muted size-4" />
             <span>
               Excel (.xlsx)
-              <span className="muted block text-[0.6875rem]">Lançamentos filtrados</span>
+              <span className="muted block text-xs">Lançamentos filtrados</span>
             </span>
           </a>
           <a
@@ -75,7 +75,7 @@ export function ExportMenu() {
             <FileText className="muted size-4" />
             <span>
               Relatório em PDF
-              <span className="muted block text-[0.6875rem]">Resumo do mês, não do filtro</span>
+              <span className="muted block text-xs">Resumo do mês, não do filtro</span>
             </span>
           </a>
         </div>

@@ -135,7 +135,7 @@ function TransferDialogContent({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 transition-opacity"
@@ -156,7 +156,7 @@ function TransferDialogContent({
         )}
       >
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 bg-[var(--surface-2)]/60">
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 bg-[var(--surface-2)]">
           <div className="flex items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] text-[var(--text-brand)]">
               <ArrowLeftRight className="size-4" />
@@ -169,7 +169,7 @@ function TransferDialogContent({
             type="button"
             aria-label="Fechar"
             onClick={onClose}
-            className="cursor-pointer rounded-[var(--radius-xs)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            className="min-h-11 min-w-11 cursor-pointer rounded-[var(--radius-xs)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
           >
             <X className="size-4" />
           </button>
@@ -182,7 +182,7 @@ function TransferDialogContent({
           </p>
 
           <Field label="Conta de origem">
-            <Select
+            <Select className="min-h-12 min-w-0 max-w-full text-base!"
               data-autofocus
               value={fromAccountId}
               onChange={(e) => {
@@ -200,7 +200,7 @@ function TransferDialogContent({
           </Field>
 
           <Field label="Conta de destino">
-            <Select
+            <Select className="min-h-12 min-w-0 max-w-full text-base!"
               value={toAccountId}
               onChange={(e) => {
                 setToAccountId(e.target.value);
@@ -218,7 +218,7 @@ function TransferDialogContent({
 
           <div className="grid grid-cols-2 gap-2.5">
             <Field label="Valor (R$)">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="amount"
                 inputMode="decimal"
                 required
@@ -232,7 +232,7 @@ function TransferDialogContent({
             </Field>
 
             <Field label="Data">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="date"
                 type="date"
                 required
@@ -243,7 +243,7 @@ function TransferDialogContent({
           </div>
 
           <Field label="Observação (opcional)">
-            <Input
+            <Input className="min-h-12 min-w-0 max-w-full text-base!"
               name="note"
               placeholder="Ex.: Reserva de emergência"
               value={note}
@@ -269,7 +269,7 @@ function TransferDialogContent({
               size="sm"
               disabled={pending}
               onClick={onClose}
-              className="cursor-pointer"
+              className="min-h-11 min-w-11 cursor-pointer"
             >
               Cancelar
             </Button>
@@ -277,7 +277,7 @@ function TransferDialogContent({
               type="submit"
               size="sm"
               disabled={pending}
-              className="cursor-pointer"
+              className="min-h-11 min-w-11 cursor-pointer"
             >
               {pending ? "Transferindo..." : "Transferir"}
             </Button>

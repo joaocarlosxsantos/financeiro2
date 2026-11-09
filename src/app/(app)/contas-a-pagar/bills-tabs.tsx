@@ -34,9 +34,9 @@ export function BillsTabs({
         href={getTabHref("contas")}
         role="tab"
         aria-selected={activeTab === "contas"}
-        className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-button)] px-3 text-sm transition-all focus-visible:ring-2 focus-visible:ring-[var(--acento)] ${
+        className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-button)] px-3 text-sm transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--acento)] ${
           activeTab === "contas"
-            ? "bg-[var(--surface)] font-semibold text-[var(--text)] shadow-xs"
+            ? "bg-[var(--surface-3)] font-semibold text-[var(--text)]"
             : "font-medium text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >
@@ -58,9 +58,9 @@ export function BillsTabs({
         href={getTabHref("compartilhadas")}
         role="tab"
         aria-selected={activeTab === "compartilhadas"}
-        className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-button)] px-3 text-sm transition-all focus-visible:ring-2 focus-visible:ring-[var(--acento)] ${
+        className={`flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-[var(--radius-button)] px-3 text-sm transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--acento)] ${
           activeTab === "compartilhadas"
-            ? "bg-[var(--surface)] font-semibold text-[var(--text)] shadow-xs"
+            ? "bg-[var(--surface-3)] font-semibold text-[var(--text)]"
             : "font-medium text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >

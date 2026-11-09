@@ -207,7 +207,7 @@ export default async function TransactionsPage({
         expenseCents={recurring.pendingExpenseCents}
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <Filters categories={plainCategories} />
 
@@ -224,7 +224,7 @@ export default async function TransactionsPage({
             </Hint>
           ) : null}
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             {plain.length ? (
               <TransactionList
                 transactions={plain}
@@ -244,7 +244,7 @@ export default async function TransactionsPage({
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <Card>
+          <Card className="min-w-0">
             <ul className="mb-4 border-b border-[var(--line)] pb-4 text-[0.8125rem]">
               <li className="flex items-baseline justify-between gap-3 py-1">
                 <span className="muted">Entrou</span>

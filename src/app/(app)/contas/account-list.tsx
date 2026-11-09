@@ -69,11 +69,7 @@ function Row({ account }: { account: Account }) {
     <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
       <div className="flex flex-wrap items-center gap-3">
         <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-button)]"
-          style={{
-            background: `color-mix(in srgb, ${account.color} 14%, transparent)`,
-            color: account.color,
-          }}
+          className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text)]"
         >
           <Icon className="size-4.5" />
         </span>
@@ -116,7 +112,7 @@ function Row({ account }: { account: Account }) {
         {account.financeMode === "manual" ? <button
           type="button"
           onClick={() => setEditing((v) => !v)}
-          className="ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
+          className="min-h-11 min-w-11 ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
         >
           {editing ? "Fechar" : "Ajustar saldo inicial"}
         </button> : null}
@@ -124,7 +120,7 @@ function Row({ account }: { account: Account }) {
 
       {editing && account.financeMode === "manual" ? (
         <form
-          className="mt-3 grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="mt-3 grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_1fr_auto] sm:items-end"
           action={(formData) => {
             start(async () => {
               await saveOpeningBalance({
@@ -139,16 +135,16 @@ function Row({ account }: { account: Account }) {
           }}
         >
           <Field label="Saldo inicial (R$)">
-            <Input
+            <Input className="min-h-12 min-w-0 max-w-full text-base!"
               name="amount"
               inputMode="decimal"
               defaultValue={formatCentsPlain(account.openingBalanceCents)}
             />
           </Field>
           <Field label="Nesta data" hint="Lançamentos anteriores param de contar.">
-            <Input name="date" type="date" defaultValue={account.openingBalanceDate ?? ""} />
+            <Input className="min-h-12 min-w-0 max-w-full text-base!" name="date" type="date" defaultValue={account.openingBalanceDate ?? ""} />
           </Field>
-          <Button type="submit" size="sm" disabled={pending}>
+          <Button className="min-h-11 min-w-11" type="submit" size="sm" disabled={pending}>
             Salvar
           </Button>
         </form>

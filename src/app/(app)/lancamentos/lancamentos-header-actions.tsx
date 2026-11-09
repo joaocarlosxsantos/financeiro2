@@ -37,7 +37,7 @@ export function LancamentosHeaderActions({
         variant="outline"
         size="sm"
         onClick={() => setTransferOpen(true)}
-        className="cursor-pointer gap-1.5 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--color-save-soft)]"
+        className="min-h-11 min-w-11 cursor-pointer gap-1.5 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--color-save-soft)]"
       >
         <ArrowLeftRight className="size-3.5" />
         <span className="hidden sm:inline">Nova transferência</span>
@@ -49,7 +49,7 @@ export function LancamentosHeaderActions({
         variant="outline"
         size="sm"
         onClick={scrollToComposer}
-        className="cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)] lg:hidden"
+        className="min-h-11 min-w-11 cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)] lg:hidden"
         title="Novo lançamento"
       >
         <Plus className="size-3.5" />

@@ -15,7 +15,7 @@ export function AlertsCard({ alerts, className }: { alerts: Alert[]; className?:
       aria-label="Avisos importantes"
     >
       <div className="mb-2 flex items-center justify-between border-b border-[var(--line)] pb-1.5">
-        <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <h2 className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">
           Avisos ({alerts.length})
         </h2>
       </div>

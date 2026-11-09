@@ -50,18 +50,18 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
       <input type="hidden" name="month" value={monthRef.month} />
 
       <Field label="Nome">
-        <Input name="name" required placeholder="Ex.: Conta de luz" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required placeholder="Ex.: Conta de luz" />
       </Field>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Repetição">
-          <Select value={recurring ? "1" : "0"} onChange={(e) => setRecurring(e.target.value === "1")}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" value={recurring ? "1" : "0"} onChange={(e) => setRecurring(e.target.value === "1")}>
             <option value="1">Repete todo mês</option>
             <option value="0">Única deste mês ({monthRefToParam(monthRef)})</option>
           </Select>
         </Field>
         <Field label="Tipo">
-          <Select name="type" value={type} onChange={(e) => setType(e.target.value as "INDIVIDUAL" | "GROUP")}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="type" value={type} onChange={(e) => setType(e.target.value as "INDIVIDUAL" | "GROUP")}>
             <option value="INDIVIDUAL">Individual</option>
             <option value="GROUP">Em grupo (dividir)</option>
           </Select>
@@ -77,7 +77,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
               : "Opcional — preencha agora ou depois na lista."
           }
         >
-          <Input name="total" inputMode="decimal" placeholder="0,00" />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="total" inputMode="decimal" placeholder="0,00" />
         </Field>
       ) : (
         <p className="muted -mt-1 text-xs leading-relaxed">
@@ -86,12 +86,12 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
       )}
 
       <Field label="Dia de vencimento" hint="Opcional — dia do mês em que a conta vence (1 a 31).">
-        <Input name="dueDay" type="number" min={1} max={31} placeholder="Ex.: 10" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="dueDay" type="number" min={1} max={31} placeholder="Ex.: 10" />
       </Field>
 
       {groupings.length ? (
         <Field label="Agrupamento" hint="Opcional — só para organizar.">
-          <Select name="groupingId" defaultValue="">
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="groupingId" defaultValue="">
             <option value="">Sem agrupamento</option>
             {groupings.map((g) => (
               <option key={g.id} value={g.id}>
@@ -107,14 +107,14 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
           <p className="text-[0.8125rem] font-medium">Quem divide essa conta</p>
           {rows.map((key, i) => (
             <div key={key} className="flex items-center gap-2">
-              <Input name="participantName" placeholder="Nome" required className="min-w-0 flex-1" />
-              <Input name="participantPhone" placeholder="Telefone (opcional)" className="w-28 sm:w-36" />
+              <Input name="participantName" placeholder="Nome" required className="min-h-12 min-w-0 max-w-full text-base! min-w-0 flex-1" />
+              <Input name="participantPhone" placeholder="Telefone (opcional)" className="min-h-12 min-w-0 max-w-full text-base! w-28 sm:w-36" />
               {rows.length > 1 ? (
                 <button
                   type="button"
                   aria-label="Remover pessoa"
                   onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}
-                  className="muted shrink-0 cursor-pointer rounded-lg p-2 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                  className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-2 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -124,7 +124,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
           <button
             type="button"
             onClick={() => setRows((r) => [...r, (r.at(-1) ?? 0) + 1])}
-            className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
+            className="min-h-11 min-w-11 inline-flex cursor-pointer items-center gap-1.5 text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
           >
             <Plus className="size-3.5" />
             Adicionar pessoa
@@ -133,7 +133,7 @@ export function NewBillForm({ groupings, monthRef }: { groupings: PlainGrouping[
       ) : null}
 
       {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
-      <SubmitButton size="sm" className="w-full" pendingLabel="Criando...">
+      <SubmitButton size="sm" className="min-h-11 min-w-11 w-full" pendingLabel="Criando...">
         Criar conta
       </SubmitButton>
     </form>

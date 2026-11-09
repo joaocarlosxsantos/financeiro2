@@ -102,7 +102,7 @@ export function BillList({
                 type="button"
                 onClick={() => toggleGroup(groupKey)}
                 aria-expanded={!isGroupCollapsed}
-                className="flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-3 bg-[var(--surface-2)] px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)]/80 focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
+                className="min-h-11 min-w-11 flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-3 bg-[var(--surface-2)] px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {group.color ? (
@@ -111,7 +111,7 @@ export function BillList({
                       style={{ backgroundColor: group.color }}
                     />
                   ) : null}
-                  <p className="truncate text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <p className="truncate text-xs font-semibold tracking-normal text-[var(--text-muted)]">
                     {group.name}
                   </p>
                   <span className="shrink-0 text-xs text-[var(--text-muted)]">
@@ -196,9 +196,9 @@ export function BillList({
   return (
     <div>
       {/* Cabeçalho de resumo da aba: total a receber pendente e já recebido */}
-      <div className="grid grid-cols-2 gap-3 border-b border-[var(--border)] bg-[var(--surface-2)]/40 p-3 sm:p-4">
+      <div className="grid grid-cols-2 gap-3 border-b border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
         <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <p className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">
             A Receber (Pendente)
           </p>
           <p className="tnum mt-1 font-mono text-base font-bold text-[var(--text-out)] sm:text-lg">
@@ -206,7 +206,7 @@ export function BillList({
           </p>
         </div>
         <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <p className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">
             Já Recebido
           </p>
           <p className="tnum mt-1 font-mono text-base font-bold text-[var(--text-in)] sm:text-lg">
@@ -267,7 +267,7 @@ export function BillList({
                 type="button"
                 onClick={() => toggleGroup(groupKey)}
                 aria-expanded={!isGroupCollapsed}
-                className="flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-3 bg-[var(--surface-2)] px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)]/80 focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
+                className="min-h-11 min-w-11 flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-3 bg-[var(--surface-2)] px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {group.color ? (
@@ -276,7 +276,7 @@ export function BillList({
                       style={{ backgroundColor: group.color }}
                     />
                   ) : null}
-                  <p className="truncate text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <p className="truncate text-xs font-semibold tracking-normal text-[var(--text-muted)]">
                     {group.name}
                   </p>
                   <span className="shrink-0 text-xs text-[var(--text-muted)]">
@@ -322,12 +322,12 @@ export function BillList({
                     return (
                       <div key={person.key}>
                         {/* Cabeçalho da Pessoa (acordeão por pessoa, alvo >= 44px) */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 transition-colors hover:bg-[var(--surface-2)]/60 sm:px-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 transition-colors hover:bg-[var(--surface-2)] sm:px-4">
                           <button
                             type="button"
                             aria-expanded={!isPersonCollapsed}
                             onClick={() => togglePerson(pCompositeKey)}
-                            className="flex min-h-[44px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
+                            className="min-h-11 min-w-11 flex min-h-[44px] min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
                           >
                             <User className="size-4 shrink-0 text-[var(--text-brand)]" />
                             <p className="break-words text-[0.875rem] font-medium text-[var(--text)]">
@@ -401,7 +401,7 @@ export function BillList({
                                   disabled
                                   aria-label={`Sem telefone para WhatsApp de ${person.displayName}`}
                                   title="Cadastre um telefone em uma das contas para habilitar o WhatsApp"
-                                  className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] opacity-50 cursor-not-allowed"
+                                  className="min-h-11 min-w-11 inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] opacity-50 cursor-not-allowed"
                                 >
                                   <MessageCircle className="size-3.5" />
                                   <span className="hidden sm:inline">WhatsApp</span>
@@ -426,7 +426,7 @@ export function BillList({
                                   : `Recolher contas de ${person.displayName}`
                               }
                               onClick={() => togglePerson(pCompositeKey)}
-                              className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
+                              className="min-h-11 min-w-11 flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-md p-1 text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--acento)]"
                             >
                               {isPersonCollapsed ? (
                                 <ChevronDown className="size-4" />
@@ -439,7 +439,7 @@ export function BillList({
 
                         {/* Conteúdo expandido da pessoa: lista de contas com toggle de pagamento individual */}
                         {!isPersonCollapsed ? (
-                          <div className="border-t border-[var(--border)] bg-[var(--surface-2)]/20 pl-2 sm:pl-4">
+                          <div className="border-t border-[var(--border)] bg-[var(--surface-2)] pl-2 sm:pl-4">
                             <ul className="divide-y divide-[var(--border)]">
                               {sortParticipantShares(person.shares).map((share) => (
                                 <BillItem

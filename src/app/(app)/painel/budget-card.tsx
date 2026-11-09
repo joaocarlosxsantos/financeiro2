@@ -22,7 +22,7 @@ export function BudgetCard({
     return (
       <section aria-label="Orçamento do mês" className={cn("h-full", className)}>
         <div className="mb-3 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-          <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
             Orçamento do mês
           </h2>
           <Link
@@ -54,7 +54,7 @@ export function BudgetCard({
   return (
     <section aria-label="Orçamento do mês" className={cn("h-full", className)}>
       <div className="mb-3 flex items-baseline justify-between border-b border-[var(--line)] pb-2">
-        <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
           Orçamento do mês
         </h2>
         <Link
@@ -104,7 +104,7 @@ export function BudgetCard({
       )}
 
       {overview.unbudgetedSpentCents > 0 ? (
-        <p className="mt-3 flex items-center gap-1.5 text-[0.6875rem] text-[var(--text-muted)]">
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
           <AlertTriangle className="size-3 shrink-0 text-[var(--text-warn)]" />
           <span>{formatCents(overview.unbudgetedSpentCents)} em categorias sem limite.</span>
         </p>

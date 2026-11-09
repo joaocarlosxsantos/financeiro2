@@ -49,7 +49,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
               type="button"
               aria-label={`Arquivar ${g.name}`}
               onClick={() => void remove(g.id, g.name)}
-              className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+              className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -65,7 +65,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
               <Field label="Nome">
-                <Input name="name" required placeholder="Ex.: Casa" />
+                <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required placeholder="Ex.: Casa" />
               </Field>
             </div>
             <Field label="Cor">
@@ -74,14 +74,14 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
           </div>
           {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
-            <SubmitButton size="sm">Adicionar</SubmitButton>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+            <SubmitButton className="min-h-11 min-w-11" size="sm">Adicionar</SubmitButton>
+            <Button className="min-h-11 min-w-11" type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
           </div>
         </form>
       ) : (
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Button className="min-h-11 min-w-11" variant="outline" size="sm" onClick={() => setOpen(true)}>
           <Plus className="size-4" />
           Novo agrupamento
         </Button>

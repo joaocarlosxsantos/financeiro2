@@ -19,7 +19,7 @@ export function ReceivablesSection({
         <div>
           <div className="flex items-center gap-1.5">
             <UserCheck className="size-3.5 text-[var(--text-muted)]" />
-            <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
               A receber
             </h2>
           </div>

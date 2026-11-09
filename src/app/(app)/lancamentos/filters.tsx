@@ -35,11 +35,11 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         className="relative min-w-44 flex-1"
       >
         <Search className="muted pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-        <input
+        <input aria-label="Buscar descrição..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar descrição..."
-          className="input-base h-12 py-0 pl-8 text-base md:h-8 md:min-h-8 md:text-xs"
+          className="min-h-12 min-w-0 max-w-full text-base! input-base h-12 py-0 pl-8 text-base md:h-8 md:min-h-8 md:text-xs"
         />
       </form>
 
@@ -72,7 +72,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         value={cat}
         onChange={(e) => update("cat", e.target.value)}
         aria-label="Filtrar por categoria"
-        className="input-base h-12 w-auto max-w-full cursor-pointer py-0 text-base md:h-8 md:min-h-8 md:text-xs"
+        className="min-h-12 min-w-0 max-w-full text-base! input-base h-12 w-auto max-w-full cursor-pointer py-0 text-base md:h-8 md:min-h-8 md:text-xs"
       >
         <option value="">Todas as categorias</option>
         <option value="NONE">Sem categoria</option>
@@ -87,7 +87,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
         <button
           type="button"
           onClick={() => router.push(pathname)}
-          className="muted inline-flex h-11 cursor-pointer items-center gap-1 rounded-[var(--radius-button)] px-3 text-sm hover:bg-[var(--surface-2)] md:h-8 md:px-2 md:text-xs"
+          className="min-h-11 min-w-11 muted inline-flex h-11 cursor-pointer items-center gap-1 rounded-[var(--radius-button)] px-3 text-sm hover:bg-[var(--surface-2)] md:h-8 md:px-2 md:text-xs"
         >
           <X className="size-3" />
           Limpar
@@ -110,12 +110,12 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={cn(
+      className={["min-h-11 min-w-11", cn(
         "h-11 cursor-pointer rounded-[var(--radius-button)] border px-3 text-sm font-medium transition-colors md:h-8 md:px-2.5 md:text-xs",
         active
           ? "border-[var(--text-brand)] bg-[var(--color-save-soft)] text-[var(--text-brand)]"
           : "border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-muted)]",
-      )}
+      )].filter(Boolean).join(" ")}
     >
       {children}
     </button>

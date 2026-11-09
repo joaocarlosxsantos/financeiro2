@@ -15,6 +15,8 @@ import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Sheet } from "@/components/sheet";
+import { Field, Select } from "@/components/ui/field";
 import { SplitDialog } from "./split-dialog";
 import { TransferDialog } from "./transfer-dialog";
 import type { PlainAccount, PlainCategory, PlainTransaction } from "./types";
@@ -40,15 +42,15 @@ export function TransactionList({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-2.5">
-        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <span className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">
           Lançamentos
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           {transactions.some((transaction) => !transaction.categoryId && !transaction.isTransfer) ? (
             <Button type="button" variant="outline" size="sm" disabled={recategorizing} onClick={() => startRecategorizing(async () => {
               const result = await recategorizeUncategorizedTransactions();
               setCategorizationMessage("error" in result ? String(result.error ?? "Falha ao categorizar.") : `${result.updated} categorizados · ${result.counts.user} por seu histórico, ${result.counts.rule + result.counts.dictionary} por regras`);
-            })} className="text-xs">
+            })} className="min-h-11 min-w-11 text-xs">
               {recategorizing ? "Categorizando…" : "Categorizar não categorizados"}
             </Button>
           ) : null}
@@ -61,7 +63,7 @@ export function TransactionList({
               composer?.focus();
               composer?.scrollIntoView({ behavior: "smooth", block: "center" });
             }}
-            className="cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+            className="min-h-11 min-w-11 cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
           >
             <Plus className="size-3.5" />
             Novo lançamento
@@ -72,7 +74,7 @@ export function TransactionList({
             variant="outline"
             size="sm"
             onClick={() => setTransferOpen(true)}
-            className="cursor-pointer gap-1.5 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--color-save-soft)]"
+            className="min-h-11 min-w-11 cursor-pointer gap-1.5 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--color-save-soft)]"
           >
             <ArrowLeftRight className="size-3.5" />
             Nova transferência
@@ -91,7 +93,7 @@ export function TransactionList({
             );
           return (
             <div key={date}>
-              <div className="flex items-center justify-between border-y border-[var(--line)] bg-[var(--surface-2)]/80 px-4 py-1.5 text-xs font-medium text-[var(--text-muted)]">
+              <div className="flex items-center justify-between border-y border-[var(--line)] bg-[var(--surface-2)] px-4 py-1.5 text-xs font-medium text-[var(--text-muted)]">
                 <span className="capitalize">{formatDayMonth(date)}</span>
                 <span
                   className={cn(
@@ -145,6 +147,8 @@ function Row({
 }) {
   const [pending, start] = useTransition();
   const [splitOpen, setSplitOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categoryError, setCategoryError] = useState("");
   const confirm = useConfirm();
   const options = categories.filter((c) => c.kind === tx.kind);
   const canSplit = tx.kind === "EXPENSE" && !tx.isTransfer;
@@ -175,114 +179,15 @@ function Row({
     ? tx.transferRoute
     : tx.accountName;
 
-  return (
-    <li className={cn("flex items-center gap-3 px-4 py-2.5 transition-opacity", pending && "opacity-50")}>
-      <span
-        className="size-2 shrink-0 rounded-full"
-        style={{ background: tx.categoryColor ?? "var(--text-muted)" }}
-        aria-hidden
-      />
+  function chooseCategory(value: string) {
+    setCategoryError("");
+    start(async () => {
+      try { await setTransactionCategory(tx.id, value || null); }
+      catch { setCategoryError("Não foi possível alterar a categoria. Tente novamente."); }
+    });
+  }
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[0.8125rem] font-medium text-[var(--text)]">{tx.description}</p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
-          {!tx.isTransfer || tx.origin === "PLUGGY" ? (
-            <select
-              aria-label="Categoria"
-              value={tx.categoryId ?? ""}
-              disabled={pending}
-              onChange={(e) =>
-                start(async () => {
-                  await setTransactionCategory(tx.id, e.target.value || null);
-                })
-              }
-              className="cursor-pointer rounded-[var(--radius-xs)] border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--text)]"
-            >
-              <option value="">Sem categoria</option>
-              {options.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
-
-          {tx.externalStatus === "PENDING" ? <span className="rounded bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-warn)]">provisório · pendente</span> : null}
-
-          {tx.isTransfer ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]"
-              title="Movimento entre contas suas — fora dos totais"
-            >
-              <ArrowLeftRight className="size-3" />
-              transferência
-            </span>
-          ) : tx.kind === "EXPENSE" ? (
-            <span className="rounded-[var(--radius-xs)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.6875rem] ring-1 ring-[var(--border)] ring-inset">
-              {tx.nature === "FIXED" ? "fixo" : "variável"}
-            </span>
-          ) : null}
-          {tx.isCard && !tx.isTransfer ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-warn)]"
-              title="Compra no cartão — demonstrativo"
-            >
-              <CreditCard className="size-3" />
-              cartão
-            </span>
-          ) : null}
-          {tx.isCardPayment ? <span className="rounded bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]" title="Conta no cash; excluído do accrual">pagamento de fatura</span> : null}
-          {tx.possibleCardPayment ? <span className="muted text-[0.6875rem]" title="Mesmo valor e mês de uma compra no cartão; sugestão sem classificação automática">possível pagamento de fatura</span> : null}
-          {tx.origin && tx.origin !== "MANUAL" && !tx.isCard && tx.kind === "EXPENSE" ? <button type="button" disabled={pending} aria-pressed={Boolean(tx.isCardPayment)} onClick={() => start(async () => { await setTransactionCardPayment(tx.id, !tx.isCardPayment); })} className="cursor-pointer rounded border px-1.5 py-0.5 text-[0.6875rem] text-[var(--text-brand)] hover:bg-[var(--surface-2)]">{tx.isCardPayment ? "Desmarcar pagamento" : "Marcar pagamento"}</button> : null}
-          {tx.installmentNumber && tx.installmentTotal ? (
-            <span
-              className="rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]"
-              title="Compra parcelada"
-            >
-              parcela {tx.installmentNumber}/{tx.installmentTotal}
-            </span>
-          ) : null}
-          {tx.recurringRuleId ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.6875rem] ring-1 ring-[var(--border)] ring-inset"
-              title="Gerado por uma recorrência"
-            >
-              <Repeat className="size-3" />
-              recorrente
-            </span>
-          ) : null}
-          {isSplit ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]"
-              title={tx.splits!.map((s) => `${s.name}: ${formatCents(s.amountCents)}`).join(", ")}
-            >
-              <Users className="size-3" />
-              dividido com {tx.splits!.length}
-            </span>
-          ) : null}
-          <span className="truncate text-[0.6875rem]">{displayName}</span>
-        </div>
-      </div>
-
-      <div className="shrink-0 text-right">
-        <span
-          className={cn(
-            "tnum font-mono block text-sm font-semibold",
-            valueColorClass,
-          )}
-        >
-          {valueSignal} {formatCents(tx.amountCents)}
-        </span>
-        {isSplit ? (
-          <span
-            className="tnum font-mono block text-[0.6875rem] text-[var(--text-muted)]"
-            title="Sua parte nesta despesa"
-          >
-            sua parte: {formatCents(tx.myShareCents ?? tx.amountCents)}
-          </span>
-        ) : null}
-      </div>
-
+  const rowActions = <>
       {canSplit ? (
         <button
           type="button"
@@ -298,10 +203,10 @@ function Row({
           }
           disabled={pending}
           onClick={() => setSplitOpen(true)}
-          className={cn(
+          className={["min-h-11 min-w-11", cn(
             "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
             isSplit ? "text-[var(--text-brand)]" : "text-[var(--text-muted)] hover:text-[var(--text)]",
-          )}
+          )].filter(Boolean).join(" ")}
         >
           <Users className="size-3.5" />
         </button>
@@ -326,10 +231,10 @@ function Row({
               await setTransactionTransfer(tx.id, !tx.isTransfer);
             })
           }
-          className={cn(
+          className={["min-h-11 min-w-11", cn(
             "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
             tx.isTransfer ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]",
-          )}
+          )].filter(Boolean).join(" ")}
         >
           <ArrowLeftRight className="size-3.5" />
         </button>
@@ -355,7 +260,7 @@ function Row({
             await deleteTransaction(tx.id);
           });
         }}
-        className="shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+        className="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-3.5" />
       </button> : <button
@@ -372,10 +277,120 @@ function Row({
           if (!ok) return;
           start(async () => { await deletePluggyTransaction({ transactionId: tx.id, confirmation: "EXCLUIR LANCAMENTO PLUGGY" }); });
         }}
-        className="shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+        className="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-4" />
       </button>}
+
+  </>;
+
+  return (
+    <li className={cn("flex min-h-14 flex-wrap items-center gap-2 px-4 py-3 transition-opacity", pending && "opacity-50")}>
+      <span
+        className="hidden size-2 shrink-0 rounded-full md:block"
+        style={{ background: tx.categoryColor ?? "var(--text-muted)" }}
+        aria-hidden
+      />
+
+      <div className="min-w-0 flex-1">
+        <button type="button" onClick={() => setCategoryOpen(true)} className="min-h-11 max-w-full cursor-pointer text-left text-sm font-medium text-[var(--text)]" aria-label={`Ver ${tx.description}`}>
+          <span className="block line-clamp-2 break-words">{tx.description}</span><span className="block text-xs font-normal text-[var(--text-muted)] md:hidden">{tx.categoryName ?? "Sem categoria"}</span>
+        </button>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
+          {!tx.isTransfer || tx.origin === "PLUGGY" ? (
+            <select
+              aria-label="Categoria"
+              value={tx.categoryId ?? ""}
+              disabled={pending}
+              onChange={(e) => chooseCategory(e.target.value)}
+              className="hidden min-h-11 max-w-full cursor-pointer rounded-xl border bg-[var(--surface-2)] px-3 text-base md:block"
+            >
+              <option value="">Sem categoria</option>
+              {options.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+
+          {tx.externalStatus === "PENDING" ? <span className="rounded bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-warn)]">provisório · pendente</span> : null}
+
+          {tx.isTransfer ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]"
+              title="Movimento entre contas suas — fora dos totais"
+            >
+              <ArrowLeftRight className="size-3" />
+              transferência
+            </span>
+          ) : tx.kind === "EXPENSE" ? (
+            <span className="rounded-[var(--radius-xs)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs ring-1 ring-[var(--border)] ring-inset">
+              {tx.nature === "FIXED" ? "fixo" : "variável"}
+            </span>
+          ) : null}
+          {tx.isCard && !tx.isTransfer ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-warn)]"
+              title="Compra no cartão — demonstrativo"
+            >
+              <CreditCard className="size-3" />
+              cartão
+            </span>
+          ) : null}
+          {tx.isCardPayment ? <span className="rounded bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]" title="Conta no cash; excluído do accrual">pagamento de fatura</span> : null}
+          {tx.possibleCardPayment ? <span className="muted text-xs" title="Mesmo valor e mês de uma compra no cartão; sugestão sem classificação automática">possível pagamento de fatura</span> : null}
+          {tx.origin && tx.origin !== "MANUAL" && !tx.isCard && tx.kind === "EXPENSE" ? <button type="button" disabled={pending} aria-pressed={Boolean(tx.isCardPayment)} onClick={() => start(async () => { await setTransactionCardPayment(tx.id, !tx.isCardPayment); })} className="min-h-11 min-w-11 cursor-pointer rounded border px-1.5 py-0.5 text-xs text-[var(--text-brand)] hover:bg-[var(--surface-2)]">{tx.isCardPayment ? "Desmarcar pagamento" : "Marcar pagamento"}</button> : null}
+          {tx.installmentNumber && tx.installmentTotal ? (
+            <span
+              className="rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]"
+              title="Compra parcelada"
+            >
+              parcela {tx.installmentNumber}/{tx.installmentTotal}
+            </span>
+          ) : null}
+          {tx.recurringRuleId ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs ring-1 ring-[var(--border)] ring-inset"
+              title="Gerado por uma recorrência"
+            >
+              <Repeat className="size-3" />
+              recorrente
+            </span>
+          ) : null}
+          {isSplit ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]"
+              title={tx.splits!.map((s) => `${s.name}: ${formatCents(s.amountCents)}`).join(", ")}
+            >
+              <Users className="size-3" />
+              dividido com {tx.splits!.length}
+            </span>
+          ) : null}
+          <span className="truncate text-xs">{displayName}</span>
+        </div>
+      </div>
+
+      <div className="shrink-0 text-right">
+        <span
+          className={cn(
+            "tnum font-mono block text-sm font-semibold",
+            valueColorClass,
+          )}
+        >
+          {valueSignal} {formatCents(tx.amountCents)}
+        </span>
+        {isSplit ? (
+          <span
+            className="tnum font-mono block text-xs text-[var(--text-muted)]"
+            title="Sua parte nesta despesa"
+          >
+            sua parte: {formatCents(tx.myShareCents ?? tx.amountCents)}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="hidden items-center gap-2 md:flex">{rowActions}</div>
 
       {splitOpen ? (
         <SplitDialog
@@ -385,6 +400,19 @@ function Row({
           initialSplits={tx.splits}
         />
       ) : null}
+      {categoryError && <p role="alert" className="w-full text-sm text-[var(--text-out)]">{categoryError}</p>}
+      {categoryOpen && <Sheet title="Detalhes do lançamento" onClose={() => setCategoryOpen(false)}>
+        <p className="mb-3 break-words text-sm">{tx.description}</p>
+        <p className={`tnum mb-4 text-display ${valueColorClass}`}>{valueSignal} {formatCents(tx.amountCents)}</p>
+        {!tx.isTransfer || tx.origin === "PLUGGY" ? <Field label="Categoria">
+          <Select value={tx.categoryId ?? ""} disabled={pending} onChange={(e) => chooseCategory(e.target.value)}>
+            <option value="">Sem categoria</option>{options.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </Select>
+        </Field> : <p className="text-sm text-[var(--text-muted)]">Transferência entre contas.</p>}
+        {categoryError && <p role="alert" className="mt-3 text-sm text-[var(--text-out)]">{categoryError}</p>}
+        <div className="mt-4 flex flex-wrap gap-2" onClickCapture={() => setCategoryOpen(false)}>{rowActions}</div>
+        <Button type="button" className="mt-4 min-h-11 w-full" onClick={() => setCategoryOpen(false)}>Concluir</Button>
+      </Sheet>}
     </li>
   );
 }

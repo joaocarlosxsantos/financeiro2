@@ -30,7 +30,7 @@ export function Money({ cents, tone, size = "md", className }: MoneyProps) {
   return (
     <span
       className={cn(
-        "tnum mono inline-flex items-baseline",
+        "tnum mono inline-flex max-w-full items-baseline",
         SIZE_VARIANTS[size],
         toneClass,
         className,
@@ -39,12 +39,12 @@ export function Money({ cents, tone, size = "md", className }: MoneyProps) {
       <span className="sr-only">
         {isNegative ? `Menos ${formatCents(Math.abs(cents))}` : formatCents(cents)}
       </span>
-      <span aria-hidden="true" className="inline-flex items-baseline">
+      <span aria-hidden="true" className="inline-flex max-w-full flex-wrap items-baseline">
         {isNegative && <span className="mr-0.5 font-medium select-none">−</span>}
         <span className="mr-1 text-[0.5em] font-normal text-[var(--text-muted)] select-none">
           {parts.currency}
         </span>
-        <span className="font-semibold">{parts.integer}</span>
+        <span className="min-w-0 break-all font-semibold">{parts.integer}</span>
         <span className="text-[0.5em] font-normal text-[var(--text-muted)]">
           {`${parts.decimal}${parts.fraction}`}
         </span>

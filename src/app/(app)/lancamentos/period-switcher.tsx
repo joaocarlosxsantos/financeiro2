@@ -81,7 +81,7 @@ export function PeriodSwitcher({
           onClick={clearRange}
           aria-label="Voltar para visão por mês"
           title="Voltar para visão por mês"
-          className="muted inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-8"
+          className="min-h-11 min-w-11 muted inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-8"
         >
           <X className="size-4 md:size-3.5" />
         </button>
@@ -96,7 +96,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(-1)}
           aria-label="Mês anterior"
-          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
+          className="min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -107,7 +107,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(1)}
           aria-label="Próximo mês"
-          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
+          className="min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
         >
           <ChevronRight className="size-4" />
         </button>
@@ -118,7 +118,7 @@ export function PeriodSwitcher({
         onClick={() => setOpen((v) => !v)}
         aria-label="Período customizado"
         title="Período customizado"
-        className="inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] md:size-9"
+        className="min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] md:size-9"
       >
         <CalendarRange className="size-4" />
       </button>
@@ -133,7 +133,7 @@ export function PeriodSwitcher({
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="input-base h-9 w-full py-0 text-[0.8125rem]"
+                className="min-h-12 min-w-0 max-w-full text-base! input-base h-9 w-full py-0 text-[0.8125rem]"
               />
             </label>
             <label className="text-[0.75rem]">
@@ -142,7 +142,7 @@ export function PeriodSwitcher({
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="input-base h-9 w-full py-0 text-[0.8125rem]"
+                className="min-h-12 min-w-0 max-w-full text-base! input-base h-9 w-full py-0 text-[0.8125rem]"
               />
             </label>
           </div>
@@ -150,11 +150,11 @@ export function PeriodSwitcher({
             <button
               type="button"
               onClick={allHistory}
-              className="cursor-pointer text-[0.75rem] font-medium text-[var(--text-brand)] hover:underline"
+              className="min-h-11 min-w-11 cursor-pointer text-[0.75rem] font-medium text-[var(--text-brand)] hover:underline"
             >
               Ver todo o histórico
             </button>
-            <Button
+            <Button className="min-h-11 min-w-11"
               type="button"
               size="sm"
               disabled={!from || !to || from > to}

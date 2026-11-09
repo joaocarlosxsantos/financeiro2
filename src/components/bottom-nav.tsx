@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
 import { BarChart3, FileUp, LayoutDashboard, LogOut, MoreHorizontal, PiggyBank, Plus, Receipt, ReceiptText, Repeat, Settings, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
-import { Sheet } from "@/components/sheet";
+import { Sheet, useSheetClose } from "@/components/sheet";
 import { Field, Input, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { createTransaction, createTransfer, type ActionState } from "@/server/actions/transactions";
@@ -55,7 +55,6 @@ export function BottomNav({ onNew }: { onNew: () => void }) {
       </button>
       {destination(mainDestinations[2])}
       <button type="button" aria-label="Mais opções" aria-haspopup="dialog" aria-expanded={moreOpen}
-        aria-current={moreDestinations.some((item) => isDestinationActive(pathname, item.href)) ? "true" : undefined}
         onClick={() => setMoreOpen(true)} className={cn(itemClass, "cursor-pointer", moreDestinations.some((item) => isDestinationActive(pathname, item.href)) ? "text-[var(--text)] before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-[var(--acento)]" : "text-[var(--text-subtle)]")}>
         <MoreHorizontal aria-hidden="true" className="size-6" strokeWidth={1.5} />Mais
       </button>
@@ -73,9 +72,16 @@ export function BottomNav({ onNew }: { onNew: () => void }) {
   </>;
 }
 
-export function QuickEntry({ accounts, categories, userId, onClose }: {
+type QuickEntryProps = {
   accounts: PlainAccount[]; categories: PlainCategory[]; userId: string; onClose: () => void;
-}) {
+};
+
+export function QuickEntry(props: QuickEntryProps) {
+  return <Sheet title="Novo lançamento" onClose={props.onClose}><QuickEntryForm {...props} /></Sheet>;
+}
+
+function QuickEntryForm({ accounts, categories, userId, onClose }: QuickEntryProps) {
+  const closeSheet = useSheetClose();
   const router = useRouter();
   const [kind, setKind] = useState("EXPENSE");
   const [state, action, pending] = useActionState(async (_previous: ActionState, form: FormData): Promise<ActionState> => {
@@ -83,11 +89,11 @@ export function QuickEntry({ accounts, categories, userId, onClose }: {
       const result = kind === "TRANSFER"
         ? await createTransfer(userId, String(form.get("accountId")), String(form.get("toAccountId")), parseMoneyToCents(String(form.get("amount"))), String(form.get("date")), String(form.get("description")))
         : await createTransaction({}, form);
-      if (result.ok) { router.refresh(); window.history.back(); onClose(); }
+      if (result.ok) { router.refresh(); closeSheet(); }
       return result;
     } catch { return { error: "Não foi possível salvar. Tente novamente." }; }
   }, {});
-  return <Sheet title="Novo lançamento" onClose={onClose}>
+  return <>
     {!accounts.length ? <p className="py-4 text-sm">Cadastre uma conta em <Link href="/configuracoes" replace onClick={onClose} className="underline">Configurações</Link> antes de lançar.</p> :
       <form action={action} className="space-y-4">
         <fieldset disabled={pending} className="grid grid-cols-3 gap-2">
@@ -111,5 +117,5 @@ export function QuickEntry({ accounts, categories, userId, onClose }: {
         {state.error && <p role="alert" className="text-sm text-[var(--text-out)]">{state.error}</p>}
         <div className="sticky bottom-0 bg-[var(--surface)] py-3"><SubmitButton className="min-h-12 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]" pendingLabel="Salvando…">Salvar lançamento</SubmitButton></div>
       </form>}
-  </Sheet>;
+  </>;
 }
