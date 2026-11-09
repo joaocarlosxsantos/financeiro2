@@ -5,6 +5,10 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { Sidebar } from "@/components/sidebar";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
+import { getAccounts, getCategories } from "@/server/queries";
+import type { Viewport } from "next";
+
+export const viewport: Viewport = { viewportFit: "cover", interactiveWidget: "resizes-content" };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -21,15 +25,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/api/sessao-invalida");
   if (!user.onboardedAt) redirect("/onboarding");
 
+  const [accounts, categories] = await Promise.all([getAccounts(userId), getCategories(userId)]);
+
   return (
     <ConfirmProvider>
       <div className="flex min-h-screen flex-col lg:flex-row">
         <a href="#conteudo" className="skip-link">
           Pular para o conteúdo
         </a>
-        <Sidebar userName={user.name} userEmail={user.email} />
+        <Sidebar userName={user.name} userEmail={user.email} userId={userId}
+          accounts={accounts.map(({ id, name }) => ({ id, name }))}
+          categories={categories.map(({ id, name, kind, nature, color }) => ({ id, name, kind, nature, color }))} />
         <div className="min-w-0 flex-1">
-          <main id="conteudo" className="mx-auto max-w-6xl px-5 py-6 pb-24 sm:px-8 lg:py-10">
+          <main id="conteudo" className="mx-auto min-w-0 max-w-[1120px] px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 lg:py-10 xl:px-8">
             {children}
           </main>
         </div>

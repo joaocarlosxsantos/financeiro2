@@ -17,23 +17,23 @@ export function MonthSwitcher({ value: current }: { value: MonthRef }) {
   }
 
   return (
-    <div className="inline-flex max-w-full items-center gap-1 rounded-xl border bg-[var(--surface)] p-1">
+    <div className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-xl border bg-[var(--surface)] p-1">
       <button
         type="button"
         onClick={() => go(-1)}
         aria-label="Mês anterior"
-        className="inline-flex size-11 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)] md:size-9"
+        className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
       >
         <ChevronLeft className="size-4" />
       </button>
-      <span className="min-w-28 sm:min-w-36 px-1.5 sm:px-2 text-center text-[0.8125rem] font-medium first-letter:uppercase truncate">
+      <span className="tnum min-w-0 flex-1 px-2 text-center text-[0.8125rem] font-medium first-letter:uppercase truncate">
         {monthLabel(current)}
       </span>
       <button
         type="button"
         onClick={() => go(1)}
         aria-label="Próximo mês"
-        className="inline-flex size-11 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)] md:size-9"
+        className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-[var(--surface-2)]"
       >
         <ChevronRight className="size-4" />
       </button>

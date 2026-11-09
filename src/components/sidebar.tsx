@@ -1,187 +1,50 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import {
-  FileUp,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Receipt,
-  ReceiptText,
-  Wallet,
-  TrendingDown,
-  Repeat,
-  PiggyBank,
-  Settings,
-  Sparkles,
-  Target,
-  TrendingUp,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logoutAction } from "@/server/actions/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BottomNav, QuickEntry, mainDestinations, moreDestinations, isDestinationActive } from "@/components/bottom-nav";
+import type { PlainAccount, PlainCategory } from "@/app/(app)/lancamentos/types";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface NavSection {
-  title: string;
-  items: NavItem[];
-}
-
-const sections: NavSection[] = [
-  {
-    title: "Mês",
-    items: [
-      { href: "/painel", label: "Painel", icon: LayoutDashboard },
-      { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
-      { href: "/contas", label: "Saldos", icon: Wallet },
-      { href: "/contas-a-pagar", label: "Contas a pagar", icon: ReceiptText },
-    ],
-  },
-  {
-    title: "Planejar",
-    items: [
-      { href: "/orcamento", label: "Orçamento", icon: PiggyBank },
-      { href: "/metas", label: "Metas e reserva", icon: Target },
-      { href: "/projecoes", label: "Projeções", icon: TrendingUp },
-      { href: "/recorrentes", label: "Recorrentes", icon: Repeat },
-    ],
-  },
-  {
-    title: "Dívidas",
-    items: [
-      { href: "/dividas", label: "Dívidas", icon: TrendingDown },
-    ],
-  },
-  {
-    title: "Sistema",
-    items: [
-      { href: "/insights", label: "Insights", icon: Sparkles },
-      { href: "/importar", label: "Importar extrato", icon: FileUp },
-      { href: "/configuracoes", label: "Configurações", icon: Settings },
-    ],
-  },
-];
-
-export function Sidebar({ userName, userEmail }: { userName: string; userEmail: string }) {
+export function Sidebar({ userName, userEmail, userId, accounts, categories }: {
+  userName: string; userEmail: string; userId: string;
+  accounts: PlainAccount[]; categories: PlainCategory[];
+}) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-
-  const links = (
-    <nav className="flex-1 space-y-4 overflow-y-auto" aria-label="Navegação principal">
-      {sections.map((section) => (
-        <div key={section.title} className="space-y-0.5">
-          <p className="px-2.5 pb-1 text-[0.6875rem] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
-            {section.title}
-          </p>
-          <div className="space-y-0.5">
-            {section.items.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setOpen(false)}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "group flex items-center gap-2.5 border-l-2 px-2.5 py-1.5 text-[0.8125rem] transition-colors rounded-r-sm",
-                    active
-                      ? "border-[var(--text-brand)] font-semibold text-[var(--text-brand)] bg-transparent"
-                      : "border-transparent text-[var(--text-muted)] hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0 transition-colors",
-                      active ? "text-[var(--text-brand)]" : "text-[var(--text-muted)] group-hover:text-[var(--text)]",
-                    )}
-                  />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </nav>
-  );
-
-  return (
-    <>
-      {/* topo mobile */}
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b bg-[var(--surface)] px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-brand)]">
-            <span className="font-display text-base font-bold leading-none">F</span>
-          </div>
-          <span className="font-display text-base font-medium tracking-tight text-[var(--text)]">
-            Financeiro <span className="text-xs font-normal text-[var(--text-muted)]">2.0</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Fechar menu" : "Abrir menu"}
-            aria-expanded={open}
-            className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md border"
-          >
-            {open ? <X className="size-4" /> : <Menu className="size-4" />}
-          </button>
-        </div>
+  const [newOpen, setNewOpen] = useState(false);
+  const brand = <Link href="/painel" className="flex min-h-11 items-center gap-2.5" aria-label="Financeiro 2.0 — Painel">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-brand)]"><span className="font-display text-base font-bold leading-none">F</span></div>
+    <span className="font-display text-base font-medium tracking-tight">Financeiro <span className="text-xs font-normal text-[var(--text-muted)]">2.0</span></span>
+  </Link>;
+  return <>
+    <header className="flex min-h-16 items-center justify-between gap-3 border-b bg-[var(--bg)] px-4 lg:fixed lg:top-0 lg:left-0 lg:z-10 lg:w-[232px] lg:border-b-0 lg:pt-4">
+      {brand}<ThemeToggle />
+    </header>
+    <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-[var(--line)] bg-[var(--bg)] p-4 pt-[84px] lg:flex">
+      <button type="button" onClick={() => setNewOpen(true)} aria-haspopup="dialog"
+        className="mb-5 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--acento)] px-3 text-sm font-medium text-[var(--on-acento)]">
+        <Plus aria-hidden="true" className="size-5" />Novo lançamento
+      </button>
+      <nav aria-label="Navegação principal desktop" className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+        {[...mainDestinations, ...moreDestinations].map(({ href, label, icon: Icon }) => {
+          const active = isDestinationActive(pathname, href);
+          return <Link key={href} href={href} aria-current={active ? "page" : undefined}
+            className={cn("flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors motion-reduce:transition-none", active ? "bg-[var(--surface-2)] font-medium text-[var(--text)]" : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]")}>
+            <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.5} />{label}
+          </Link>;
+        })}
+      </nav>
+      <div className="mt-4 shrink-0 border-t pt-3">
+        <p className="truncate px-3 text-sm font-medium">{userName}</p>
+        <p className="muted mt-1 truncate px-3 text-xs">{userEmail}</p>
+        <form action={logoutAction}><button className="mt-2 flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-2)]"><LogOut aria-hidden="true" className="size-5" />Sair</button></form>
       </div>
-      <div className="h-[69px] lg:hidden" />
-
-      {open ? (
-        <div className="fixed inset-x-0 top-[69px] z-30 max-h-[calc(100dvh-69px)] overflow-y-auto border-b bg-[var(--surface)] p-4 lg:hidden">
-          {links}
-          <form action={logoutAction} className="mt-4 border-t pt-3">
-            <button className="flex w-full cursor-pointer items-center gap-2.5 border-l-2 border-transparent px-2.5 py-1.5 text-[0.8125rem] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]">
-              <LogOut className="size-4 text-[var(--text-muted)]" />
-              Sair
-            </button>
-          </form>
-        </div>
-      ) : null}
-
-      {/* sidebar desktop */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-[var(--surface)] p-4 lg:flex">
-        <div className="mb-6 flex items-center justify-between px-1 pt-1">
-          <Link href="/painel" className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-brand)]">
-              <span className="font-display text-base font-bold leading-none">F</span>
-            </div>
-            <span className="font-display text-base font-medium tracking-tight text-[var(--text)]">
-              Financeiro <span className="text-xs font-normal text-[var(--text-muted)]">2.0</span>
-            </span>
-          </Link>
-          <ThemeToggle />
-        </div>
-
-        {links}
-
-        <div className="mt-auto border-t pt-3">
-          <div className="px-2.5 py-1.5">
-            <p className="truncate text-[0.8125rem] font-medium text-[var(--text)]">{userName}</p>
-            <p className="muted truncate text-xs">{userEmail}</p>
-          </div>
-          <form action={logoutAction}>
-            <button className="flex w-full cursor-pointer items-center gap-2.5 border-l-2 border-transparent px-2.5 py-1.5 text-[0.8125rem] text-[var(--text-muted)] transition-colors hover:border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]">
-              <LogOut className="size-4 text-[var(--text-muted)]" />
-              Sair
-            </button>
-          </form>
-        </div>
-      </aside>
-    </>
-  );
+    </aside>
+    <BottomNav onNew={() => setNewOpen(true)} />
+    {newOpen && <QuickEntry accounts={accounts} categories={categories} userId={userId} onClose={() => setNewOpen(false)} />}
+  </>;
 }
