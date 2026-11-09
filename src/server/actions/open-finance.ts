@@ -18,6 +18,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 const OPEN_FINANCE_SETUP_LIMIT = 10;
 const OPEN_FINANCE_SETUP_WINDOW_MS = 60 * 60 * 1000;
 const SYNC_COOLDOWN_MS = 60 * 1000;
+const AUTO_SYNC_COOLDOWN_MS = 5 * 60 * 1000;
 
 function pluggyMessage(status: number, code: string): string {
   return pluggyErrorForUser(new PluggyHttpError(status, code, "", ""));
@@ -249,7 +250,20 @@ export async function removeOpenFinanceConnection(input: unknown) {
   }
 }
 
-export async function syncOpenFinance(input: unknown) {
+// Chamado pelo painel a cada visita: só sincroniza se a última tentativa tem 5+ min.
+export async function autoSyncOpenFinance(): Promise<{ synced: boolean }> {
+  const userId = await requireUserId();
+  const rows = await db.select({ id: openFinanceConnections.id }).from(openFinanceConnections).where(eq(openFinanceConnections.userId, userId));
+  let synced = false;
+  for (const row of rows) {
+    const result = await syncOpenFinance(row.id, "auto");
+    if (result && !("error" in result && result.error)) synced = true;
+  }
+  return { synced };
+}
+
+export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = "manual") {
+  const cooldownMs = mode === "auto" ? AUTO_SYNC_COOLDOWN_MS : SYNC_COOLDOWN_MS;
   const userId = await requireUserId();
   const parsed = openFinanceConnectionIdSchema.safeParse({ connectionId: input });
   if (!parsed.success) return { error: "Conexão inválida." };
@@ -259,8 +273,8 @@ export async function syncOpenFinance(input: unknown) {
   if (!connection || !credentials) return { error: "Conexão não encontrada." };
   const now = Date.now();
   const lastAttemptTime = connection?.lastAttemptAt instanceof Date ? connection.lastAttemptAt.getTime() : null;
-  if (lastAttemptTime !== null && now - lastAttemptTime < SYNC_COOLDOWN_MS) return { error: "Aguarde pelo menos 60 segundos entre sincronizações." };
-  const lock = await db.update(openFinanceConnections).set({ status: "SYNCING", lastAttemptAt: new Date(now), lastErrorCode: null }).where(and(eq(openFinanceConnections.id, connectionId), eq(openFinanceConnections.userId, userId), or(isNull(openFinanceConnections.lastAttemptAt), lt(openFinanceConnections.lastAttemptAt, new Date(now - SYNC_COOLDOWN_MS))), or(ne(openFinanceConnections.status, "SYNCING"), lt(openFinanceConnections.lastAttemptAt, new Date(now - 20 * 60_000))))).returning({ id: openFinanceConnections.id });
+  if (lastAttemptTime !== null && now - lastAttemptTime < cooldownMs) return { error: `Aguarde pelo menos ${mode === "auto" ? "5 minutos" : "60 segundos"} entre sincronizações.` };
+  const lock = await db.update(openFinanceConnections).set({ status: "SYNCING", lastAttemptAt: new Date(now), lastErrorCode: null }).where(and(eq(openFinanceConnections.id, connectionId), eq(openFinanceConnections.userId, userId), or(isNull(openFinanceConnections.lastAttemptAt), lt(openFinanceConnections.lastAttemptAt, new Date(now - cooldownMs))), or(ne(openFinanceConnections.status, "SYNCING"), lt(openFinanceConnections.lastAttemptAt, new Date(now - 20 * 60_000))))).returning({ id: openFinanceConnections.id });
   if (!lock.length) return { error: "Esta conexão já está sincronizando. Aguarde e tente novamente." };
   let upstreamStatus: string | null = null;
   type Summary = { accountName: string; accountType: string; read: number; ignoredByDate: number; ignoredByTombstone: number; ignoredByType: number; invalid: number; inserted: number; updated: number; status: "PENDING" | "OK" | "ERROR"; error?: string };

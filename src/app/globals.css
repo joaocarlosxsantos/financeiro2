@@ -168,16 +168,20 @@
 
 .dark {
   /* Paleta escura */
-  --bg: #0E1116;
-  --surface: #151A21;
-  --surface-2: #1B222B;
-  --border: #262D37;
-  --text: #ECEFF4;
-  --text-muted: #9AA4B2;
-  --text-subtle: #7A8494;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-overlay: 0 4px 12px rgba(0, 0, 0, 0.5);
+  /* AMOLED: fundo preto puro; superfícies são vidro translúcido branco */
+  --bg: #000000;
+  --surface: #0B0B0D;
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.10);
+  --text: #F5F5F7;
+  --text-muted: #A1A1A8;
+  --text-subtle: #86868B;
+  --shadow-card: none;
+  --shadow-sm: none;
+  --shadow-overlay: 0 8px 32px rgba(0, 0, 0, 0.8);
+  --radius-card: 16px;
+  --radius-input: 12px;
+  --radius-button: 999px;
 
   /* Contraste WCAG AA rigorosamente garantido no tema escuro (>= 4.5:1) */
   --text-in: #4FD1A1;      /* 9.13:1 sobre #151A21, 9.88:1 sobre #0E1116 */
@@ -206,8 +210,8 @@
   --border-brand: rgba(127, 162, 255, 0.25);
 
   /* Tokens diretos */
-  --paper: #0E1116;
-  --line: #262D37;
+  --paper: #000000;
+  --line: rgba(255, 255, 255, 0.10);
   --nanquim: #7FA2FF;
   --entrou: #4FD1A1;
   --saiu: #FF7F73;
@@ -224,6 +228,41 @@ html {
 }
 html.dark {
   color-scheme: dark;
+}
+
+/* Tema escuro AMOLED: cartões e botões de vidro (estilo Apple) */
+html.dark .card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+/* Botões/links sólidos de marca viram vidro translúcido. */
+html.dark .bg-brand-600,
+html.dark .bg-brand-700,
+html.dark .bg-brand-300 {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 999px;
+}
+html.dark .bg-brand-600:hover,
+html.dark .bg-brand-700:hover {
+  background: rgba(255, 255, 255, 0.20);
+}
+html.dark .bg-brand-300 { opacity: 0.5; }
+html.dark button.border:not(.bg-brand-600),
+html.dark a.border:not(.bg-brand-600) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+html.dark button.border:not(.bg-brand-600):hover,
+html.dark a.border:not(.bg-brand-600):hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 body {

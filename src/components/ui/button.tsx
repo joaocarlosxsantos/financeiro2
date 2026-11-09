@@ -34,6 +34,7 @@ export function Button({
         "inline-flex cursor-pointer items-center justify-center font-medium motion-reduce:transition-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
         variants[variant],
         sizes[size],
+        "dark:rounded-full dark:backdrop-blur-xl",
         className,
       )}
       {...props}

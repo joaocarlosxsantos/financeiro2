@@ -37,6 +37,7 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty";
 import { MonthlyFlowChart, FixedVariableChart } from "@/components/charts/monthly-flow";
 import { CategoryBars } from "@/components/charts/category-bars";
+import { AutoSync } from "./auto-sync";
 import { HealthCard } from "./health-card";
 import { BudgetCard } from "./budget-card";
 import { DebtCard } from "./debt-card";
@@ -112,6 +113,7 @@ export default async function DashboardPage({
 
   return (
     <>
+      <AutoSync />
       <PageHeader
         title={`Olá, ${user.name.split(" ")[0]}`}
         description="Resumo do mês: entradas, saídas e saldo."
