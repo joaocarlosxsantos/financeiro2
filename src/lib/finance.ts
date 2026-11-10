@@ -178,6 +178,39 @@ export function monthsToTarget(
   return null;
 }
 
+/**
+ * Calcula quanto guardar por mês para atingir o valor restante da meta até o prazo estabelecido.
+ * Se a meta já foi alcançada, retorna 0.
+ * Se não houver data ou ela for inválida, retorna null.
+ * Se o prazo é no mês corrente ou no passado, retorna o saldo restante integral.
+ */
+export function monthlySavingsNeeded(
+  targetCents: number,
+  savedCents: number,
+  targetDate: Date | string | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  if (!targetDate) return null;
+  if (savedCents >= targetCents) return 0;
+
+  const target =
+    typeof targetDate === "string"
+      ? new Date(targetDate.length === 10 ? `${targetDate}T12:00:00.000Z` : targetDate)
+      : targetDate;
+  if (isNaN(target.getTime())) return null;
+
+  const yearDiff = target.getUTCFullYear() - now.getUTCFullYear();
+  const monthDiff = target.getUTCMonth() - now.getUTCMonth();
+  const monthsRemaining = yearDiff * 12 + monthDiff;
+
+  const remaining = Math.max(0, targetCents - savedCents);
+  if (monthsRemaining <= 0) {
+    return remaining;
+  }
+
+  return Math.ceil(remaining / monthsRemaining);
+}
+
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }

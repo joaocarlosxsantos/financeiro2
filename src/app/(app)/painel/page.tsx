@@ -17,7 +17,7 @@ import {
   getTotalSavedCents,
   getUser,
 } from "@/server/queries";
-import { monthRefFromParam, monthLabel } from "@/lib/dates";
+import { monthRefFromParam, monthLabel, currentMonthRef, getNowInSaoPaulo } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
 import {
   balanceCents,
@@ -27,6 +27,8 @@ import {
   monthsOfRunway,
   savingsRate,
 } from "@/lib/finance";
+import { monthForecast } from "@/lib/forecast";
+import { calculateDailyBudget } from "@/lib/daily-budget";
 import { buildBudgetAlerts, buildGoalAlerts } from "@/lib/alerts";
 import { PageHeader } from "@/components/page-header";
 import { MonthSwitcher } from "@/components/month-switcher";
@@ -44,6 +46,8 @@ import { BudgetCard } from "./budget-card";
 import { DebtCard } from "./debt-card";
 import { AlertsCard } from "./alerts-card";
 import { OnboardingCard } from "./onboarding-card";
+import { ForecastCard } from "./forecast-card";
+import { DailyBudgetCard } from "./daily-budget-card";
 
 export const metadata = { title: "Painel" };
 
@@ -111,6 +115,30 @@ export default async function DashboardPage({
   });
 
   const hasData = summary.incomeCents > 0 || summary.expenseCents > 0 || cardBreakdown.length > 0;
+
+  const now = getNowInSaoPaulo();
+  const currentRef = currentMonthRef(now);
+  const isCurrentMonth = ref.year === currentRef.year && ref.month === currentRef.month;
+  const daysInMonth = new Date(ref.year, ref.month, 0).getDate();
+  const dayOfMonth = isCurrentMonth
+    ? now.getDate()
+    : ref.year < currentRef.year || (ref.year === currentRef.year && ref.month < currentRef.month)
+    ? daysInMonth
+    : 0;
+
+  const forecast = monthForecast({
+    incomeCents: user.monthlyIncomeCents || summary.incomeCents,
+    expenseSoFarCents: summary.expenseCents,
+    dayOfMonth,
+    daysInMonth,
+  });
+
+  const dailyBudget = calculateDailyBudget({
+    incomeCents: user.monthlyIncomeCents || summary.incomeCents,
+    expenseSoFarCents: summary.expenseCents,
+    dayOfMonth,
+    daysInMonth,
+  });
 
   return (
     <>
@@ -199,6 +227,13 @@ export default async function DashboardPage({
           </div>
         </div>
       </section>
+
+      {hasData && (
+        <section className="mt-4 space-y-3" aria-label="Ritmo e previsões">
+          {isCurrentMonth && <DailyBudgetCard dailyBudget={dailyBudget} />}
+          <ForecastCard forecast={forecast} monthName={monthLabel(ref)} />
+        </section>
+      )}
 
       {/* 2. Alerta/onboarding compacta logo abaixo */}
       <div className="mt-4 space-y-3">

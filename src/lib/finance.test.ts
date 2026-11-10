@@ -8,6 +8,7 @@ import {
   financialHealth,
   monthsOfRunway,
   monthsToTarget,
+  monthlySavingsNeeded,
   projectBalance,
   savingsRate,
   spendingPace,
@@ -162,3 +163,30 @@ test("comparativo por categoria: ordena pela maior variação em módulo", () =>
   assert.equal(sumiu?.totalCents, 0, "categoria que zerou este mês aparece com total 0");
   assert.equal(sumiu?.deltaCents, -4000);
 });
+
+test("quanto guardar por mês (monthlySavingsNeeded)", () => {
+  const now = new Date("2026-01-15T12:00:00.000Z");
+
+  // Sem data alvo
+  assert.equal(monthlySavingsNeeded(100000, 20000, null, now), null);
+  assert.equal(monthlySavingsNeeded(100000, 20000, undefined, now), null);
+
+  // Meta já alcançada
+  assert.equal(monthlySavingsNeeded(100000, 100000, "2026-06-01", now), 0);
+  assert.equal(monthlySavingsNeeded(100000, 150000, "2026-06-01", now), 0);
+
+  // Faltam 5 meses (Janeiro -> Junho = 5 meses): falta 80.000 / 5 = 16.000
+  assert.equal(monthlySavingsNeeded(100000, 20000, "2026-06-01", now), 16000);
+
+  // Divisão com dízima arredonda para cima (100.000 faltantes em 3 meses -> 33.334/mês)
+  assert.equal(monthlySavingsNeeded(100000, 0, "2026-04-01", now), 33334);
+
+  // Prazo no mesmo mês ou no passado: precisa do valor total restante
+  assert.equal(monthlySavingsNeeded(100000, 30000, "2026-01-30", now), 70000);
+  assert.equal(monthlySavingsNeeded(100000, 30000, "2025-12-31", now), 70000);
+
+  // Suporta Date object
+  const targetDate = new Date("2026-06-15T00:00:00.000Z");
+  assert.equal(monthlySavingsNeeded(100000, 20000, targetDate, now), 16000);
+});
+

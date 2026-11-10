@@ -24,6 +24,7 @@ import { monthRange, monthShortLabel, lastNMonths, shiftMonth, type MonthRef } f
 import type { MonthSummary } from "@/lib/finance";
 import { monthlyInterestCents } from "@/lib/debts";
 import { accountBalance, netWorth } from "@/lib/balances";
+import { detectSubscriptions } from "@/lib/subscriptions";
 
 /**
  * O usuário da sessão.
@@ -1355,6 +1356,51 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
     type: r.type as "INDIVIDUAL" | "GROUP",
     participants: participantsByBill.get(r.id) ?? [],
   }));
+}
+
+/**
+ * Detecta assinaturas e despesas periódicas nos últimos 90 dias,
+ * apontando as que ainda não foram cadastradas e variações de aumento de preço.
+ */
+export async function getDetectedSubscriptions(userId: string, connection: Pick<typeof db, "select"> = db) {
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const [txs, rules] = await Promise.all([
+    connection
+      .select({
+        description: txTable.description,
+        amountCents: txTable.amountCents,
+        date: txTable.date,
+        categoryName: categoriesTable.name,
+      })
+      .from(txTable)
+      .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
+      .where(
+        and(
+          eq(txTable.userId, userId),
+          eq(txTable.kind, "EXPENSE"),
+          eq(txTable.isTransfer, false),
+          eq(txTable.isCardPayment, false),
+          or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
+          gte(txTable.date, ninetyDaysAgo),
+        ),
+      ),
+    connection
+      .select({
+        description: recurringRulesTable.description,
+      })
+      .from(recurringRulesTable)
+      .where(eq(recurringRulesTable.userId, userId)),
+  ]);
+
+  return detectSubscriptions(
+    txs.map((t) => ({
+      description: t.description,
+      amountCents: t.amountCents,
+      date: t.date,
+      categoryName: t.categoryName,
+    })),
+    rules.map((r) => r.description),
+  );
 }
 
 export * from "./split-queries";

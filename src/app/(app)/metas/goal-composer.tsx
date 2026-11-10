@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createGoal, type ActionState } from "@/server/actions/goals";
 import { Field, MoneyInput, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
+import { parseMoneyToCents, formatCents } from "@/lib/money";
+import { monthlySavingsNeeded } from "@/lib/finance";
 
 import { GOAL_COLORS } from "@/lib/goal-colors";
 
@@ -20,9 +22,22 @@ const KINDS = [
 export function GoalComposer() {
   const [state, formAction] = useActionState(createGoal, initial);
   const ref = useRef<HTMLFormElement>(null);
+  const [target, setTarget] = useState("");
+  const [saved, setSaved] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+
+  const targetCents = parseMoneyToCents(target);
+  const savedCents = parseMoneyToCents(saved);
+  const savingsNeeded = targetCents > 0 && targetDate ? monthlySavingsNeeded(targetCents, savedCents, targetDate) : null;
 
   useEffect(() => {
-    if (state.ok) ref.current?.reset();
+    if (state.ok) {
+      ref.current?.reset();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset controlled fields on successful creation
+      setTarget("");
+      setSaved("");
+      setTargetDate("");
+    }
   }, [state]);
 
   return (
@@ -43,16 +58,47 @@ export function GoalComposer() {
 
       <div className="grid min-w-0 grid-cols-1 items-start gap-3 min-[480px]:grid-cols-2">
         <Field label="Valor da meta">
-          <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="target" inputMode="decimal" required placeholder="0,00" />
+          <MoneyInput
+            className="min-h-12 min-w-0 max-w-full text-base!"
+            name="target"
+            inputMode="decimal"
+            required
+            placeholder="0,00"
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+          />
         </Field>
         <Field label="Já tenho">
-          <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="saved" inputMode="decimal" placeholder="0,00" />
+          <MoneyInput
+            className="min-h-12 min-w-0 max-w-full text-base!"
+            name="saved"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={saved}
+            onChange={(e) => setSaved(e.target.value)}
+          />
         </Field>
       </div>
 
       <Field label="Prazo (opcional)" hint="Uma data deixa a meta concreta e mostra se o ritmo dá conta.">
-        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="targetDate" type="date" />
+        <Input
+          className="min-h-12 min-w-0 max-w-full text-base!"
+          name="targetDate"
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+        />
       </Field>
+
+      {savingsNeeded !== null && savingsNeeded > 0 ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed">
+          <span className="font-medium text-[var(--text-brand)]">Quanto guardar por mês: </span>
+          <strong className="tnum font-semibold text-[var(--text-primary)]">{formatCents(savingsNeeded)}/mês</strong>
+          <p className="muted mt-1 text-[0.75rem]">
+            Para atingir {formatCents(targetCents)} até {targetDate.split("-").reverse().join("/")}, esse é o aporte sugerido.
+          </p>
+        </div>
+      ) : null}
 
       <Field label="Cor">
         <div className="flex gap-2">

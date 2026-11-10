@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MoneyInput } from "@/components/ui/field";
 import { formatCents, pct } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
+import { monthlySavingsNeeded } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Hint } from "@/components/ui/hint";
@@ -48,6 +49,7 @@ export function GoalCard({
   const confirm = useConfirm();
   const progress = goal.targetCents ? (goal.savedCents / goal.targetCents) * 100 : 0;
   const done = goal.savedCents >= goal.targetCents;
+  const savingsNeeded = !done ? monthlySavingsNeeded(goal.targetCents, goal.savedCents, goal.targetDate) : null;
 
   return (
     <div className={cn("min-w-0 rounded-xl border bg-[var(--surface)] px-3 py-3 transition-opacity sm:rounded-none sm:border-0 sm:bg-transparent sm:px-5 sm:py-5", pending && "opacity-50")}>
@@ -112,6 +114,16 @@ export function GoalCard({
         </span>
       </div>
       <Progress value={progress} color={done ? "var(--text-in)" : "var(--text-info)"} label={`Progresso da meta ${goal.name}`} />
+
+      {savingsNeeded !== null && savingsNeeded > 0 ? (
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="font-medium text-[var(--text-brand)]">Quanto guardar por mês:</span>
+            <strong className="tnum font-semibold text-[var(--text-primary)]">{formatCents(savingsNeeded)}/mês</strong>
+          </div>
+          {goal.targetDate ? <span className="muted">para atingir até {formatDate(goal.targetDate)}</span> : null}
+        </div>
+      ) : null}
 
       <div className="muted mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
         <span>Falta {formatCents(Math.max(0, goal.targetCents - goal.savedCents))}</span>

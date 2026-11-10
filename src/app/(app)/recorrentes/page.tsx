@@ -1,7 +1,7 @@
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Repeat } from "lucide-react";
 import { requireProfileRoute } from "@/server/usage-profile";
-import { getAccounts, getCategories, getRecurringStatus, getUser } from "@/server/queries";
+import { getAccounts, getCategories, getDetectedSubscriptions, getRecurringStatus, getUser } from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty";
 import { PendingPanel } from "./pending-panel";
 import { RuleList } from "./rule-list";
 import { RuleComposer } from "./rule-composer";
+import { SubscriptionsPanel } from "./subscriptions-panel";
 
 export const metadata = { title: "Recorrentes" };
 
@@ -24,11 +25,12 @@ export default async function RecurringPage({
   const { m } = await searchParams;
   const ref = monthRefFromParam(m);
 
-  const [user, status, accounts, categories] = await Promise.all([
+  const [user, status, accounts, categories, detectedSubscriptions] = await Promise.all([
     getUser(userId),
     getRecurringStatus(userId, ref),
     getAccounts(userId),
     getCategories(userId),
+    getDetectedSubscriptions(userId),
   ]);
 
   const income = user.monthlyIncomeCents;
@@ -104,6 +106,8 @@ export default async function RecurringPage({
               />
             )}
           </Card>
+
+          <SubscriptionsPanel subscriptions={detectedSubscriptions} />
 
           <Hint tone="tip" title="Geração sob controle">
             Lançamentos recorrentes não entram no extrato automaticamente: confira e aprove na lista antes de lançar.
