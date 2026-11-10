@@ -21,6 +21,9 @@ describe("quota IA persistente", () => {
     expect(predicate.params).toContain(20); expect(predicate.params).toContain(2);
     expect(new PgDialect().sqlToQuery(config.set.dayCount).sql).toContain("case when");
     expect(new PgDialect().sqlToQuery(config.set.minuteCount).sql).toContain("case when");
+    const minuteStartedAtQuery = new PgDialect().sqlToQuery(config.set.minuteStartedAt as SQL);
+    expect(predicate.params.some((p) => p instanceof Date)).toBe(false);
+    expect(minuteStartedAtQuery.params.some((p) => p instanceof Date)).toBe(false);
   });
   it("quota negada não retorna reserva nem permite chamada", async () => {
     mocks.rows = [];

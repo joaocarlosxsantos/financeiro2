@@ -31,18 +31,20 @@ export async function processMessage(updateId: number, message: TelegramMessage)
   const chatId = String(message.chat.id);
   const result = await db.transaction(async (tx) => {
     const now = new Date();
-    const expired = sql`${telegramChatState.windowStartedAt} <= ${new Date(now.getTime() - CHAT_WINDOW_MS)}`;
+    const windowStart = new Date(now.getTime() - CHAT_WINDOW_MS).toISOString();
+    const staleWatermark = new Date(now.getTime() - 7 * 24 * 60 * 60_000).toISOString();
+    const expired = sql`${telegramChatState.windowStartedAt} <= ${windowStart}::timestamptz`;
     const [state] = await tx.insert(telegramChatState).values({
       chatId, lastUpdateId: updateId, windowStartedAt: now, requestCount: 1,
     }).onConflictDoUpdate({
       target: telegramChatState.chatId,
       set: {
         lastUpdateId: updateId,
-        windowStartedAt: sql`case when ${expired} then ${now} else ${telegramChatState.windowStartedAt} end`,
+        windowStartedAt: sql`case when ${expired} then ${now.toISOString()}::timestamptz else ${telegramChatState.windowStartedAt} end`,
         requestCount: sql`case when ${expired} then 1 else least(${telegramChatState.requestCount} + 1, ${CHAT_MAX_REQUESTS + 1}) end`,
       },
       // Telegram pode sortear outro update_id após uma semana sem updates.
-      setWhere: sql`${telegramChatState.lastUpdateId} < ${updateId} or ${telegramChatState.windowStartedAt} < ${new Date(now.getTime() - 7 * 24 * 60 * 60_000)}`,
+      setWhere: sql`${telegramChatState.lastUpdateId} < ${updateId} or ${telegramChatState.windowStartedAt} < ${staleWatermark}::timestamptz`,
     }).returning({ count: telegramChatState.requestCount });
     if (!state || state.count > CHAT_MAX_REQUESTS) return null;
 

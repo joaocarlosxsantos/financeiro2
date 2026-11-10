@@ -48,7 +48,12 @@ export async function handleWebhook(
     return Response.json(reply ? {
       method: "sendMessage", chat_id: parsed.data.message.chat.id, text: reply, protect_content: true,
     } : { ok: true }, { headers });
-  } catch {
+  } catch (error) {
+    const err = error as { name?: string; code?: string | number; constructor?: { name?: string } };
+    console.error("[telegram-webhook]", {
+      name: err?.constructor?.name ?? err?.name ?? "Error",
+      code: err?.code ?? null,
+    });
     // Não expor tokens, payload, chat, usuário, saldo ou mensagens do banco em logs.
     return Response.json({ error: "temporarily_unavailable" }, { status: 503, headers });
   }

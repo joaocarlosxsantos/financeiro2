@@ -138,4 +138,18 @@ describe("persistência Telegram", () => {
     await processMessage(18, message("saldo?"));
     expect(mocks.ai).not.toHaveBeenCalled();
   });
+  it("regressão: upsert de estado serializa timestamps como strings ISO para evitar erro Date no postgres.js", async () => {
+    mocks.results.push([{ count: 1 }]);
+    await processMessage(19, message("/ajuda"));
+    const upsert = mocks.events.find((e) => e.kind === "upsert")?.value as {
+      setWhere: SQL;
+      set: { windowStartedAt: SQL; requestCount: SQL };
+    };
+    const setWhereQuery = sqlQuery(upsert.setWhere);
+    const setWindowQuery = sqlQuery(upsert.set.windowStartedAt);
+    expect(setWhereQuery.params.some((p) => p instanceof Date)).toBe(false);
+    expect(setWindowQuery.params.some((p) => p instanceof Date)).toBe(false);
+    expect(setWhereQuery.sql).toContain("::timestamptz");
+    expect(setWindowQuery.sql).toContain("::timestamptz");
+  });
 });

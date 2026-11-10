@@ -42,12 +42,18 @@ describe("webhook Telegram", () => {
   it("deduplicação/limite retorna apenas ok", async () => {
     expect(await (await handleWebhook(request(), "secret", vi.fn().mockResolvedValue(null))).json()).toEqual({ ok: true });
   });
-  it("falha transitória retorna 503 sem logar detalhe sensível", async () => {
-    const log = vi.spyOn(console, "error");
-    const result = await handleWebhook(request(), "secret", vi.fn().mockRejectedValue(new Error("token balance chat_id user_id")));
+  it("falha transitória retorna 503 com log seguro sem dados sensíveis", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = Object.assign(new Error("token balance chat_id user_id"), { code: "22003" });
+    const result = await handleWebhook(request(), "secret", vi.fn().mockRejectedValue(error));
     expect(result.status).toBe(503);
     expect(await result.json()).toEqual({ error: "temporarily_unavailable" });
-    expect(log).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith("[telegram-webhook]", { name: "Error", code: "22003" });
+    const loggedStr = JSON.stringify(log.mock.calls);
+    expect(loggedStr).not.toContain("token");
+    expect(loggedStr).not.toContain("balance");
+    expect(loggedStr).not.toContain("chat_id");
+    expect(loggedStr).not.toContain("user_id");
     log.mockRestore();
   });
 });
