@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: { default: "Mutano Contas", template: "%s — Mutano Contas" },
   description,
   applicationName: "Mutano Contas",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://financeiro2-delta.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://mutanocontas.vercel.app"),
   openGraph: { type: "website", locale: "pt_BR", siteName: "Mutano Contas", title: "Mutano Contas", description },
   twitter: { card: "summary_large_image", title: "Mutano Contas", description },
 };
