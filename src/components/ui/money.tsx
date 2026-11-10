@@ -12,7 +12,7 @@ const SIZE_VARIANTS = {
   sm: "text-[0.8125rem]",
   md: "text-base",
   lg: "text-display leading-none tracking-tight",
-  hero: "text-hero font-medium tracking-[-0.035em]",
+  hero: "[--text-hero:clamp(2rem,7vw,3rem)] text-hero font-medium tracking-[-0.035em]",
 };
 
 export function Money({ cents, tone, size = "md", className }: MoneyProps) {

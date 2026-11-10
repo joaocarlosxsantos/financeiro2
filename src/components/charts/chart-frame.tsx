@@ -70,8 +70,8 @@ export function ChartFrame({ title, data, series, empty, loading = false, childr
   return (
     <figure className="min-w-0 w-full max-w-full">
       {!busy && !empty && last && (
-        <figcaption className="mb-3 text-xs text-[var(--text-muted)]">
-          <p className="mb-2">{last.label} · valores em reais</p>
+        <figcaption className="mb-2 sm:mb-3 text-xs text-[var(--text-muted)]">
+          <p className="mb-2 hidden sm:block">{last.label} · valores em reais</p>
           <ul className="flex flex-wrap gap-x-4 gap-y-2">
             {series.map((item, index) => (
               <li key={item.key} className="min-w-0 max-w-full">
@@ -79,14 +79,14 @@ export function ChartFrame({ title, data, series, empty, loading = false, childr
                   <svg aria-hidden="true" width="20" height="8"><path d="M0 4H20" stroke={item.color} strokeWidth={1.75} strokeDasharray={item.dash ?? (index ? "4 4" : undefined)} /></svg>
                   {item.name}
                 </span>{" "}
-                <span className="tnum inline-block text-[var(--text)]">{chartMoney(Number(last[item.key] ?? 0))}</span>
+                <span className="tnum sr-only text-[var(--text)] sm:not-sr-only sm:inline-block">{chartMoney(Number(last[item.key] ?? 0))}</span>
               </li>
             ))}
           </ul>
         </figcaption>
       )}
       <div role="img" aria-label={`${title}. ${busy ? "Carregando gráfico." : empty ? "Sem dados no período." : summary}`} aria-busy={busy}
-        className="relative h-56 min-w-0 w-full max-w-full overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--acento)] md:h-72" {...interaction?.handlers}>
+        className="relative h-40 min-w-0 w-full max-w-full overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--acento)] md:h-72" {...interaction?.handlers}>
         {busy || empty ? (
           <p role="status" className="flex h-full items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-center text-sm text-[var(--text-muted)]">
             {busy ? "Carregando gráfico…" : "Sem dados no período"}

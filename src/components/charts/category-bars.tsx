@@ -5,7 +5,7 @@ import { CHART_CATEGORY_PALETTE } from "./palette";
 /** Ranked, directly labelled bars: names and ranks carry meaning without color. */
 export function CategoryBars({ slices, limit = 5, loading = false }: { slices: CategorySlice[]; limit?: number; loading?: boolean }) {
   if (loading || !slices.some((row) => row.totalCents > 0)) {
-    return <p role="status" aria-busy={loading} className="flex h-56 items-center justify-center px-4 text-center text-sm text-[var(--text-muted)]">{loading ? "Carregando categorias…" : "Sem despesas no período"}</p>;
+    return <p role="status" aria-busy={loading} className="flex h-40 items-center md:h-56 justify-center px-4 text-center text-sm text-[var(--text-muted)]">{loading ? "Carregando categorias…" : "Sem despesas no período"}</p>;
   }
   const sorted = slices.filter((row) => row.totalCents > 0).toSorted((a, b) => b.totalCents - a.totalCents);
   const total = sorted.reduce((sum, row) => sum + row.totalCents, 0);

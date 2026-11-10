@@ -122,7 +122,7 @@ export default async function DashboardPage({
 
       {/* 1. Hero mês: 'Sobrou' grande + linha Entrou/Saiu/Fixo menores */}
       <section
-        className="card p-5 sm:p-6"
+        className="card min-w-0 p-4 sm:p-6"
         aria-label="Resumo financeiro do mês"
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
@@ -146,8 +146,8 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[var(--border)]">
-          <div className="min-w-0 pr-2 sm:pr-4">
+        <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 border-t border-[var(--border)] pt-3 sm:mt-5 sm:gap-0 sm:divide-x sm:divide-[var(--border)] sm:pt-4">
+          <div className="min-w-0 sm:pr-4">
             <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Entrou
             </p>
@@ -164,7 +164,7 @@ export default async function DashboardPage({
             </p>
           </div>
 
-          <div className="min-w-0 px-2 sm:px-4">
+          <div className="min-w-0 sm:px-4">
             <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Saiu
             </p>
@@ -181,7 +181,7 @@ export default async function DashboardPage({
             </p>
           </div>
 
-          <div className="min-w-0 pl-2 sm:pl-4">
+          <div className="min-w-0 sm:pl-4">
             <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Fixo
             </p>
