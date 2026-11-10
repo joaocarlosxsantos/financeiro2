@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, Lock, X } from "lucide-react";
+import { Download, Lock } from "lucide-react";
+import { Sheet } from "@/components/sheet";
 import { requestExportToken } from "@/server/actions/export";
 
 export function BackupButton() {
@@ -63,31 +64,13 @@ export function BackupButton() {
       </button>
 
       {isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reauth-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-        >
-          <div className="relative w-full max-w-md rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isPending}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-button)] text-[var(--text-muted)] hover:text-[var(--text)]"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
+        <Sheet title="Confirmar senha" maxWidth="md" onClose={handleClose} closeDisabled={isPending}>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--acento)]">
                 <Lock className="h-5 w-5" />
               </div>
               <div>
-                <h3 id="reauth-modal-title" className="text-base font-semibold text-[var(--text)]">
-                  Confirmar senha
-                </h3>
+
                 <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                   Por segurança, confirme sua senha para baixar o backup completo.
                 </p>
@@ -139,8 +122,7 @@ export function BackupButton() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Sheet>
       )}
     </>
   );

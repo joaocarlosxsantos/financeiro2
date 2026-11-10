@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
-import { Plus, Trash2, Users, X } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { Sheet } from "@/components/sheet";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCents, formatCentsPlain, parseMoneyToCents } from "@/lib/money";
 import { computeSplit, type SplitMode, type SplitPersonInput } from "@/lib/splits";
@@ -48,8 +48,6 @@ function SplitDialogContent({
   transaction: PlainTransaction;
   initialSplits?: PlainSplit[];
 }) {
-  const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -84,39 +82,7 @@ function SplitDialogContent({
   });
 
   // Foco inicial e trap de foco acessível
-  useEffect(() => {
-    const panel = panelRef.current;
-    panel?.querySelector<HTMLInputElement>("input[data-autofocus]")?.focus();
 
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab" || !panel) return;
-      const focusable = panel.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [onClose]);
 
   // Manipulação de pessoas
   function addPerson() {
@@ -208,53 +174,10 @@ function SplitDialogContent({
     people.every((p) => p.name.trim().length > 0) &&
     preview.ok;
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50  transition-opacity"
-        onClick={onClose}
-        aria-hidden
-      />
-
-      {/* Painel do Modal */}
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="card sheet-glass rounded-b-none pb-[max(12px,env(safe-area-inset-bottom))] sm:rounded-b-2xl relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow-overlay)]"
-      >
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between border-b border-[var(--line)] px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] text-[var(--text-brand)]">
-              <Users className="size-4" />
-            </span>
-            <div>
-              <h2 id={titleId} className="text-sm font-semibold text-[var(--text)]">
-                Dividir despesa
-              </h2>
-              <p className="muted mt-0.5 truncate text-xs" title={transaction.description}>
-                {transaction.description} ·{" "}
-                <span className="tnum font-mono font-medium text-[var(--text)]">
-                  {formatCents(transaction.amountCents)}
-                </span>
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label="Fechar"
-            onClick={onClose}
-            className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        {/* Corpo com scroll */}
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+  return (
+    <Sheet title="Dividir despesa" maxWidth="xl" onClose={onClose}>
+      <p className="mb-3 break-words text-sm text-[var(--text-muted)]">{transaction.description} ? {formatCents(transaction.amountCents)}</p>
+        <div className="space-y-4 py-4">
           {/* Modo de divisão */}
           <div>
             <label className="muted mb-1.5 block text-xs font-semibold tracking-normal">
@@ -489,8 +412,6 @@ function SplitDialogContent({
             </Button>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }

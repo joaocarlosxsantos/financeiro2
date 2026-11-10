@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
-import { ArrowLeftRight, X } from "lucide-react";
+import { useId, useState, useTransition } from "react";
+import { Sheet } from "@/components/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { MAX_CENTS, parseMoneyToCents } from "@/lib/money";
 import { todayRef } from "@/lib/dates";
 import { createTransfer } from "@/server/actions/transactions";
-import { cn } from "@/lib/cn";
 import type { PlainAccount } from "./types";
 
 export function TransferDialog({
@@ -36,9 +34,7 @@ function TransferDialogContent({
   onClose: () => void;
   accounts: PlainAccount[];
 }) {
-  const titleId = useId();
   const descId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
 
   const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id ?? "");
@@ -51,39 +47,7 @@ function TransferDialogContent({
   const [clientError, setClientError] = useState<string | null>(null);
 
   // Foco inicial e trap de foco acessível
-  useEffect(() => {
-    const panel = panelRef.current;
-    panel?.querySelector<HTMLSelectElement>("select[data-autofocus]")?.focus();
 
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab" || !panel) return;
-      const focusable = panel.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [onClose]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -128,48 +92,8 @@ function TransferDialogContent({
     });
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Janela Modal — padrão 360px e tokens semânticos */}
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descId}
-        className={cn(
-          "relative z-10 w-full max-w-[360px] overflow-hidden rounded-[var(--radius-card)]",
-          "border border-[var(--border)] bg-[var(--surface)] p-0 shadow-lg text-[var(--text)]",
-        )}
-      >
-        {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 bg-[var(--surface-2)]">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] text-[var(--text-brand)]">
-              <ArrowLeftRight className="size-4" />
-            </span>
-            <h2 id={titleId} className="text-sm font-semibold tracking-tight">
-              Nova transferência
-            </h2>
-          </div>
-          <button
-            type="button"
-            aria-label="Fechar"
-            onClick={onClose}
-            className="inline-flex items-center justify-center min-h-11 min-w-11 cursor-pointer rounded-[var(--radius-xs)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        {/* Formulário */}
+  return (
+    <Sheet title="Nova transferência" onClose={onClose} describedBy={descId}>
         <form onSubmit={handleSubmit} className="space-y-3.5 p-4">
           <p id={descId} className="sr-only">
             Transfere valores entre contas do usuário mantendo os saldos ajustados.
@@ -277,8 +201,6 @@ function TransferDialogContent({
             </Button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }

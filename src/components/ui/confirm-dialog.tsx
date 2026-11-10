@@ -4,13 +4,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useId,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
+import { Sheet } from "@/components/sheet";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -84,70 +82,11 @@ function Dialog({
   closing: boolean;
   onSettle: (result: boolean) => void;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const titleId = useId();
   const descId = useId();
   const danger = state.tone === "danger";
-
-  useEffect(() => {
-    // Foca o botão de cancelar por padrão — ação segura, e é o que "Esc" já faz.
-    const panel = panelRef.current;
-    panel?.querySelector<HTMLButtonElement>("[data-autofocus]")?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onSettle(false);
-        return;
-      }
-      if (e.key !== "Tab" || !panel) return;
-      const focusable = panel.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [onSettle]);
-
-  return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4">
-      <div
-        className={cn(
-          "absolute inset-0 bg-black/45 transition-opacity duration-150",
-          closing ? "opacity-0" : "opacity-100",
-        )}
-        onClick={() => onSettle(false)}
-        aria-hidden
-      />
-      <div
-        ref={panelRef}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={state.description ? descId : undefined}
-        className={cn(
-          "card sheet-glass relative w-full max-w-sm p-5 motion-reduce:transition-none transition-all duration-300 ease-out sm:duration-150",
-          "rounded-b-none pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-b-[var(--radius-card)] sm:pb-5",
-          closing
-            ? "translate-y-2 opacity-0 sm:translate-y-0 sm:scale-95"
-            : "translate-y-0 opacity-100 sm:scale-100",
-        )}
-      >
+  return (
+    <Sheet title={state.title} role="alertdialog" maxWidth="sm" describedBy={state.description ? descId : undefined} onClose={() => onSettle(false)}>
+      <div className={cn("transition-opacity duration-150 motion-reduce:transition-none", closing && "opacity-0")}>
         <div className="flex items-start gap-3">
           {danger ? (
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-money-out-soft)] text-[var(--text-out)]">
@@ -155,9 +94,7 @@ function Dialog({
             </span>
           ) : null}
           <div className="min-w-0">
-            <h2 id={titleId} className="text-heading font-semibold tracking-tight">
-              {state.title}
-            </h2>
+
             {state.description ? (
               <p id={descId} className="muted mt-1.5 text-sm leading-relaxed">
                 {state.description}
@@ -189,7 +126,6 @@ function Dialog({
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }
