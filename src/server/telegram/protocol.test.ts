@@ -77,6 +77,51 @@ describe("protocolo Telegram", () => {
     expect(d.pause).toHaveBeenCalledTimes(1);
     expect(d.summary).toHaveBeenCalledTimes(1);
   });
+  it("/previsao, /hoje e /assinaturas consultam o dono vinculado", async () => {
+    const d = {
+      ...deps(),
+      forecast: vi.fn().mockResolvedValue("Previsão: saldo R$ 500,00"),
+      dailyBudget: vi.fn().mockResolvedValue("Hoje você pode gastar até R$ 80,00"),
+      subscriptions: vi.fn().mockResolvedValue("Assinaturas identificadas"),
+    };
+    expect(await commandReply(message("/previsao"), d)).toBe("Previsão: saldo R$ 500,00");
+    expect(d.forecast).toHaveBeenCalledWith("linked-owner");
+
+    expect(await commandReply(message("/hoje"), d)).toBe("Hoje você pode gastar até R$ 80,00");
+    expect(d.dailyBudget).toHaveBeenCalledWith("linked-owner");
+
+    expect(await commandReply(message("/assinaturas"), d)).toBe("Assinaturas identificadas");
+    expect(d.subscriptions).toHaveBeenCalledWith("linked-owner");
+
+    vi.mocked(d.linkedUser).mockResolvedValue(null);
+    expect(await commandReply(message("/previsao"), d)).toContain("Vincule");
+    expect(await commandReply(message("/hoje"), d)).toContain("Vincule");
+    expect(await commandReply(message("/assinaturas"), d)).toContain("Vincule");
+    expect(d.forecast).toHaveBeenCalledTimes(1);
+    expect(d.dailyBudget).toHaveBeenCalledTimes(1);
+    expect(d.subscriptions).toHaveBeenCalledTimes(1);
+  });
+  it("/cartao consulta o dono vinculado e ignora argumentos adicionais", async () => {
+    const d = {
+      ...deps(),
+      cards: vi.fn().mockResolvedValue("Resumo dos cartões: Nubank Final 1234"),
+    };
+    expect(await commandReply(message("/cartao"), d)).toBe("Resumo dos cartões: Nubank Final 1234");
+    expect(d.cards).toHaveBeenCalledWith("linked-owner");
+
+    // Argumentos adicionais são ignorados
+    expect(await commandReply(message("/cartao 1234"), d)).toBe("Resumo dos cartões: Nubank Final 1234");
+    expect(await commandReply(message("/cartao injected-user-id"), d)).toBe("Resumo dos cartões: Nubank Final 1234");
+    expect(d.cards).toHaveBeenCalledTimes(3);
+
+    // Sem vínculo
+    vi.mocked(d.linkedUser).mockResolvedValue(null);
+    expect(await commandReply(message("/cartao"), d)).toContain("Vincule");
+    expect(d.cards).toHaveBeenCalledTimes(3);
+
+    // HELP contém /cartao
+    expect(HELP).toContain("/cartao");
+  });
   it.each([
     { chat: { id: -123, type: "group" } },
     { from: { id: 456, is_bot: false } },

@@ -8,11 +8,23 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   balance: vi.fn(),
   summary: vi.fn(),
+  forecast: vi.fn(),
+  dailyBudget: vi.fn(),
+  subscriptions: vi.fn(),
+  cards: vi.fn(),
   ai: vi.fn(),
 }));
 vi.mock("@/db", () => ({ db: { transaction: (...args: unknown[]) => mocks.transaction(...args) } }));
 vi.mock("@/server/queries", () => ({ getBalances: (...args: unknown[]) => mocks.balance(...args) }));
-vi.mock("./insight-store", () => ({ manualSummary: (...args: unknown[]) => mocks.summary(...args) }));
+vi.mock("./insight-store", () => ({
+  manualSummary: (...args: unknown[]) => mocks.summary(...args),
+  manualForecast: (...args: unknown[]) => mocks.forecast(...args),
+  manualDailyBudget: (...args: unknown[]) => mocks.dailyBudget(...args),
+  manualSubscriptionsInsight: (...args: unknown[]) => mocks.subscriptions(...args),
+}));
+vi.mock("./card-summary", () => ({
+  loadCardSummary: (...args: unknown[]) => mocks.cards(...args),
+}));
 vi.mock("./ai-service", () => ({ answerQuestion: (...args: unknown[]) => mocks.ai(...args) }));
 
 import { disconnect, issueLink, processMessage } from "./store";
@@ -151,5 +163,26 @@ describe("persistência Telegram", () => {
     expect(setWindowQuery.params.some((p) => p instanceof Date)).toBe(false);
     expect(setWhereQuery.sql).toContain("::timestamptz");
     expect(setWindowQuery.sql).toContain("::timestamptz");
+  });
+  it("/previsao e /hoje mantêm leituras na conexão da transação", async () => {
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.forecast.mockResolvedValue("Previsão mock");
+    expect(await processMessage(20, message("/previsao"))).toBe("Previsão mock");
+    expect(mocks.forecast).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
+
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.dailyBudget.mockResolvedValue("Hoje mock");
+    expect(await processMessage(21, message("/hoje"))).toBe("Hoje mock");
+    expect(mocks.dailyBudget).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
+
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.subscriptions.mockResolvedValue("Assinaturas mock");
+    expect(await processMessage(22, message("/assinaturas"))).toBe("Assinaturas mock");
+    expect(mocks.subscriptions).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
+
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.cards.mockResolvedValue("Cartões mock");
+    expect(await processMessage(23, message("/cartao"))).toBe("Cartões mock");
+    expect(mocks.cards).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }), expect.any(Date));
   });
 });

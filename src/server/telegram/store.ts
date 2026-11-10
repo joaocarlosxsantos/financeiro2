@@ -2,7 +2,9 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { telegramChatState, telegramLinkCodes, telegramLinks, telegramPreferences, users } from "@/db/schema";
 import { getBalances } from "@/server/queries";
-import { manualSummary } from "./insight-store";
+import { loadMonthlyReport } from "./monthly-report";
+import { manualDailyBudget, manualForecast, manualSubscriptionsInsight, manualSummary } from "./insight-store";
+import { loadCardSummary } from "./card-summary";
 import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
 
@@ -73,6 +75,11 @@ export async function processMessage(updateId: number, message: TelegramMessage)
       // Usa a conexão já reservada; abrir outra aqui pode esgotar o pool.
       balance: (userId) => getBalances(userId, tx),
       summary: (userId) => manualSummary(userId, tx),
+      report: (userId) => loadMonthlyReport(userId, now, tx),
+      forecast: (userId) => manualForecast(userId, tx),
+      dailyBudget: (userId) => manualDailyBudget(userId, tx),
+      subscriptions: (userId) => manualSubscriptionsInsight(userId, tx),
+      cards: (userId) => loadCardSummary(userId, tx, now),
       async pause(userId) {
         await tx.insert(telegramPreferences).values({ userId, enabled: false })
           .onConflictDoUpdate({ target: telegramPreferences.userId, set: { enabled: false, updatedAt: new Date() } });

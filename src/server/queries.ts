@@ -129,26 +129,26 @@ export type CardMode = "accrual" | "cash";
 export async function getMonthSummary(
   userId: string,
   ref: MonthRef,
-  opts?: { cardMode?: CardMode },
+  opts?: { cardMode?: CardMode; connection?: Pick<typeof db, "select">; endExclusive?: Date },
 ): Promise<MonthSummary> {
   const { start, end } = monthRange(ref);
   const cash = opts?.cardMode === "cash";
 
-  const rows = await db
+  const rows = await (opts?.connection ?? db)
     .select({
       kind: txTable.kind,
       nature: txTable.nature,
       total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
     })
     .from(txTable)
-    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .innerJoin(accountsTable, and(eq(accountsTable.id, txTable.accountId), eq(accountsTable.userId, userId)))
     .where(
       and(
         eq(txTable.userId, userId),
         eq(txTable.isTransfer, false),
         or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         gte(txTable.date, start),
-        lt(txTable.date, end),
+        lt(txTable.date, opts?.endExclusive && opts.endExclusive < end ? opts.endExclusive : end),
         cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
         cash ? sql`true` : eq(txTable.isCardPayment, false),
       ),
@@ -250,12 +250,12 @@ export type CategorySlice = {
 export async function getCategoryBreakdown(
   userId: string,
   ref: MonthRef,
-  opts?: { cardMode?: CardMode },
+  opts?: { cardMode?: CardMode; connection?: Pick<typeof db, "select">; endExclusive?: Date },
 ): Promise<CategorySlice[]> {
   const { start, end } = monthRange(ref);
   const cash = opts?.cardMode === "cash";
 
-  const rows = await db
+  const rows = await (opts?.connection ?? db)
     .select({
       id: txTable.categoryId,
       name: categoriesTable.name,
@@ -264,8 +264,8 @@ export async function getCategoryBreakdown(
       total: sql<number>`coalesce(sum(${txTable.amountCents}), 0)::int`,
     })
     .from(txTable)
-    .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
-    .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
+    .leftJoin(categoriesTable, and(eq(categoriesTable.id, txTable.categoryId), eq(categoriesTable.userId, userId)))
+    .innerJoin(accountsTable, and(eq(accountsTable.id, txTable.accountId), eq(accountsTable.userId, userId)))
     .where(
       and(
         eq(txTable.userId, userId),
@@ -273,7 +273,7 @@ export async function getCategoryBreakdown(
         eq(txTable.isTransfer, false),
         or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         gte(txTable.date, start),
-        lt(txTable.date, end),
+        lt(txTable.date, opts?.endExclusive && opts.endExclusive < end ? opts.endExclusive : end),
         cash ? sql`${accountsTable.type} <> 'CREDIT_CARD'` : sql`true`,
         cash ? sql`true` : eq(txTable.isCardPayment, false),
       ),

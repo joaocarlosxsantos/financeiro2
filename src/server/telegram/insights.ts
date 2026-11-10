@@ -9,7 +9,7 @@ export const preferenceSchema = z.object({
 }).strict();
 export type Preferences = z.infer<typeof preferenceSchema>;
 export const DEFAULT_PREFERENCES: Preferences = { enabled: false, hours: [8, 14, 20], summary: true, spending: true, dueBills: true, budget: true };
-export type InsightWindow = { key: string; day: string; hour: 8 | 14 | 20 };
+export type InsightWindow = { key: string; day: string; hour: 8 | 14 | 20; monthly?: true };
 
 export function insightWindow(now = new Date()): InsightWindow | null {
   const hour = getNowInSaoPaulo(now).getHours();
@@ -32,6 +32,14 @@ export type InsightData = {
   categories: { name: string; todayCents: number; historyCents: number; historyCount: number; historyDays: number }[];
   due: { name: string; date: string; totalCents: number }[];
   budgets: { name: string; spentCents: number; limitCents: number }[];
+  subscriptions?: {
+    name: string;
+    currentCents: number;
+    previousCents?: number;
+    hasPriceIncrease: boolean;
+    priceIncreasePct?: number;
+    isRegistered: boolean;
+  }[];
 };
 const money = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const label = (name: string) => name.replace(/[\r\n\t\u0000-\u001f\u007f]/g, " ").slice(0, 60);
@@ -54,6 +62,20 @@ export function buildInsight(data: InsightData, prefs: Preferences, window: Insi
     const budgets = data.budgets.filter((b) => b.spentCents > b.limitCents && b.limitCents >= 0)
       .sort((a, b) => (b.spentCents - b.limitCents) - (a.spentCents - a.limitCents)).slice(0, 3);
     for (const b of budgets) lines.push(`Orçamento estourou em ${label(b.name)}: ${money(b.spentCents)} de ${money(b.limitCents)}.`);
+  }
+  if (data.subscriptions?.length) {
+    const increases = data.subscriptions.filter((s) => s.hasPriceIncrease);
+    for (const sub of increases.slice(0, 2)) {
+      lines.push(
+        `Aviso de assinatura: ${label(sub.name)} subiu de ${money(sub.previousCents ?? 0)} para ${money(sub.currentCents)} (+${sub.priceIncreasePct}%).`,
+      );
+    }
+    const unregistered = data.subscriptions.filter((s) => !s.isRegistered && !s.hasPriceIncrease);
+    for (const sub of unregistered.slice(0, 2)) {
+      lines.push(
+        `Assinatura detectada no extrato: ${label(sub.name)} (${money(sub.currentCents)}/mês). Registre em Recorrentes no app.`,
+      );
+    }
   }
   if (!lines.length) return null;
   return [`Mutano Contas — ${manual ? "resumo solicitado" : window.hour === 8 ? "resumo da manhã" : window.hour === 14 ? "alertas da tarde" : "fechamento do dia"}`, ...lines, "Dados registrados no app. /pausar desliga avisos automáticos."].join("\n").slice(0, 3800);

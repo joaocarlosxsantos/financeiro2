@@ -5,6 +5,7 @@ export type InsightRecipient = { userId: string; chatId: string; prefs: Preferen
 export interface CronDependencies {
   candidates(window: InsightWindow, afterUserId?: string): Promise<InsightRecipient[]>;
   data(userId: string, window: InsightWindow): Promise<InsightData>;
+  renderMessage?(recipient: InsightRecipient, window: InsightWindow): Promise<string | null>;
   claim(userId: string, windowKey: string): Promise<boolean>;
   stillEnabled(recipient: InsightRecipient, window: InsightWindow): Promise<boolean>;
   send(chatId: string, text: string): Promise<void>;
@@ -22,11 +23,12 @@ export async function runInsightBatch(window: InsightWindow, deps: CronDependenc
       await Promise.all(recipients.slice(offset, offset + 5).map(async (recipient) => {
         let claimed = false;
         try {
-          if (!recipient.prefs.enabled || !recipient.prefs.hours.includes(window.hour)) { result.skipped++; return; }
+          if (!recipient.prefs.enabled || !recipient.prefs.hours.includes(window.hour) || (window.monthly && !recipient.prefs.summary)) { result.skipped++; return; }
           if (!await deps.claim(recipient.userId, window.key)) { result.skipped++; return; }
           claimed = true;
-          const data = await deps.data(recipient.userId, window);
-          const text = buildInsight(data, recipient.prefs, window);
+          const text = deps.renderMessage
+            ? await deps.renderMessage(recipient, window)
+            : buildInsight(await deps.data(recipient.userId, window), recipient.prefs, window);
           if (!text) {
             await deps.finish(recipient.userId, window.key, "CANCELLED");
             result.skipped++; return;
@@ -53,13 +55,16 @@ export async function runInsightBatch(window: InsightWindow, deps: CronDependenc
   return result;
 }
 
-export async function handleInsightsCron(request: Request, secret: string | undefined, deps: CronDependencies, now = new Date()) {
+export async function handleInsightsCron(
+  request: Request, secret: string | undefined, deps: CronDependencies,
+  now = new Date(), selectWindow: (now: Date) => InsightWindow | null = insightWindow,
+) {
   const headers = { "Cache-Control": "no-store" };
   if (!secret) return Response.json({ error: "unavailable" }, { status: 503, headers });
   if (!validWebhookSecret(request.headers.get("authorization"), `Bearer ${secret}`)) {
     return Response.json({ error: "unauthorized" }, { status: 401, headers });
   }
-  const window = insightWindow(now);
+  const window = selectWindow(now);
   if (!window) return Response.json({ sent: 0, skipped: 0, failed: 0 }, { headers });
   try { return Response.json(await runInsightBatch(window, deps), { headers }); }
   catch { return Response.json({ error: "temporarily_unavailable" }, { status: 503, headers }); }

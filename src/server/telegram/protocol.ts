@@ -37,7 +37,7 @@ export const updateSchema = z.object({
 export type TelegramUpdate = z.infer<typeof updateSchema>;
 export type TelegramMessage = NonNullable<TelegramUpdate["message"]>;
 
-export const HELP = "Mutano Contas: /saldo consulta seu saldo disponível; /resumo traz os números e avisos do dia; /pausar desliga avisos automáticos; /ajuda mostra os comandos. Quando habilitadas, perguntas livres usam o provedor de IA configurado (Google Gemini ou Anthropic Claude), enviando pergunta e dados mínimos; limite de 2 por minuto e 20 por dia. Sem IA, comandos e avisos por regra continuam funcionando. Para vincular, retomar avisos ou desconectar, abra Configurações no app.";
+export const HELP = "Mutano Contas: /saldo consulta seu saldo disponível; /cartao resume suas faturas, limites e últimas compras; /previsao traz a projeção de fechamento do mês; /hoje calcula quanto você pode gastar hoje; /assinaturas lista assinaturas e aumentos de preço; /resumo traz os números e avisos do dia; /relatorio mostra o relatório do mês; /pausar desliga avisos automáticos; /ajuda mostra os comandos. Quando habilitadas, perguntas livres usam o provedor de IA configurado (Google Gemini ou Anthropic Claude), enviando pergunta e dados mínimos; limite de 2 por minuto e 20 por dia. Sem IA, comandos e avisos por regra continuam funcionando. Para vincular, retomar avisos ou desconectar, abra Configurações no app.";
 
 export function isFreeQuestion(text: string | undefined) {
   const value = text?.trim() ?? "";
@@ -49,6 +49,11 @@ export interface CommandDependencies {
   linkedUser(chatId: string): Promise<string | null>;
   balance(userId: string): Promise<{ availableCents: number; totalIncomplete: boolean; needsOpeningBalance: boolean }>;
   summary?(userId: string): Promise<string>;
+  report?(userId: string): Promise<string>;
+  forecast?(userId: string): Promise<string>;
+  dailyBudget?(userId: string): Promise<string>;
+  subscriptions?(userId: string): Promise<string>;
+  cards?(userId: string): Promise<string>;
   pause?(userId: string): Promise<void>;
 }
 
@@ -63,9 +68,18 @@ export async function commandReply(message: TelegramMessage, deps: CommandDepend
     const linked = await deps.consumeCode(hashCode(code), chatId);
     return linked ? "Telegram vinculado ao Mutano Contas. Use /saldo ou /ajuda." : "Link inválido, expirado ou conta já vinculada. Desconecte no app e gere outro link.";
   }
-  if (!["/saldo", "/resumo", "/pausar"].includes(text)) return HELP;
+  const isCardsCommand = text === "/cartao" || text.startsWith("/cartao ");
+  if (!isCardsCommand && !["/saldo", "/resumo", "/pausar", "/previsao", "/hoje", "/assinaturas", "/relatorio"].includes(text)) return HELP;
   const userId = await deps.linkedUser(chatId);
+  if (text === "/relatorio") {
+    if (!userId) return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar o relatório.";
+    return deps.report ? deps.report(userId) : "Relatório temporariamente indisponível.";
+  }
   if (!userId) return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar o saldo.";
+  if (isCardsCommand) return deps.cards ? deps.cards(userId) : "Resumo de cartões temporariamente indisponível.";
+  if (text === "/previsao") return deps.forecast ? deps.forecast(userId) : "Previsão temporariamente indisponível.";
+  if (text === "/hoje") return deps.dailyBudget ? deps.dailyBudget(userId) : "Cálculo diário temporariamente indisponível.";
+  if (text === "/assinaturas") return deps.subscriptions ? deps.subscriptions(userId) : "Assinaturas temporariamente indisponíveis.";
   if (text === "/resumo") return deps.summary ? deps.summary(userId) : "Resumo temporariamente indisponível.";
   if (text === "/pausar") {
     if (!deps.pause) return "Não foi possível pausar agora. Tente no app.";
