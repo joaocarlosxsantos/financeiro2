@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteDebt, registerDebtPayment, updateDebtField } from "@/server/actions/debts";
 import { Button } from "@/components/ui/button";
-import { MoneyInput, Input } from "@/components/ui/field";
+import { MoneyInput } from "@/components/ui/field";
 import { formatCents, formatCentsPlain } from "@/lib/money";
 import { DEBT_KIND_LABEL, annualRateFromMonthly, formatRate } from "@/lib/debts";
 import { cn } from "@/lib/cn";

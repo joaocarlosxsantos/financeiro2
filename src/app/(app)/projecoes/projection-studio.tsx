@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, MoneyInput, Input } from "@/components/ui/field";
+import { Field, MoneyInput } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { ProjectionChart, type ProjectionRow } from "@/components/charts/projection-chart";
 import { formatCents, parseMoneyToCents } from "@/lib/money";

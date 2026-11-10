@@ -68,7 +68,8 @@ export function Sheet({ title, children, onClose }: {
       viewport?.removeEventListener("scroll", fitKeyboard);
       dialog.close();
       if (window.history.state?.sheet === marker) {
-        const { sheet: _sheet, ...previousState } = window.history.state;
+        const previousState = { ...window.history.state };
+        delete previousState.sheet;
         window.history.replaceState(previousState, "");
       }
       document.body.style.overflow = previousOverflow;

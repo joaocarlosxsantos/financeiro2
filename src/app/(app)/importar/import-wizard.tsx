@@ -1,14 +1,13 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ArrowLeftRight, CheckCircle2, FileUp, Loader2 } from "lucide-react";
+import { CheckCircle2, FileUp, Loader2 } from "lucide-react";
 import { commitImport, previewImport, type PreviewRow } from "@/server/actions/import";
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
-import { formatCents } from "@/lib/money";
 import { formatDate, monthLabel, monthRefFromParam, todayRef } from "@/lib/dates";
 import { ImportReview } from "./import-review";
 import { cn } from "@/lib/cn";

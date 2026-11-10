@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
-import { MoneyInput, Input } from "@/components/ui/field";
+import { MoneyInput } from "@/components/ui/field";
 import { formatCents } from "@/lib/money";
 import { monthsToTarget, monthsOfRunway } from "@/lib/finance";
 import { GoalRecurringControl, type PlainGoalRecurringRule } from "./goal-recurring-control";

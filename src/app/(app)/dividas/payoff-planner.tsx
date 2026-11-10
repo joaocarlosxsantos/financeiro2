@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Award, CalendarCheck } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, MoneyInput, Input } from "@/components/ui/field";
+import { Field, MoneyInput } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { ProjectionChart } from "@/components/charts/projection-chart";
 import { VIZ } from "@/components/charts/palette";

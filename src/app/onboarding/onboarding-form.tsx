@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { completeOnboarding, type ActionState } from "@/server/actions/settings";
-import { Field, MoneyInput, Input, Select } from "@/components/ui/field";
+import { Field, MoneyInput, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
 import { formatCents, parseMoneyToCents } from "@/lib/money";

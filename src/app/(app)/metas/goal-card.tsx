@@ -5,7 +5,7 @@ import { Trash2 } from "lucide-react";
 import { contributeToGoal, deleteGoal } from "@/server/actions/goals";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { MoneyInput, Input } from "@/components/ui/field";
+import { MoneyInput } from "@/components/ui/field";
 import { formatCents, pct } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";

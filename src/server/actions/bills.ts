@@ -14,7 +14,7 @@ import {
 import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, formatCents, MAX_CENTS } from "@/lib/money";
 import { checkManualSplit, recalculateSplit, splitBillEqually } from "@/lib/bills";
-import { shiftMonth, type MonthRef } from "@/lib/dates";
+import { shiftMonth } from "@/lib/dates";
 import { billMonthSchema } from "@/server/validation/bill-month";
 
 export type ActionState = { error?: string; ok?: boolean };
