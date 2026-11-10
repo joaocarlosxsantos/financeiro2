@@ -1,10 +1,9 @@
 import { cn } from "@/lib/cn";
 
 export function LogoMark({ className }: { className?: string }) {
-  return <svg viewBox="10 10 44 44" className={className} fill="currentColor" aria-hidden="true">
-    <circle cx="32" cy="32" r="19" fill="none" stroke="currentColor" strokeWidth="5" />
-    <rect x="20" y="24.5" width="24" height="5" />
-    <rect x="20" y="34.5" width="24" height="5" />
+  return <svg viewBox="7 7 45 50" className={className} fill="none" stroke="currentColor" strokeMiterlimit={2} aria-hidden="true">
+    <path d="M49.34 18.46A22 22 0 1 0 49.34 45.54" strokeWidth={6} />
+    <path d="M22.5 42V22.5L32.5 34L42.5 22.5V42" strokeWidth={4.8} />
   </svg>;
 }
 
@@ -38,8 +37,8 @@ export function Wordmark({ className }: { className?: string }) {
 }
 
 export function Logo({ className, compacto }: { className?: string; compacto?: boolean }) {
-  return <span className={cn("inline-flex shrink-0 items-center gap-6 text-[var(--text)]", className)}>
-    <LogoMark className={compacto ? "h-7 w-auto shrink-0" : "h-7 w-auto shrink-0 lg:h-8"} />
+  return <span className={cn("inline-flex shrink-0 items-center gap-3 text-[var(--text)]", className)}>
+    <LogoMark className={compacto ? "h-5 w-auto shrink-0" : "h-5 w-auto shrink-0 sm:h-6"} />
     {compacto ? <WordmarkCurto className="h-5 w-auto shrink-0" /> : <Wordmark className="h-5 w-auto shrink-0 sm:h-6" />}
   </span>;
 }
