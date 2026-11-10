@@ -40,7 +40,7 @@ export default async function ImportPage() {
         description="Suba o arquivo que o seu banco exporta. Nós lemos, sugerimos categoria linha a linha e bloqueamos o que já foi importado antes."
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <ImportWizard
           accounts={accounts.map((a) => ({ id: a.id, name: a.name, type: a.type }))}
           categories={categories.map((c) => ({
@@ -53,7 +53,7 @@ export default async function ImportPage() {
         />
 
         <div className="space-y-4">
-          <Card>
+          <Card className="min-w-0">
             <CardHeader title="Onde encontrar o arquivo" />
             <ul className="muted space-y-2.5 text-[0.8125rem] leading-relaxed">
               <li>
@@ -83,7 +83,7 @@ export default async function ImportPage() {
           </Hint>
 
           {history.length ? (
-            <Card>
+            <Card className="min-w-0">
               <CardHeader
                 title="Importações recentes"
                 subtitle="Importou algo errado? Apague o lote e importe de novo."

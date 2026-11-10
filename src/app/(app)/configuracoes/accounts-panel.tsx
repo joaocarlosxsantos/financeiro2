@@ -111,7 +111,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 type="button"
                 aria-label={`Editar ${a.name}`}
                 onClick={() => toggleEdit(a.id)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
+                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
               >
                 <Pencil className="size-4" />
               </button>
@@ -119,7 +119,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 type="button"
                 aria-label={`Arquivar ${a.name}`}
                 onClick={() => void archive(a)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -168,7 +168,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Editar ${a.name}`}
                     onClick={() => toggleEdit(a.id)}
-                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface)] hover:text-[var(--text-brand)]"
+                    className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface)] hover:text-[var(--text-brand)]"
                   >
                     <Pencil className="size-4" />
                   </button>
@@ -176,7 +176,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Reativar ${a.name}`}
                     onClick={() => start(async () => void (await restoreAccount(a.id)))}
-                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-in-soft)] hover:text-[var(--text-in)]"
+                    className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-in-soft)] hover:text-[var(--text-in)]"
                   >
                     <ArchiveRestore className="size-4" />
                   </button>
@@ -184,7 +184,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Excluir ${a.name} definitivamente`}
                     onClick={() => void removeForever(a)}
-                    className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                    className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -201,11 +201,11 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
       {open ? (
         <form ref={ref} action={formAction} className="space-y-3 rounded-xl border bg-[var(--surface-2)] p-4">
           <Field label="Nome">
-            <Input name="name" required placeholder="Ex.: Nubank" />
+            <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required placeholder="Ex.: Nubank" />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Tipo">
-              <Select name="type" defaultValue="CHECKING" onChange={(e) => setNewType(e.target.value)}>
+              <Select className="min-h-12 min-w-0 max-w-full text-base!" name="type" defaultValue="CHECKING" onChange={(e) => setNewType(e.target.value)}>
                 <option value="CHECKING">Conta corrente</option>
                 <option value="SAVINGS">Poupança</option>
                 <option value="CREDIT_CARD">Cartão de crédito</option>
@@ -214,29 +214,29 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
               </Select>
             </Field>
             <Field label="Instituição (opcional)">
-              <Input name="institution" placeholder="Ex.: Banco Inter" />
+              <Input className="min-h-12 min-w-0 max-w-full text-base!" name="institution" placeholder="Ex.: Banco Inter" />
             </Field>
           </div>
           {newType === "CREDIT_CARD" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Dia de fechamento">
-                <Input name="closingDay" type="number" min={1} max={31} placeholder="Ex.: 25" />
+                <Input className="min-h-12 min-w-0 max-w-full text-base!" name="closingDay" type="number" min={1} max={31} placeholder="Ex.: 25" />
               </Field>
               <Field label="Dia de vencimento">
-                <Input name="dueDay" type="number" min={1} max={31} placeholder="Ex.: 5" />
+                <Input className="min-h-12 min-w-0 max-w-full text-base!" name="dueDay" type="number" min={1} max={31} placeholder="Ex.: 5" />
               </Field>
             </div>
           )}
           {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
-            <SubmitButton size="sm">Adicionar conta</SubmitButton>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+            <SubmitButton className="min-h-11 min-w-11" size="sm">Adicionar conta</SubmitButton>
+            <Button className="min-h-11 min-w-11" type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
           </div>
         </form>
       ) : (
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Button className="min-h-11 min-w-11" variant="outline" size="sm" onClick={() => setOpen(true)}>
           <Plus className="size-4" />
           Nova conta
         </Button>
@@ -260,11 +260,11 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
     <form action={formAction} className="mt-3 space-y-3 rounded-xl border bg-[var(--surface-2)] p-3">
       <input type="hidden" name="id" value={account.id} />
       <Field label="Nome">
-        <Input name="name" required defaultValue={account.name} />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required defaultValue={account.name} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Tipo">
-          <Select name="type" defaultValue={account.type} onChange={(e) => setType(e.target.value)}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="type" defaultValue={account.type} onChange={(e) => setType(e.target.value)}>
             <option value="CHECKING">Conta corrente</option>
             <option value="SAVINGS">Poupança</option>
             <option value="CREDIT_CARD">Cartão de crédito</option>
@@ -273,13 +273,13 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
           </Select>
         </Field>
         <Field label="Instituição (opcional)">
-          <Input name="institution" defaultValue={account.institution ?? ""} placeholder="Ex.: Banco Inter" />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="institution" defaultValue={account.institution ?? ""} placeholder="Ex.: Banco Inter" />
         </Field>
       </div>
       {type === "CREDIT_CARD" && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Dia de fechamento">
-            <Input
+            <Input className="min-h-12 min-w-0 max-w-full text-base!"
               name="closingDay"
               type="number"
               min={1}
@@ -289,7 +289,7 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
             />
           </Field>
           <Field label="Dia de vencimento">
-            <Input
+            <Input className="min-h-12 min-w-0 max-w-full text-base!"
               name="dueDay"
               type="number"
               min={1}
@@ -305,8 +305,8 @@ function EditForm({ account, onDone }: { account: Account; onDone: () => void })
       </Field>
       {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
       <div className="flex gap-2">
-        <SubmitButton size="sm">Salvar</SubmitButton>
-        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        <SubmitButton className="min-h-11 min-w-11" size="sm">Salvar</SubmitButton>
+        <Button className="min-h-11 min-w-11" type="button" size="sm" variant="ghost" onClick={onDone}>
           Cancelar
         </Button>
       </div>

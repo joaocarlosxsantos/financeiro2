@@ -74,16 +74,16 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
         <form ref={ref} action={formAction} className="space-y-3 rounded-xl border bg-[var(--surface-2)] p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Nome">
-              <Input name="name" required placeholder="Ex.: Pet" />
+              <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required placeholder="Ex.: Pet" />
             </Field>
             <Field label="Tipo">
-              <Select name="kind" defaultValue="EXPENSE">
+              <Select className="min-h-12 min-w-0 max-w-full text-base!" name="kind" defaultValue="EXPENSE">
                 <option value="EXPENSE">Saída</option>
                 <option value="INCOME">Entrada</option>
               </Select>
             </Field>
             <Field label="Natureza">
-              <Select name="nature" defaultValue="VARIABLE">
+              <Select className="min-h-12 min-w-0 max-w-full text-base!" name="nature" defaultValue="VARIABLE">
                 <option value="VARIABLE">Variável</option>
                 <option value="FIXED">Fixo</option>
               </Select>
@@ -93,21 +93,21 @@ export function CategoriesPanel({ categories }: { categories: Cat[] }) {
             label="Palavras-chave"
             hint="Usadas para categorizar automaticamente na importação. Ex.: petz, cobasi, ração"
           >
-            <Input name="keywords" placeholder="petz, cobasi, racao" />
+            <Input className="min-h-12 min-w-0 max-w-full text-base!" name="keywords" placeholder="petz, cobasi, racao" />
           </Field>
           <Field label="Cor">
             <Input name="color" type="color" defaultValue={CATEGORY_PALETTE[9]} className="h-11 w-24 p-1" />
           </Field>
           {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
           <div className="flex gap-2">
-            <SubmitButton size="sm">Adicionar categoria</SubmitButton>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+            <SubmitButton className="min-h-11 min-w-11" size="sm">Adicionar categoria</SubmitButton>
+            <Button className="min-h-11 min-w-11" type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
           </div>
         </form>
       ) : (
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Button className="min-h-11 min-w-11" variant="outline" size="sm" onClick={() => setOpen(true)}>
           <Plus className="size-4" />
           Nova categoria
         </Button>
@@ -154,7 +154,7 @@ function Group({
                 type="button"
                 aria-label={`Editar ${c.name}`}
                 onClick={() => onToggleEdit(c.id)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
+                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
               >
                 <Pencil className="size-4" />
               </button>
@@ -162,7 +162,7 @@ function Group({
                 type="button"
                 aria-label={`Arquivar ${c.name}`}
                 onClick={() => onDelete(c.id, c.name)}
-                className="muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -198,16 +198,16 @@ function EditForm({ category, onDone }: { category: Cat; onDone: () => void }) {
       <input type="hidden" name="id" value={category.id} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Nome">
-          <Input name="name" required defaultValue={category.name} />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required defaultValue={category.name} />
         </Field>
         <Field label="Tipo">
-          <Select name="kind" defaultValue={category.kind}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="kind" defaultValue={category.kind}>
             <option value="EXPENSE">Saída</option>
             <option value="INCOME">Entrada</option>
           </Select>
         </Field>
         <Field label="Natureza">
-          <Select name="nature" defaultValue={category.nature}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="nature" defaultValue={category.nature}>
             <option value="VARIABLE">Variável</option>
             <option value="FIXED">Fixo</option>
           </Select>
@@ -217,15 +217,15 @@ function EditForm({ category, onDone }: { category: Cat; onDone: () => void }) {
         label="Palavras-chave"
         hint="Usadas para categorizar automaticamente na importação. Ex.: petz, cobasi, ração"
       >
-        <Input name="keywords" defaultValue={category.keywords.join(", ")} placeholder="petz, cobasi, racao" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="keywords" defaultValue={category.keywords.join(", ")} placeholder="petz, cobasi, racao" />
       </Field>
       <Field label="Cor">
         <Input name="color" type="color" defaultValue={category.color} className="h-11 w-24 p-1" />
       </Field>
       {state.error ? <p className="text-[0.8125rem] text-[var(--text-out)]">{state.error}</p> : null}
       <div className="flex gap-2">
-        <SubmitButton size="sm">Salvar</SubmitButton>
-        <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        <SubmitButton className="min-h-11 min-w-11" size="sm">Salvar</SubmitButton>
+        <Button className="min-h-11 min-w-11" type="button" size="sm" variant="ghost" onClick={onDone}>
           Cancelar
         </Button>
       </div>

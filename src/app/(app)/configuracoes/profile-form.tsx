@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { saveProfile, type ActionState } from "@/server/actions/settings";
-import { Field, Input, Select } from "@/components/ui/field";
+import { Field, MoneyInput, Input, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 
 const initial: ActionState = {};
@@ -17,11 +17,11 @@ export function ProfileForm({
   return (
     <form action={formAction} className="space-y-4">
       <Field label="Nome">
-        <Input name="name" defaultValue={defaults.name} required />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" defaultValue={defaults.name} required />
       </Field>
 
       <Field label="Renda mensal líquida" hint="O que cai na conta, já com descontos.">
-        <Input
+        <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!"
           name="income"
           inputMode="decimal"
           defaultValue={(defaults.income / 100).toFixed(2).replace(".", ",")}
@@ -31,7 +31,7 @@ export function ProfileForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Meses de reserva">
-          <Select name="emergencyMonths" defaultValue={String(defaults.emergencyMonths)}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="emergencyMonths" defaultValue={String(defaults.emergencyMonths)}>
             {[3, 6, 9, 12, 18, 24].map((m) => (
               <option key={m} value={m}>
                 {m} meses
@@ -40,7 +40,7 @@ export function ProfileForm({
           </Select>
         </Field>
         <Field label="Meta de economia">
-          <Select name="savingsTargetPct" defaultValue={String(defaults.savingsTargetPct)}>
+          <Select className="min-h-12 min-w-0 max-w-full text-base!" name="savingsTargetPct" defaultValue={String(defaults.savingsTargetPct)}>
             {[5, 10, 15, 20, 25, 30, 40, 50].map((p) => (
               <option key={p} value={p}>
                 {p}% da renda
@@ -61,7 +61,7 @@ export function ProfileForm({
         </p>
       ) : null}
 
-      <SubmitButton>Salvar perfil</SubmitButton>
+      <SubmitButton className="min-h-11 min-w-11">Salvar perfil</SubmitButton>
     </form>
   );
 }

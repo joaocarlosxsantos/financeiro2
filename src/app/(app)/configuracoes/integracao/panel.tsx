@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
+import { Sheet } from "@/components/sheet";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Plus, RefreshCw, X } from "lucide-react";
@@ -27,7 +27,6 @@ type SyncAccountSummary = { accountName: string; accountType: string; read: numb
 export function IntegrationPanel({ initial }: { initial: Setup }) {
   const router = useRouter();
   const confirm = useConfirm();
-  const modalTitleId = useId();
 
   const [setup, setSetup] = useState(initial);
   const [connectionId, setConnectionId] = useState(initial.connections[0]?.id ?? "");
@@ -37,13 +36,9 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
   const [syncSummary, setSyncSummary] = useState<{ status: string; imported: number; error?: string; accounts: SyncAccountSummary[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [fromDate, setFromDate] = useState(() => `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`);
 
-  useEffect(() => {
-// eslint-disable-next-line react-hooks/set-state-in-effect -- The mount flag gates createPortal so the server render does not access the browser DOM.
-    setMounted(true);
-  }, []);
+
 
   useEffect(() => {
 // eslint-disable-next-line react-hooks/set-state-in-effect -- Apply refreshed server setup props and repair a connection selection that no longer exists.
@@ -54,16 +49,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
     }
   }, [initial, connectionId]);
 
-  useEffect(() => {
-    if (!isNewModalOpen) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setIsNewModalOpen(false);
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [isNewModalOpen]);
+
 
   const activeConnection = setup.connections.find((c) => c.id === connectionId) ?? setup.connections[0];
 
@@ -212,7 +198,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                       setRemote([]);
                       setRemoteSelection({});
                     }}
-                    className="h-9 text-xs"
+                    className="min-h-12 min-w-0 max-w-full text-base! h-9 text-xs"
                   >
                     {setup.connections.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -227,7 +213,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
             <Button
               type="button"
               onClick={() => setIsNewModalOpen(true)}
-              className="gap-1.5 self-start sm:self-auto"
+              className="min-h-11 min-w-11 gap-1.5 self-start sm:self-auto"
             >
               <Plus className="size-4" />
               Nova Conexão
@@ -246,9 +232,9 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         activeConnection.status === "UPDATED"
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          ? "bg-[var(--in-soft)] text-[var(--text-in)] dark:text-[var(--text-in)] border border-[var(--line-strong)]"
                           : activeConnection.lastErrorMessage
-                          ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                          ? "bg-[var(--out-soft)] text-[var(--text-out)] dark:text-[var(--text-out)] border border-[var(--line-strong)]"
                           : "bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--border)]"
                       }`}
                     >
@@ -279,7 +265,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     router.refresh();
                   }}
                   disabled={busy}
-                  className="gap-1.5 shrink-0"
+                  className="min-h-11 min-w-11 gap-1.5 shrink-0"
                 >
                   <RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`} />
                   Sincronizar agora
@@ -287,7 +273,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
               </div>
 
               {activeConnection.lastErrorMessage ? (
-                <div className="flex items-start gap-2 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-600 dark:text-rose-400">
+                <div className="flex items-start gap-2 rounded-lg bg-[var(--out-soft)] border border-[var(--line-strong)] p-3 text-xs text-[var(--text-out)] dark:text-[var(--text-out)]">
                   <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                   <div>
                     <strong className="font-semibold">Erro na última leitura:</strong>{" "}
@@ -302,7 +288,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     <h3 className="text-sm font-semibold text-[var(--text)]">Resumo da última sincronização</h3>
                     <span className="text-xs text-[var(--text-muted)]">Status: {syncSummary.status} · {syncSummary.imported} inseridos/atualizados</span>
                   </div>
-                  {syncSummary.error ? <p className="text-xs text-rose-600 dark:text-rose-400">{syncSummary.error}</p> : null}
+                  {syncSummary.error ? <p className="text-xs text-[var(--text-out)] dark:text-[var(--text-out)]">{syncSummary.error}</p> : null}
                   {syncSummary.accounts.length ? syncSummary.accounts.map((account, index) => (
                     <div key={`${account.accountName}-${index}`} className="space-y-1 border-t border-[var(--border)] pt-3 text-xs">
                       <div className="flex flex-wrap justify-between gap-2 font-medium text-[var(--text)]">
@@ -312,7 +298,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                       <p className="text-[var(--text-muted)]">
                         Lidos: {account.read} · Ignorados por data: {account.ignoredByDate} · Bloqueados por exclusão: {account.ignoredByTombstone} · Tipo não importado: {account.ignoredByType} · Inválidos: {account.invalid} · Inseridos: {account.inserted} · Atualizados: {account.updated}
                       </p>
-                      {account.error ? <p className="text-rose-600 dark:text-rose-400">{account.error}</p> : null}
+                      {account.error ? <p className="text-[var(--text-out)] dark:text-[var(--text-out)]">{account.error}</p> : null}
                     </div>
                   )) : <p className="text-xs text-[var(--text-muted)]">Nenhuma conta local vinculada a esta conexão.</p>}
                 </section>
@@ -331,7 +317,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     size="sm"
                     onClick={() => void loadAccounts()}
                     disabled={busy}
-                    className="gap-1.5 self-start sm:self-auto"
+                    className="min-h-11 min-w-11 gap-1.5 self-start sm:self-auto"
                   >
                     <RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`} />
                     Carregar contas Pluggy
@@ -339,7 +325,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                 </div>
 
                 {remote.some((account) => account.type === "CREDIT") && !setup.accounts.some((account) => account.type === "CREDIT_CARD") ? (
-                  <div role="status" className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-[var(--text-muted)]">
+                  <div role="status" className="rounded-lg border border-[var(--line-strong)] bg-[var(--warn-soft)] p-3 text-xs text-[var(--text-muted)]">
                     O item Pluggy tem cartÃ£o de crÃ©dito, mas ainda nÃ£o hÃ¡ uma conta local de cartÃ£o para vinculÃ¡-lo. Em <Link className="font-medium text-[var(--text-brand)] underline" href="/configuracoes">ConfiguraÃ§Ãµes → Contas e cartÃµes → Nova conta</Link>, crie uma conta do tipo &ldquo;CartÃ£o de crÃ©dito&rdquo; e volte para selecionÃ¡-la aqui.
                   </div>
                 ) : null}
@@ -349,13 +335,13 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     {setup.accounts.map((a) => (
                       <li
                         key={a.id}
-                        className="grid gap-2 rounded-lg bg-[var(--surface-2)] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                        className="grid gap-2 rounded-lg bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_1fr_auto] sm:items-end"
                       >
                         <label htmlFor={`remote-${a.id}`} className="text-sm font-medium text-[var(--text)]">
                           {a.name}
                           <span className="muted block text-xs font-normal">
                             {a.type === "CREDIT_CARD" ? "Cartão de Crédito" : "Conta Bancária"} · modo{" "}
-                            <strong className={a.financeMode === "integracao" ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-[var(--text-muted)] font-normal"}>
+                            <strong className={a.financeMode === "integracao" ? "text-[var(--text-in)] dark:text-[var(--text-in)] font-medium" : "text-[var(--text-muted)] font-normal"}>
                               {a.financeMode === "integracao" ? "automático (Pluggy)" : "manual"}
                             </strong>
                             {a.type === "CREDIT_CARD" && a.creditLimitCents !== null
@@ -364,7 +350,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                           </span>
                         </label>
                         <select
-                          className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]"
+                          className="min-h-12 min-w-0 max-w-full text-base! h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]"
                           id={`remote-${a.id}`}
                           value={remoteSelection[a.id] ?? a.externalAccountId ?? ""}
                           onChange={(event) => setRemoteSelection((current) => ({ ...current, [a.id]: event.target.value }))}
@@ -378,7 +364,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                               </option>
                             ))}
                         </select>
-                        <Button
+                        <Button className="min-h-11 min-w-11"
                           type="button"
                           size="sm"
                           variant="outline"
@@ -414,12 +400,12 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
               {/* Faturas Pluggy */}
               {setup.invoices.length ? (
                 <div className="space-y-2 border-t border-[var(--line)] pt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Faturas Pluggy</h3>
+                  <h3 className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">Faturas Pluggy</h3>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {setup.invoices.map((invoice) => (
                       <div
                         key={`${invoice.accountId}-${invoice.invoiceRef}-${invoice.dueDate.toISOString()}`}
-                        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)]/50 p-3 text-xs space-y-1"
+                        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs space-y-1"
                       >
                         <p className="font-medium text-[var(--text)]">
                           {setup.accounts.find((a) => a.id === invoice.accountId)?.name ?? "Cartão"}
@@ -467,7 +453,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     variant="outline"
                     disabled={busy}
                     onClick={() => void deleteAll(activeConnection)}
-                    className="shrink-0 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+                    className="min-h-11 min-w-11 shrink-0 text-[var(--text-out)] hover:text-[var(--text-out)] hover:bg-[var(--out-soft)]"
                   >
                     Excluir dados importados da Pluggy
                   </Button>
@@ -486,7 +472,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     variant="outline"
                     disabled={busy}
                     onClick={() => void removeConnection(activeConnection, false)}
-                    className="shrink-0"
+                    className="min-h-11 min-w-11 shrink-0"
                   >
                     Remover conexão e manter lançamentos
                   </Button>
@@ -494,7 +480,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
 
                 <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
+                    <p className="text-xs font-medium text-[var(--text-out)] dark:text-[var(--text-out)]">
                       Remover conexão e excluir lançamentos
                     </p>
                     <p className="muted text-xs">
@@ -507,7 +493,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     variant="outline"
                     disabled={busy}
                     onClick={() => void removeConnection(activeConnection, true)}
-                    className="shrink-0 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+                    className="min-h-11 min-w-11 shrink-0 text-[var(--text-out)] hover:text-[var(--text-out)] hover:bg-[var(--out-soft)]"
                   >
                     Remover conexão e excluir lançamentos Pluggy
                   </Button>
@@ -529,7 +515,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                   variant="outline"
                   disabled={busy || setup.connections.length > 0 || !setup.credentialSaved}
                   onClick={() => void removeCredentials()}
-                  className="shrink-0"
+                  className="min-h-11 min-w-11 shrink-0"
                 >
                   Remover credenciais
                 </Button>
@@ -553,14 +539,14 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
 
           <form action={save} className="space-y-3 pt-2">
             <Field label="Client ID">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="clientId"
                 placeholder={setup.credentialSaved ? "Salvo (deixe em branco para manter)" : "Informe seu Client ID"}
                 autoComplete="off"
               />
             </Field>
             <Field label="Client Secret">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="clientSecret"
                 type="password"
                 placeholder={setup.credentialSaved ? "•••••••••••• (deixe em branco para manter)" : "Informe seu Client Secret"}
@@ -568,7 +554,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
               />
             </Field>
             <Field label="Item ID (Pluggy)">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="itemId"
                 placeholder="Identificador do item gerado pelo Pluggy Connect"
                 autoComplete="off"
@@ -576,14 +562,14 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
               />
             </Field>
             <Field label="Nome desta conexão">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="label"
                 placeholder="Ex.: Nubank Principal, Itaú PJ..."
                 maxLength={100}
               />
             </Field>
             <Field label="Data inicial de importação">
-              <Input
+              <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
@@ -593,7 +579,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
             <p className="muted text-xs">
               Padrão: dia 1º do mês atual. Lançamentos manuais ou importados via CSV/OFX existentes não serão sobrescritos nem deduplicados automaticamente.
             </p>
-            <SubmitButton disabled={busy}>Salvar e Conectar</SubmitButton>
+            <SubmitButton className="min-h-11 min-w-11" disabled={busy}>Salvar e Conectar</SubmitButton>
           </form>
         </section>
       )}
@@ -606,15 +592,15 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
             message.toLowerCase().includes("erro") ||
             message.toLowerCase().includes("falha") ||
             message.toLowerCase().includes("confira")
-              ? "bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400"
-              : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+              ? "bg-[var(--out-soft)] border border-[var(--line-strong)] text-[var(--text-out)] dark:text-[var(--text-out)]"
+              : "bg-[var(--in-soft)] border border-[var(--line-strong)] text-[var(--text-in)] dark:text-[var(--text-in)]"
           }`}
         >
           <span>{message}</span>
           <button
             type="button"
             onClick={() => setMessage("")}
-            className="rounded p-1 hover:bg-black/5 dark:hover:bg-white/5"
+            className="min-h-11 min-w-11 rounded p-1 hover:bg-black/5 dark:hover:bg-[var(--surface)]"
             aria-label="Dispensar aviso"
           >
             <X className="size-3.5" />
@@ -627,42 +613,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       </p>
 
       {/* Modal para Adicionar Nova Conexão */}
-      {mounted && isNewModalOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
-                onClick={() => setIsNewModalOpen(false)}
-                aria-hidden="true"
-              />
-
-              {/* Janela Modal */}
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={modalTitleId}
-                className="relative z-10 w-full max-w-lg overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl text-[var(--text)] max-h-[90vh] overflow-y-auto"
-              >
-                <div className="flex items-center justify-between border-b border-[var(--line)] pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="flex size-7 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--surface-2)] text-[var(--text)]">
-                      <Plus className="size-4" />
-                    </span>
-                    <h2 id={modalTitleId} className="text-base font-semibold tracking-tight">
-                      Nova Conexão Open Finance
-                    </h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsNewModalOpen(false)}
-                    className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors"
-                    aria-label="Fechar"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-
+      {isNewModalOpen && <Sheet title="Nova conex?o Open Finance" onClose={() => setIsNewModalOpen(false)}>
                 <p className="muted text-xs mb-4">
                   {setup.credentialSaved
                     ? "Suas credenciais gerais da Pluggy já estão cadastradas. Informe o Item ID e um nome para esta nova conexão (ou preencha novos valores de Client ID e Secret se desejar alterá-los)."
@@ -671,14 +622,14 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
 
                 <form action={save} className="space-y-3">
                   <Field label="Client ID">
-                    <Input
+                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
                       name="clientId"
                       placeholder={setup.credentialSaved ? "Salvo (deixe em branco para manter)" : "Informe seu Client ID"}
                       autoComplete="off"
                     />
                   </Field>
                   <Field label="Client Secret">
-                    <Input
+                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
                       name="clientSecret"
                       type="password"
                       placeholder={setup.credentialSaved ? "•••••••••••• (deixe em branco para manter)" : "Informe seu Client Secret"}
@@ -686,7 +637,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     />
                   </Field>
                   <Field label="Item ID (Pluggy)">
-                    <Input
+                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
                       name="itemId"
                       placeholder="Identificador do item Pluggy"
                       autoComplete="off"
@@ -694,14 +645,14 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     />
                   </Field>
                   <Field label="Nome desta conexão">
-                    <Input
+                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
                       name="label"
                       placeholder="Ex.: Nubank Principal, Itaú PJ..."
                       maxLength={100}
                     />
                   </Field>
                   <Field label="Data inicial de importação">
-                    <Input
+                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
                       type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
@@ -713,7 +664,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                   </p>
 
                   <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--line)]">
-                    <Button
+                    <Button className="min-h-11 min-w-11"
                       type="button"
                       variant="outline"
                       onClick={() => setIsNewModalOpen(false)}
@@ -721,14 +672,10 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     >
                       Cancelar
                     </Button>
-                    <SubmitButton disabled={busy}>Salvar Conexão</SubmitButton>
+                    <SubmitButton className="min-h-11 min-w-11" disabled={busy}>Salvar Conexão</SubmitButton>
                   </div>
                 </form>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
+      </Sheet>}
     </div>
   );
 }

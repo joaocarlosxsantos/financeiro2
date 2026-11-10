@@ -25,11 +25,11 @@ export default async function SettingsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Open Finance" subtitle="Conecte o Pluggy e escolha a fonte de cada conta." />
           <div className="p-4 pt-0"><Link className="text-sm font-medium text-[var(--text-brand)] underline" href="/configuracoes/integracao">Configurar integração</Link></div>
         </Card>
-        <Card>
+        <Card className="min-w-0">
           <CardHeader
             title="Perfil financeiro"
             subtitle="Esses números alimentam a reserva de emergência, o 50/30/20 e a nota de saúde."
@@ -44,7 +44,7 @@ export default async function SettingsPage() {
           />
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader
             title="Contas e cartões"
             subtitle="Cada lançamento pertence a uma conta. Isso mantém as importações separadas."
@@ -65,7 +65,7 @@ export default async function SettingsPage() {
           />
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader
             title="Categorias"
             subtitle="As palavras-chave são o que faz a importação adivinhar a categoria certa. Separe por vírgula."
@@ -82,7 +82,7 @@ export default async function SettingsPage() {
           />
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader
             title="Dados"
             subtitle="Exporte um backup completo do seu perfil financeiro em JSON."

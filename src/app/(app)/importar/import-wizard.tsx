@@ -9,6 +9,7 @@ import { Field, Select } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { formatCents } from "@/lib/money";
 import { formatDate, monthLabel, monthRefFromParam, todayRef } from "@/lib/dates";
+import { ImportReview } from "./import-review";
 import { cn } from "@/lib/cn";
 
 type Account = { id: string; name: string; type: string };
@@ -148,12 +149,12 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="min-w-0">
         <CardHeader title="1. Escolha a conta e o arquivo" />
 
         <div className={cn("grid grid-cols-1 gap-4", isCard ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           <Field label="Conta que vai receber os lançamentos">
-            <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            <Select className="min-h-12 min-w-0 max-w-full text-base!" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -171,7 +172,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                 type="month"
                 value={invoiceMonth}
                 onChange={(e) => setInvoiceMonth(e.target.value)}
-                className="input-base h-[42px]"
+                className="min-h-12 min-w-0 max-w-full text-base! input-base h-[42px]"
               />
             </Field>
           ) : null}
@@ -231,7 +232,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       {error ? <Hint tone="warn">{error}</Hint> : null}
 
       {savedCount !== null ? (
-        <Card>
+        <Card className="min-w-0">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="size-6 text-[var(--text-in)]" />
             <div>
@@ -252,12 +253,12 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       ) : null}
 
       {rows ? (
-        <Card>
+        <Card className="min-w-0">
           <CardHeader
             title="2. Confira antes de gravar"
             subtitle={`${selected} linha(s) serão importadas · ${ignored} ignorada(s). Desmarque o que não quiser trazer.`}
             action={
-              <Button onClick={confirm} disabled={pending || selected === 0}>
+              <Button className="min-h-11 min-w-11" onClick={confirm} disabled={pending || selected === 0}>
                 {pending ? "Importando..." : `Importar ${selected}`}
               </Button>
             }
@@ -276,7 +277,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
                 A maioria das linhas dessa fatura virou entrada — é bem comum o cartão exportar os
                 gastos como valor positivo. Marcar &quot;inverter sinal&quot; deve corrigir.
               </p>
-              <Button type="button" size="sm" variant="outline" onClick={acceptInvertSignSuggestion}>
+              <Button className="min-h-11 min-w-11" type="button" size="sm" variant="outline" onClick={acceptInvertSignSuggestion}>
                 Marcar &quot;inverter sinal&quot; e atualizar prévia
               </Button>
             </Hint>
@@ -319,109 +320,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
             </label>
           ) : null}
 
-          <div className="-mx-5 overflow-x-auto">
-            <table className="w-full min-w-[800px] text-[0.8125rem]">
-              <thead>
-                <tr className="muted border-b text-left text-xs">
-                  <th className="px-5 py-2 font-medium">Importar</th>
-                  <th className="py-2 font-medium">Data</th>
-                  <th className="py-2 font-medium">Descrição</th>
-                  <th className="py-2 font-medium">Categoria</th>
-                  <th className="py-2 text-center font-medium">Transferência</th>
-                  <th className="px-5 py-2 text-right font-medium">Valor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {rows.map((row, i) => (
-                  <tr key={`${row.fingerprint}-${i}`} className={cn(row.duplicate && "opacity-45")}>
-                    <td className="px-5 py-2.5">
-                      <input
-                        type="checkbox"
-                        checked={!row.duplicate}
-                        onChange={() => toggleRow(i)}
-                        aria-label={`Importar ${row.description}`}
-                        className="size-4 accent-[var(--color-brand-600)]"
-                      />
-                    </td>
-                    <td className="tnum py-2.5 whitespace-nowrap">
-                      {formatDate(row.date)}
-                      {row.dateAdjusted ? (
-                        <span
-                          className="mt-0.5 flex items-center gap-1 text-[0.6875rem] font-medium text-[var(--text-warn)]"
-                          title={`Compra realizada em ${formatDate(row.originalDate!)} — gravada na fatura do mês escolhido`}
-                        >
-                          compra realizada em {formatDate(row.originalDate!)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="max-w-64 py-2.5">
-                      <span className="block truncate">{row.description}</span>
-                      <span className="mt-0.5 flex flex-wrap gap-1">
-                        {row.possibleDuplicate ? (
-                          <span className="inline-block rounded-md bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-warn)]">
-                            possível duplicata
-                          </span>
-                        ) : null}
-                        {row.installmentNumber && row.installmentTotal ? (
-                          <span className="inline-block rounded-md bg-[var(--color-save-soft)] px-1.5 py-0.5 text-[0.6875rem] font-medium text-[var(--text-brand)]">
-                            parcela {row.installmentNumber}/{row.installmentTotal}
-                          </span>
-                        ) : null}
-                      </span>
-                    </td>
-                    <td className="py-2.5">
-                      <select
-                        disabled={row.isTransfer}
-                        value={row.categoryId ?? ""}
-                        onChange={(e) => changeCategory(i, e.target.value)}
-                        className="cursor-pointer rounded-md border bg-[var(--surface-2)] px-1.5 py-1 text-xs disabled:opacity-50"
-                      >
-                        <option value="">Sem categoria</option>
-                        {categories
-                          .filter((c) => c.kind === row.kind)
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                    <td className="py-2.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => toggleTransfer(i)}
-                        title={
-                          row.isTransfer
-                            ? "É transferência (pagamento de fatura, entre contas suas etc.) — fora dos relatórios de receita/despesa, mas conta no saldo. Clique para desmarcar."
-                            : "Marcar como transferência entre contas suas (ex.: pagamento de fatura) — fora dos relatórios, mas conta no saldo"
-                        }
-                        aria-pressed={row.isTransfer}
-                        aria-label={`Marcar ${row.description} como transferência`}
-                        className={cn(
-                          "inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-[0.6875rem] font-medium transition-colors",
-                          row.isTransfer
-                            ? "bg-[var(--color-save-soft)] text-[var(--text-brand)]"
-                            : "muted hover:bg-[var(--surface-2)]",
-                        )}
-                      >
-                        <ArrowLeftRight className="size-3.5" />
-                      </button>
-                    </td>
-                    <td
-                      className={cn(
-                        "tnum px-5 py-2.5 text-right font-medium whitespace-nowrap",
-                        row.kind === "INCOME"
-                          ? "text-[var(--text-in)]"
-                          : "text-[var(--text-out)]",
-                      )}
-                    >
-                      {row.kind === "INCOME" ? "+" : "−"} {formatCents(row.amountCents)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ImportReview rows={rows} categories={categories} onToggle={toggleRow} onCategory={changeCategory} onTransfer={toggleTransfer} />
         </Card>
       ) : null}
     </div>
