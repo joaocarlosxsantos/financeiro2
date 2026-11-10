@@ -231,7 +231,7 @@ export function BillItem({
           type="button"
           aria-label={`Excluir ${bill.name}`}
           onClick={() => void remove()}
-          className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+          className="inline-flex items-center justify-center min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-3.5" />
         </button>
@@ -326,7 +326,7 @@ export function BillItem({
                           disabled
                           aria-label={`Sem telefone válido para ${p.name}`}
                           title="Cadastre um telefone pra habilitar o WhatsApp"
-                          className="min-h-11 min-w-11 muted shrink-0 cursor-not-allowed rounded-lg p-1.5 opacity-40"
+                          className="inline-flex items-center justify-center min-h-11 min-w-11 muted shrink-0 cursor-not-allowed rounded-lg p-1.5 opacity-40"
                         >
                           <MessageCircle className="size-3.5" />
                         </button>
@@ -336,7 +336,7 @@ export function BillItem({
                       type="button"
                       aria-label={`Remover ${p.name}`}
                       onClick={() => start(async () => void (await removeBillParticipant(p.id)))}
-                      className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

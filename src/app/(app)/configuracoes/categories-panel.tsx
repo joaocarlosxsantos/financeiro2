@@ -154,7 +154,7 @@ function Group({
                 type="button"
                 aria-label={`Editar ${c.name}`}
                 onClick={() => onToggleEdit(c.id)}
-                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
               >
                 <Pencil className="size-4" />
               </button>
@@ -162,7 +162,7 @@ function Group({
                 type="button"
                 aria-label={`Arquivar ${c.name}`}
                 onClick={() => onDelete(c.id, c.name)}
-                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 <Trash2 className="size-4" />
               </button>

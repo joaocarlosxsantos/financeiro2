@@ -178,7 +178,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           ) : null}
 
           <Field label="Ajuste de sinal" hint="Use quando a prévia mostrar gastos como entradas.">
-            <label className="flex h-[42px] cursor-pointer items-center gap-2.5 rounded-xl border bg-[var(--surface-2)] px-3.5">
+            <label className="min-h-11 flex h-[42px] cursor-pointer items-center gap-2.5 rounded-xl border bg-[var(--surface-2)] px-3.5">
               <input
                 type="checkbox"
                 checked={invertSign}
@@ -298,7 +298,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           ))}
 
           {existingInPeriod > 0 && period ? (
-            <label className="mb-4 flex cursor-pointer items-start gap-2.5 rounded-xl border bg-[var(--surface-2)] px-3.5 py-3 text-[0.8125rem]">
+            <label className="min-h-11 mb-4 flex cursor-pointer items-start gap-2.5 rounded-xl border bg-[var(--surface-2)] px-3.5 py-3 text-[0.8125rem]">
               <input
                 type="checkbox"
                 checked={replacePeriod}

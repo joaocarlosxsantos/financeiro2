@@ -16,12 +16,12 @@ export default async function OnboardingPage() {
   if (!user) redirect("/api/sessao-invalida");
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 py-14">
+    <div className="mx-auto flex min-h-dvh max-w-2xl flex-col justify-center px-4 py-8 sm:px-6 sm:py-14">
       <div className="mb-8">
-        <p className="text-[var(--text-brand)] mb-2 text-xs font-semibold tracking-wide uppercase">
+        <p className="text-[var(--text-brand)] mb-2 text-xs font-medium">
           Passo 1 de 1
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">
+        <h1 className="text-display font-semibold tracking-tight text-balance">
           Olá, {user.name.split(" ")[0]}. Vamos calibrar o sistema?
         </h1>
         <p className="muted mt-2 text-[0.9375rem] leading-relaxed">

@@ -27,7 +27,7 @@ export default async function AccountsPage() {
             action={
               <Link
                 href="/configuracoes"
-                className="inline-flex h-10 items-center rounded-[var(--radius-button)] bg-[var(--btn-brand)] px-4 text-sm font-medium text-[var(--on-acento)] hover:opacity-90"
+                className="inline-flex min-h-11 items-center inline-flex h-10 items-center rounded-[var(--radius-button)] bg-[var(--btn-brand)] px-4 text-sm font-medium text-[var(--on-acento)] hover:opacity-90"
               >
                 Ir para configurações
               </Link>

@@ -116,7 +116,7 @@ function Row({ rule }: { rule: Rule }) {
           if (!ok) return;
           start(async () => void (await deleteRecurringRule(rule.id)));
         }}
-        className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+        className="inline-flex items-center justify-center min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-4" />
       </button>

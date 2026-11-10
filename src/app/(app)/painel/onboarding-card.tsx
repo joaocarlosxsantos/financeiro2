@@ -65,7 +65,7 @@ export function OnboardingCard({
             {!s.done ? (
               <Link
                 href={s.href}
-                className="shrink-0 text-xs font-medium text-[var(--text-brand)] hover:underline"
+                className="inline-flex min-h-11 items-center shrink-0 text-xs font-medium text-[var(--text-brand)] hover:underline"
               >
                 {s.linkLabel}
               </Link>

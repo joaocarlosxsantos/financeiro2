@@ -63,7 +63,7 @@ export function TransactionList({
               composer?.focus();
               composer?.scrollIntoView({ behavior: "smooth", block: "center" });
             }}
-            className="min-h-11 min-w-11 cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+            className="hidden min-h-11 min-w-11 cursor-pointer gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)] md:inline-flex"
           >
             <Plus className="size-3.5" />
             Novo lançamento
@@ -74,10 +74,11 @@ export function TransactionList({
             variant="outline"
             size="sm"
             onClick={() => setTransferOpen(true)}
+            aria-label="Nova transferência"
             className="min-h-11 min-w-11 cursor-pointer gap-1.5 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--color-save-soft)]"
           >
             <ArrowLeftRight className="size-3.5" />
-            Nova transferência
+            <span className="hidden sm:inline">Nova transferência</span>
           </Button>
         </div>
       </div>
@@ -203,10 +204,10 @@ function Row({
           }
           disabled={pending}
           onClick={() => setSplitOpen(true)}
-          className={["min-h-11 min-w-11", cn(
+          className={["inline-flex items-center justify-center",["min-h-11 min-w-11", cn(
             "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
             isSplit ? "text-[var(--text-brand)]" : "text-[var(--text-muted)] hover:text-[var(--text)]",
-          )].filter(Boolean).join(" ")}
+          )].filter(Boolean).join(" ")].filter(Boolean).join(" ")}
         >
           <Users className="size-3.5" />
         </button>
@@ -231,10 +232,10 @@ function Row({
               await setTransactionTransfer(tx.id, !tx.isTransfer);
             })
           }
-          className={["min-h-11 min-w-11", cn(
+          className={["inline-flex items-center justify-center",["min-h-11 min-w-11", cn(
             "shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)]",
             tx.isTransfer ? "text-[var(--text-brand)]" : "text-[var(--text-muted)]",
-          )].filter(Boolean).join(" ")}
+          )].filter(Boolean).join(" ")].filter(Boolean).join(" ")}
         >
           <ArrowLeftRight className="size-3.5" />
         </button>
@@ -260,7 +261,7 @@ function Row({
             await deleteTransaction(tx.id);
           });
         }}
-        className="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+        className="inline-flex items-center justify-center min-h-11 min-w-11 shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-3.5" />
       </button> : <button
@@ -277,7 +278,7 @@ function Row({
           if (!ok) return;
           start(async () => { await deletePluggyTransaction({ transactionId: tx.id, confirmation: "EXCLUIR LANCAMENTO PLUGGY" }); });
         }}
-        className="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+        className="inline-flex items-center justify-center min-h-11 min-w-11 shrink-0 cursor-pointer rounded-[var(--radius-xs)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-4" />
       </button>}

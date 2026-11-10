@@ -223,13 +223,13 @@ export default async function DashboardPage({
                 <div className="flex flex-wrap justify-center gap-2">
                   <Link
                     href="/lancamentos"
-                    className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-[var(--on-acento)] hover:bg-brand-700"
+                    className="inline-flex min-h-11 items-center inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-[var(--on-acento)] hover:bg-brand-700"
                   >
                     Adicionar lançamento
                   </Link>
                   <Link
                     href="/importar"
-                    className="inline-flex h-10 items-center rounded-xl border px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+                    className="inline-flex min-h-11 items-center inline-flex h-10 items-center rounded-xl border px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
                   >
                     Importar extrato
                   </Link>
@@ -274,7 +274,7 @@ export default async function DashboardPage({
               action={
                 <Link
                   href="/lancamentos?acc=CARD"
-                  className="text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                  className="inline-flex min-h-11 items-center text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
                 >
                   Ver lançamentos do cartão
                 </Link>
@@ -345,7 +345,7 @@ export default async function DashboardPage({
                 </div>
                 <Link
                   href="/metas"
-                  className="shrink-0 text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
+                  className="inline-flex min-h-11 items-center shrink-0 text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
                 >
                   Gerenciar
                 </Link>

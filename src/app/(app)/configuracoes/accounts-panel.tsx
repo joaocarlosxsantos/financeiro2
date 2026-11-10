@@ -111,7 +111,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 type="button"
                 aria-label={`Editar ${a.name}`}
                 onClick={() => toggleEdit(a.id)}
-                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)] hover:text-[var(--text-brand)]"
               >
                 <Pencil className="size-4" />
               </button>
@@ -119,7 +119,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                 type="button"
                 aria-label={`Arquivar ${a.name}`}
                 onClick={() => void archive(a)}
-                className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -168,7 +168,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Editar ${a.name}`}
                     onClick={() => toggleEdit(a.id)}
-                    className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface)] hover:text-[var(--text-brand)]"
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface)] hover:text-[var(--text-brand)]"
                   >
                     <Pencil className="size-4" />
                   </button>
@@ -176,7 +176,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Reativar ${a.name}`}
                     onClick={() => start(async () => void (await restoreAccount(a.id)))}
-                    className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-in-soft)] hover:text-[var(--text-in)]"
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-in-soft)] hover:text-[var(--text-in)]"
                   >
                     <ArchiveRestore className="size-4" />
                   </button>
@@ -184,7 +184,7 @@ export function AccountsPanel({ accounts }: { accounts: Account[] }) {
                     type="button"
                     aria-label={`Excluir ${a.name} definitivamente`}
                     onClick={() => void removeForever(a)}
-                    className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                   >
                     <Trash2 className="size-4" />
                   </button>

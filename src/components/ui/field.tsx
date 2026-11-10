@@ -43,7 +43,7 @@ export function Field({
   });
 
   return (
-    <label className={cn("block", className)}>
+    <label className={cn("block min-w-0", className)}>
       <span className="mb-1.5 block text-caption font-medium text-[var(--text-muted)]">
         {label}
       </span>

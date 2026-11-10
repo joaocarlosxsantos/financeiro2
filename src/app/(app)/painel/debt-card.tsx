@@ -56,7 +56,7 @@ export function DebtCard({
       <div className="ml-auto">
         <Link
           href="/dividas"
-          className="inline-flex h-7 items-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
+          className="inline-flex min-h-11 items-center inline-flex h-7 items-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
         >
           Ver plano de quitação
         </Link>

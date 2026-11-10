@@ -51,7 +51,7 @@ export function ProfileForm({
       </div>
 
       {state.error ? (
-        <p className="rounded-xl bg-[var(--color-money-out-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-out)]">
+        <p role="alert" className="rounded-xl bg-[var(--color-money-out-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}

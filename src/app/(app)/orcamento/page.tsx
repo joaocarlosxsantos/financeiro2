@@ -91,7 +91,7 @@ export default async function BudgetPage({
             <Hint tone="warn">
               <strong>{formatCents(overview.uncategorizedSpentCents)}</strong> em lançamentos sem
               categoria neste mês. Enquanto ficarem assim, esse gasto não entra em nenhum limite —{" "}
-              <Link href="/lancamentos" className="font-semibold underline">
+              <Link href="/lancamentos" className="inline-flex min-h-11 items-center font-semibold underline">
                 classifique na tela de lançamentos
               </Link>
               .
@@ -189,7 +189,7 @@ export default async function BudgetPage({
             <div className="mt-4">
               <Link
                 href="/lancamentos"
-                className="text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
+                className="inline-flex min-h-11 items-center text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
               >
                 Ver os lançamentos do mês →
               </Link>

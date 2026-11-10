@@ -49,7 +49,7 @@ export function BillGroupingsManager({ groupings }: { groupings: PlainGrouping[]
               type="button"
               aria-label={`Arquivar ${g.name}`}
               onClick={() => void remove(g.id, g.name)}
-              className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-3.5" />
             </button>

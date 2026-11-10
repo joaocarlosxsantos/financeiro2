@@ -16,19 +16,19 @@ export function ImportReview({ rows, categories, onToggle, onCategory, onTransfe
   onTransfer: (index: number) => void;
 }) {
   return <>
-    <ul className="space-y-3 md:hidden" aria-label="Confer?ncia de lan?amentos">
+    <ul className="space-y-3 md:hidden" aria-label="Conferência de lançamentos">
       {rows.map((row, i) => <li key={`${row.fingerprint}-${i}`} className="min-w-0 rounded-xl border bg-[var(--surface)] p-3">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
             <input type="checkbox" checked={!row.duplicate} onChange={() => onToggle(i)} aria-label={`Importar ${row.description}`} className="size-5 accent-[var(--acento)]" />
             {row.duplicate ? "Ignorar linha" : "Importar linha"}
           </label>
-          <span className={cn("tnum pt-3 text-sm font-medium", row.kind === "INCOME" ? "text-[var(--text-in)]" : "text-[var(--text-out)]")}>{row.kind === "INCOME" ? "+" : "?"} {formatCents(row.amountCents)}</span>
+          <span className={cn("tnum pt-3 text-sm font-medium", row.kind === "INCOME" ? "text-[var(--text-in)]" : "text-[var(--text-out)]")}>{row.kind === "INCOME" ? "+" : "−"} {formatCents(row.amountCents)}</span>
         </div>
         <p className="mb-1 break-words text-sm font-medium">{row.description}</p>
         <p className="tnum mb-3 text-xs text-[var(--text-muted)]">{formatDate(row.date)}</p>
         {row.dateAdjusted && <p className="mb-2 text-xs text-[var(--text-warn)]">Compra realizada em {formatDate(row.originalDate!)}</p>}
-        {row.possibleDuplicate && <p className="mb-2 text-xs text-[var(--text-warn)]">Poss?vel duplicata</p>}
+        {row.possibleDuplicate && <p className="mb-2 text-xs text-[var(--text-warn)]">Possível duplicata</p>}
         {row.installmentNumber && row.installmentTotal && <p className="mb-2 text-xs">Parcela {row.installmentNumber}/{row.installmentTotal}</p>}
         <Field label="Categoria">
           <Select className="min-h-12 text-base!" disabled={row.isTransfer} value={row.categoryId ?? ""} onChange={(e) => onCategory(i, e.target.value)}>
@@ -37,7 +37,7 @@ export function ImportReview({ rows, categories, onToggle, onCategory, onTransfe
           </Select>
         </Field>
         <button type="button" aria-pressed={row.isTransfer} onClick={() => onTransfer(i)} className="mt-3 flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border bg-[var(--surface-2)] px-3 text-sm">
-          <ArrowLeftRight aria-hidden="true" className="size-5" />{row.isTransfer ? "Transfer?ncia marcada" : "Marcar transfer?ncia"}
+          <ArrowLeftRight aria-hidden="true" className="size-5" />{row.isTransfer ? "Transferência marcada" : "Marcar transferência"}
         </button>
       </li>)}
     </ul>
@@ -55,14 +55,14 @@ export function ImportReview({ rows, categories, onToggle, onCategory, onTransfe
               </thead>
               <tbody className="divide-y">
                 {rows.map((row, i) => (
-                  <tr key={`${row.fingerprint}-${i}`} className={cn(row.duplicate && "opacity-45")}>
+                  <tr key={`${row.fingerprint}-${i}`} className={cn(row.duplicate && "bg-[var(--surface-2)]")}>
                     <td className="px-5 py-2.5">
                       <input
                         type="checkbox"
                         checked={!row.duplicate}
                         onChange={() => onToggle(i)}
                         aria-label={`Importar ${row.description}`}
-                        className="size-11 accent-[var(--color-brand-600)]"
+                        className="min-h-11 min-w-11 size-11 accent-[var(--color-brand-600)]"
                       />
                     </td>
                     <td className="tnum py-2.5 whitespace-nowrap">
@@ -92,7 +92,7 @@ export function ImportReview({ rows, categories, onToggle, onCategory, onTransfe
                       </span>
                     </td>
                     <td className="py-2.5">
-                      <select
+                      <select aria-label={`Categoria de ${row.description}`}
                         disabled={row.isTransfer}
                         value={row.categoryId ?? ""}
                         onChange={(e) => onCategory(i, e.target.value)}
@@ -119,12 +119,12 @@ export function ImportReview({ rows, categories, onToggle, onCategory, onTransfe
                         }
                         aria-pressed={row.isTransfer}
                         aria-label={`Marcar ${row.description} como transferência`}
-                        className={["min-h-11 min-w-11", cn(
+                        className={["inline-flex items-center justify-center",["min-h-11 min-w-11", cn(
                           "inline-flex cursor-pointer items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium transition-colors",
                           row.isTransfer
                             ? "bg-[var(--color-save-soft)] text-[var(--text-brand)]"
                             : "muted hover:bg-[var(--surface-2)]",
-                        )].filter(Boolean).join(" ")}
+                        )].filter(Boolean).join(" ")].filter(Boolean).join(" ")}
                       >
                         <ArrowLeftRight className="size-3.5" />
                       </button>

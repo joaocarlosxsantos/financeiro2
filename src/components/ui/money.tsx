@@ -32,6 +32,7 @@ export function Money({ cents, tone, size = "md", className }: MoneyProps) {
       className={cn(
         "tnum mono inline-flex max-w-full items-baseline",
         SIZE_VARIANTS[size],
+        size === "hero" && "w-full [container-type:inline-size]",
         toneClass,
         className,
       )}
@@ -39,7 +40,8 @@ export function Money({ cents, tone, size = "md", className }: MoneyProps) {
       <span className="sr-only">
         {isNegative ? `Menos ${formatCents(Math.abs(cents))}` : formatCents(cents)}
       </span>
-      <span aria-hidden="true" className="inline-flex max-w-full flex-wrap items-baseline">
+      <span aria-hidden="true" className="inline-flex max-w-full flex-wrap items-baseline"
+        style={size === "hero" ? { fontSize: `min(var(--text-hero), calc(100cqw / ${parts.integer.length * 0.6 + 1.75 + (isNegative ? 0.65 : 0)}))` } : undefined}>
         {isNegative && <span className="mr-0.5 font-medium select-none">−</span>}
         <span className="mr-1 text-[0.5em] font-normal text-[var(--text-muted)] select-none">
           {parts.currency}

@@ -5,7 +5,7 @@ import {
   ChartPie,
   FileUp,
   LifeBuoy,
-  Sparkles,
+  BookOpen,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -39,7 +39,7 @@ const features = [
     text: "Veja onde seu patrimônio chega em 1, 5 ou 10 anos mudando o quanto você guarda por mês.",
   },
   {
-    icon: Sparkles,
+    icon: BookOpen,
     title: "Didático de propósito",
     text: "Cada número vem com a explicação do porquê ele importa. Controle financeiro sem jargão.",
   },
@@ -50,37 +50,33 @@ export default async function LandingPage() {
   if (session?.user) redirect("/painel");
 
   return (
-    <div className="min-h-screen">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+    <div className="min-h-dvh">
+      <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-[var(--on-acento)] shadow-sm">
             <ChartPie className="size-4.5" />
           </div>
           <span className="text-[0.9375rem] font-semibold tracking-tight">Financeiro 2.0</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <ThemeToggle />
           <Link
             href="/login"
-            className="rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+            className="inline-flex min-h-11 items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
           >
             Entrar
           </Link>
           <Link
             href="/cadastro"
-            className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
+            className="inline-flex min-h-11 items-center rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-[var(--on-acento)] shadow-sm transition-colors hover:bg-brand-700"
           >
             Criar conta
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 pb-24">
+      <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         <section className="pt-14 pb-16 text-center sm:pt-20">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full border bg-[var(--surface)] px-3.5 py-1.5 text-xs font-medium">
-            <span className="size-1.5 rounded-full bg-money-in" />
-            Seu dinheiro, explicado
-          </p>
           <h1 className="mx-auto max-w-3xl text-4xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-5xl">
             Clareza no que entra, no que sai e no que sobra
           </h1>
@@ -91,14 +87,14 @@ export default async function LandingPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/cadastro"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
+              className="inline-flex min-h-11 items-center inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-medium text-[var(--on-acento)] shadow-sm transition-colors hover:bg-brand-700"
             >
               Começar agora
               <ArrowRight className="size-4" />
             </Link>
             <Link
               href="/login"
-              className="inline-flex h-11 items-center rounded-xl border bg-[var(--surface)] px-6 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+              className="inline-flex min-h-11 items-center inline-flex h-11 items-center rounded-xl border bg-[var(--surface)] px-6 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
             >
               Já tenho conta
             </Link>
@@ -107,17 +103,17 @@ export default async function LandingPage() {
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="card p-6">
-              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/12 dark:text-brand-300">
-                <Icon className="size-5" />
+            <div key={title} className="min-w-0 border-t border-[var(--line)] py-6">
+              <div className="mb-3 text-[var(--text-muted)]">
+                <Icon aria-hidden="true" className="size-5" strokeWidth={1.5} />
               </div>
-              <h3 className="text-[0.9375rem] font-semibold tracking-tight">{title}</h3>
+              <h2 className="text-heading font-medium">{title}</h2>
               <p className="muted mt-1.5 text-[0.875rem] leading-relaxed">{text}</p>
             </div>
           ))}
         </section>
 
-        <section className="card mt-16 flex flex-col items-center gap-5 p-10 text-center">
+        <section className="mt-12 flex flex-col items-start gap-4 border-t border-[var(--line)] py-8 text-left">
           <h2 className="max-w-lg text-2xl font-semibold tracking-tight text-balance">
             Está endividado? O primeiro passo é enxergar o tamanho real do buraco.
           </h2>
@@ -127,7 +123,7 @@ export default async function LandingPage() {
           </p>
           <Link
             href="/cadastro"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+            className="inline-flex min-h-11 items-center inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-6 text-sm font-medium text-[var(--on-acento)] transition-colors hover:bg-brand-700"
           >
             Criar minha conta
             <ArrowRight className="size-4" />
@@ -136,7 +132,7 @@ export default async function LandingPage() {
       </main>
 
       <footer className="border-t">
-        <div className="muted mx-auto max-w-6xl px-6 py-6 text-xs">
+        <div className="muted mx-auto max-w-6xl px-4 py-6 sm:px-6 text-xs">
           Financeiro 2.0 — seus dados ficam na sua conta. Este sistema é uma ferramenta de organização
           e não substitui orientação profissional de investimentos.
         </div>

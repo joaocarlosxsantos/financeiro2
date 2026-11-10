@@ -173,7 +173,7 @@ export function TransactionComposer({
       </Field>
 
       {state.error ? (
-        <p className="rounded-[var(--radius-input)] bg-[var(--color-money-out-soft)] px-3.5 py-2 text-xs text-[var(--text-out)]">
+        <p role="alert" className="rounded-[var(--radius-input)] bg-[var(--color-money-out-soft)] px-3.5 py-2 text-xs text-[var(--text-out)]">
           {state.error}
         </p>
       ) : null}

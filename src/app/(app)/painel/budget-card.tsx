@@ -27,7 +27,7 @@ export function BudgetCard({
           </h2>
           <Link
             href={href}
-            className="text-xs font-medium text-[var(--text-brand)] hover:underline"
+            className="inline-flex min-h-11 items-center text-xs font-medium text-[var(--text-brand)] hover:underline"
           >
             Definir limites
           </Link>
@@ -59,7 +59,7 @@ export function BudgetCard({
         </h2>
         <Link
           href={href}
-          className="text-xs font-medium text-[var(--text-brand)] hover:underline"
+          className="inline-flex min-h-11 items-center text-xs font-medium text-[var(--text-brand)] hover:underline"
         >
           Gerenciar
         </Link>

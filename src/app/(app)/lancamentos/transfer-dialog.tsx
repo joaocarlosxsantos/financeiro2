@@ -169,7 +169,7 @@ function TransferDialogContent({
             type="button"
             aria-label="Fechar"
             onClick={onClose}
-            className="min-h-11 min-w-11 cursor-pointer rounded-[var(--radius-xs)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 cursor-pointer rounded-[var(--radius-xs)] p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
           >
             <X className="size-4" />
           </button>

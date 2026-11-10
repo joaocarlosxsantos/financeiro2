@@ -247,7 +247,7 @@ function SplitDialogContent({
             type="button"
             aria-label="Fechar"
             onClick={onClose}
-            className="min-h-11 min-w-11 muted cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
           >
             <X className="size-4" />
           </button>
@@ -286,7 +286,7 @@ function SplitDialogContent({
           </div>
 
           {/* Eu participo */}
-          <label className="flex cursor-pointer select-none items-center gap-2.5 rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs text-[var(--text)]">
+          <label className="min-h-11 flex cursor-pointer select-none items-center gap-2.5 rounded-[var(--radius-input)] border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs text-[var(--text)]">
             <input
               type="checkbox"
               checked={myIncluded}
@@ -326,7 +326,7 @@ function SplitDialogContent({
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div>
                         <label className="muted mb-1 block text-xs">Nome</label>
-                        <input aria-label="Ex.: Mariana"
+                        <input aria-label={`Nome da pessoa ${idx + 1}`}
                           type="text"
                           required
                           data-autofocus={idx === 0 ? "" : undefined}
@@ -340,7 +340,7 @@ function SplitDialogContent({
                         <label className="muted mb-1 block text-xs">
                           Telefone / WhatsApp (opcional)
                         </label>
-                        <input aria-label="(11) 99999-9999"
+                        <input aria-label={`Telefone da pessoa ${idx + 1}`}
                           type="tel"
                           value={p.phone}
                           onChange={(e) => updatePerson(idx, { phone: e.target.value })}
@@ -357,7 +357,7 @@ function SplitDialogContent({
                           <span className="muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
                             R$
                           </span>
-                          <input aria-label="0,00"
+                          <input aria-label={`Valor da pessoa ${idx + 1}`}
                             type="text"
                             inputMode="decimal"
                             value={p.amount}
@@ -373,7 +373,7 @@ function SplitDialogContent({
                       <div>
                         <label className="muted mb-1 block text-xs">Porcentagem (%)</label>
                         <div className="relative">
-                          <input aria-label="Ex.: 50"
+                          <input aria-label={`Percentual da pessoa ${idx + 1}`}
                             type="text"
                             inputMode="decimal"
                             value={p.percent}
@@ -394,7 +394,7 @@ function SplitDialogContent({
                       type="button"
                       aria-label={`Remover pessoa ${idx + 1}`}
                       onClick={() => removePerson(idx)}
-                      className="min-h-11 min-w-11 muted mt-5 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 muted mt-5 cursor-pointer rounded-[var(--radius-xs)] p-1.5 transition-colors hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

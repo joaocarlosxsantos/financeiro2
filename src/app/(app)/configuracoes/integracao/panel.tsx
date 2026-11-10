@@ -326,7 +326,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
 
                 {remote.some((account) => account.type === "CREDIT") && !setup.accounts.some((account) => account.type === "CREDIT_CARD") ? (
                   <div role="status" className="rounded-lg border border-[var(--line-strong)] bg-[var(--warn-soft)] p-3 text-xs text-[var(--text-muted)]">
-                    O item Pluggy tem cartÃ£o de crÃ©dito, mas ainda nÃ£o hÃ¡ uma conta local de cartÃ£o para vinculÃ¡-lo. Em <Link className="font-medium text-[var(--text-brand)] underline" href="/configuracoes">ConfiguraÃ§Ãµes → Contas e cartÃµes → Nova conta</Link>, crie uma conta do tipo &ldquo;CartÃ£o de crÃ©dito&rdquo; e volte para selecionÃ¡-la aqui.
+                    O item Pluggy tem cartÃ£o de crÃ©dito, mas ainda nÃ£o hÃ¡ uma conta local de cartÃ£o para vinculÃ¡-lo. Em <Link className="inline-flex min-h-11 items-center font-medium text-[var(--text-brand)] underline" href="/configuracoes">ConfiguraÃ§Ãµes → Contas e cartÃµes → Nova conta</Link>, crie uma conta do tipo &ldquo;CartÃ£o de crÃ©dito&rdquo; e volte para selecionÃ¡-la aqui.
                   </div>
                 ) : null}
 
@@ -600,7 +600,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
           <button
             type="button"
             onClick={() => setMessage("")}
-            className="min-h-11 min-w-11 rounded p-1 hover:bg-black/5 dark:hover:bg-[var(--surface)]"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 rounded p-1 hover:bg-black/5 dark:hover:bg-[var(--surface)]"
             aria-label="Dispensar aviso"
           >
             <X className="size-3.5" />
@@ -613,7 +613,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       </p>
 
       {/* Modal para Adicionar Nova Conexão */}
-      {isNewModalOpen && <Sheet title="Nova conex?o Open Finance" onClose={() => setIsNewModalOpen(false)}>
+      {isNewModalOpen && <Sheet title="Nova conexão Open Finance" onClose={() => setIsNewModalOpen(false)}>
                 <p className="muted text-xs mb-4">
                   {setup.credentialSaved
                     ? "Suas credenciais gerais da Pluggy já estão cadastradas. Informe o Item ID e um nome para esta nova conexão (ou preencha novos valores de Client ID e Secret se desejar alterá-los)."

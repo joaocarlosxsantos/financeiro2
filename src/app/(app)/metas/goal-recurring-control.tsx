@@ -75,7 +75,7 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
               if (!ok) return;
               start(async () => void (await deleteGoalRecurringRule(rule.id)));
             }}
-            className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+            className="inline-flex items-center justify-center min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -120,7 +120,7 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
             Cancelar
           </Button>
           {state.error ? (
-            <p className="w-full text-[0.75rem] text-[var(--text-out)]">{state.error}</p>
+            <p role="alert" className="w-full text-[0.75rem] text-[var(--text-out)]">{state.error}</p>
           ) : null}
         </form>
       ) : null}

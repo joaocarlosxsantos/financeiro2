@@ -69,7 +69,7 @@ export function ImportHistory({ batches }: { batches: Batch[] }) {
               title="Apagar esta importação e os lançamentos que vieram dela"
               disabled={pendingId === b.id}
               onClick={() => remove(b)}
-              className="min-h-11 min-w-11 muted mt-0.5 shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 muted mt-0.5 shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
             >
               <Trash2 className="size-4" />
             </button>

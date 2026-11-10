@@ -15,9 +15,9 @@ export default async function LoginPage({
   if (session?.user) redirect("/painel");
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
+    <div className="flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
+      <div className="min-w-0 w-full max-w-sm">
+        <Link href="/" className="inline-flex min-h-11 items-center mb-8 flex min-h-11 items-center justify-center gap-2.5">
           <div className="flex size-8 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-brand)]">
             <span className="font-display text-base font-bold leading-none">F</span>
           </div>
@@ -26,9 +26,9 @@ export default async function LoginPage({
           </span>
         </Link>
 
-        <div className="card p-7">
-          <h1 className="font-display text-xl font-medium tracking-tight">Entrar</h1>
-          <p className="muted mt-1 mb-6 text-xs">Acesse seu caderno de contas.</p>
+        <div className="card p-5 sm:p-7">
+          <h1 className="font-display text-display font-semibold tracking-tight">Entrar</h1>
+          <p className="muted mt-1 mb-6 text-sm">Acesse seu caderno de contas.</p>
 
           {sessao === "expirada" ? (
             <p className="mb-5 rounded-[4px] border border-[var(--border-warn)] bg-[var(--color-warn-soft)] px-3.5 py-2.5 text-xs text-[var(--text-warn)]">
@@ -41,7 +41,7 @@ export default async function LoginPage({
 
         <p className="muted mt-6 text-center text-xs">
           Não tem conta?{" "}
-          <Link href="/cadastro" className="font-medium text-[var(--text-brand)] hover:underline">
+          <Link href="/cadastro" className="inline-flex min-h-11 items-center font-medium text-[var(--text-brand)] hover:underline">
             Criar conta
           </Link>
         </p>

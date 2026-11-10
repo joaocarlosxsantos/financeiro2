@@ -81,7 +81,7 @@ export function PeriodSwitcher({
           onClick={clearRange}
           aria-label="Voltar para visão por mês"
           title="Voltar para visão por mês"
-          className="min-h-11 min-w-11 muted inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-8"
+          className="inline-flex items-center justify-center min-h-11 min-w-11 muted inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-8"
         >
           <X className="size-4 md:size-3.5" />
         </button>
@@ -96,7 +96,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(-1)}
           aria-label="Mês anterior"
-          className="min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
+          className="inline-flex items-center justify-center min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
         >
           <ChevronLeft className="size-4" />
         </button>
@@ -107,7 +107,7 @@ export function PeriodSwitcher({
           type="button"
           onClick={() => goMonth(1)}
           aria-label="Próximo mês"
-          className="min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
+          className="inline-flex items-center justify-center min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-xs)] hover:bg-[var(--surface-2)] md:size-9"
         >
           <ChevronRight className="size-4" />
         </button>
@@ -118,7 +118,7 @@ export function PeriodSwitcher({
         onClick={() => setOpen((v) => !v)}
         aria-label="Período customizado"
         title="Período customizado"
-        className="min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] md:size-9"
+        className="inline-flex items-center justify-center min-h-11 min-w-11 inline-flex size-11 cursor-pointer items-center justify-center rounded-[var(--radius-button)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] md:size-9"
       >
         <CalendarRange className="size-4" />
       </button>
