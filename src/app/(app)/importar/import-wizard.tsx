@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { ArrowLeftRight, CheckCircle2, FileUp, Loader2 } from "lucide-react";
 import { commitImport, previewImport, type PreviewRow } from "@/server/actions/import";
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
@@ -152,6 +153,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
       <Card className="min-w-0">
         <CardHeader title="1. Escolha a conta e o arquivo" />
 
+        <MobileDisclosure label="Escolher conta e arquivo">
         <div className={cn("grid grid-cols-1 gap-4", isCard ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           <Field label="Conta que vai receber os lançamentos">
             <Select className="min-h-12 min-w-0 max-w-full text-base!" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
@@ -198,7 +200,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
 
         <label
           className={cn(
-            "mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors hover:bg-[var(--surface-2)]",
+            "mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-4 sm:px-6 sm:py-10 text-center transition-colors hover:bg-[var(--surface-2)]",
             (pending || !accountId || (isCard && !invoiceMonth)) && "pointer-events-none opacity-60",
           )}
         >
@@ -218,7 +220,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           ) : (
             <FileUp className="mb-3 size-6 opacity-60" />
           )}
-          <p className="text-[0.9375rem] font-medium">
+          <p className="max-w-full break-words text-[0.9375rem] font-medium [overflow-wrap:anywhere]">
             {fileName ?? "Clique para escolher o arquivo"}
           </p>
           <p className="muted mt-1 text-[0.8125rem]">
@@ -227,6 +229,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
               : "Aceita CSV e OFX de extrato bancário — cada linha entra com a própria data do arquivo."}
           </p>
         </label>
+        </MobileDisclosure>
       </Card>
 
       {error ? <Hint tone="warn">{error}</Hint> : null}

@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { requireUserId } from "@/lib/auth";
 import { getAccountsWithStats, getCategories, getUser } from "@/server/queries";
 import { PageHeader } from "@/components/page-header";
@@ -34,14 +35,14 @@ export default async function SettingsPage() {
             title="Perfil financeiro"
             subtitle="Esses números alimentam a reserva de emergência, o 50/30/20 e a nota de saúde."
           />
-          <ProfileForm
+          <MobileDisclosure label="Editar perfil financeiro"><ProfileForm
             defaults={{
               name: user.name,
               income: user.monthlyIncomeCents,
               emergencyMonths: user.emergencyMonths,
               savingsTargetPct: user.savingsTargetPct,
             }}
-          />
+          /></MobileDisclosure>
         </Card>
 
         <Card className="min-w-0">

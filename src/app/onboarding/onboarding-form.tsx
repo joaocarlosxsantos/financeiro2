@@ -27,8 +27,8 @@ export function OnboardingForm({
 
   return (
     <form aria-busy={pending} action={formAction} className="space-y-6">
-      <div className="card space-y-5 p-6">
-        <Field
+      <div className="card space-y-3 p-3 sm:space-y-5 sm:p-6 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
+        <Field className="max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3"
           label="Renda mensal líquida"
           hint="O que efetivamente cai na sua conta por mês, já com descontos. Se varia, use uma média conservadora."
         >
@@ -42,8 +42,8 @@ export function OnboardingForm({
           />
         </Field>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field
+        <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-5 sm:grid-cols-2">
+          <Field className="max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3"
             label="Meses de reserva de emergência"
             hint="CLT estável: 6 meses. Autônomo ou renda variável: 9 a 12."
           >
@@ -56,7 +56,7 @@ export function OnboardingForm({
             </Select>
           </Field>
 
-          <Field label="Quanto quero guardar por mês" hint="A referência clássica é 20% da renda.">
+          <Field className="max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3" label="Quanto quero guardar por mês" hint="A referência clássica é 20% da renda.">
             <Select className="min-h-12 min-w-0 max-w-full text-base!" name="savingsTargetPct" value={savePct} onChange={(e) => setSavePct(e.target.value)}>
               {[5, 10, 15, 20, 25, 30, 40].map((p) => (
                 <option key={p} value={p}>
@@ -69,7 +69,7 @@ export function OnboardingForm({
       </div>
 
       {cents > 0 ? (
-        <div className="card space-y-4 p-6">
+        <div className="card min-w-0 space-y-3 p-3 sm:space-y-4 sm:p-6 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
           <h2 className="text-[0.9375rem] font-semibold tracking-tight">
             Com essa renda, aqui está o seu ponto de partida
           </h2>
@@ -81,17 +81,17 @@ export function OnboardingForm({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="border-t border-[var(--line)] pt-4">
+            <div className="min-w-0 border-t border-[var(--line)] pt-4 max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3">
               <p className="muted text-xs">Meta de reserva estimada</p>
-              <p className="tnum mt-1 max-w-full break-words text-display font-semibold">{formatCents(emergencyEstimate)}</p>
+              <p className="tnum mt-1 max-w-full break-all text-[clamp(1.25rem,4vw,var(--text-display))] font-semibold">{formatCents(emergencyEstimate)}</p>
               <p className="muted mt-1 text-xs leading-snug">
                 Estimativa com custo de vida em 70% da renda. Assim que você lançar gastos, o cálculo passa a
                 usar o seu custo real.
               </p>
             </div>
-            <div className="border-t border-[var(--line)] pt-4">
+            <div className="min-w-0 border-t border-[var(--line)] pt-4 max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3">
               <p className="muted text-xs">Guardando {savePct}% ao mês</p>
-              <p className="tnum mt-1 max-w-full break-words text-display font-semibold">{formatCents(monthlySave)}</p>
+              <p className="tnum mt-1 max-w-full break-all text-[clamp(1.25rem,4vw,var(--text-display))] font-semibold">{formatCents(monthlySave)}</p>
               <p className="muted mt-1 text-xs leading-snug">
                 Nesse ritmo, a reserva completa fica pronta em cerca de{" "}
                 {monthlySave > 0 ? Math.ceil(emergencyEstimate / monthlySave) : "—"} meses.
@@ -131,12 +131,12 @@ function SplitCard({
   desc: string;
 }) {
   return (
-    <div className="border-t border-[var(--line)] pt-4">
+    <div className="min-w-0 border-t border-[var(--line)] pt-4 max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3">
       <div className="mb-2 flex items-center gap-2">
         <span className="size-2.5 rounded-full" style={{ background: color }} />
         <p className="text-xs font-medium">{label}</p>
       </div>
-      <p className="tnum text-lg font-semibold">{formatCents(value)}</p>
+      <p className="tnum break-all text-lg font-semibold">{formatCents(value)}</p>
       <p className="muted mt-1 text-xs leading-snug">{desc}</p>
     </div>
   );

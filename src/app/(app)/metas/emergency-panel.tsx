@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { LifeBuoy } from "lucide-react";
 import { upsertEmergencyGoal, contributeToGoal } from "@/server/actions/goals";
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
+import { Money } from "@/components/ui/money";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -39,7 +41,7 @@ export function EmergencyPanel({
 
   return (
     <Card className="min-w-0">
-      <div className="mb-5 flex items-start gap-3">
+      <div className="mb-3 flex sm:mb-5 items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-save-soft)] text-[var(--color-save)]">
           <LifeBuoy className="size-5" />
         </span>
@@ -53,7 +55,7 @@ export function EmergencyPanel({
       </div>
 
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="tnum max-w-full break-words text-hero font-medium tracking-tight">{formatCents(saved)}</span>
+        <Money cents={saved} size="hero" />
         <span className="muted tnum text-[0.875rem]">meta: {formatCents(target)}</span>
       </div>
       <Progress
@@ -63,7 +65,8 @@ export function EmergencyPanel({
         height={6}
       />
 
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-3"><MobileDisclosure label="Detalhes e aportes da reserva">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Metric label="Falta guardar" value={formatCents(missing)} />
         <Metric label="Meses cobertos hoje" value={`${runway} de ${months}`} />
         <Metric
@@ -131,6 +134,7 @@ export function EmergencyPanel({
           )}
         </Hint>
       </div>
+      </MobileDisclosure></div>
     </Card>
   );
 }
@@ -139,7 +143,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border p-3.5">
       <p className="muted text-xs">{label}</p>
-      <p className="tnum mt-0.5 text-[0.9375rem] font-semibold">{value}</p>
+      <p className="tnum break-all mt-0.5 text-[0.9375rem] font-semibold">{value}</p>
     </div>
   );
 }

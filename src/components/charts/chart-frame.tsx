@@ -70,7 +70,7 @@ export function ChartFrame({ title, data, series, empty, loading = false, childr
   return (
     <figure className="min-w-0 w-full max-w-full">
       {!busy && !empty && last && (
-        <figcaption className="mb-2 sm:mb-3 text-xs text-[var(--text-muted)]">
+        <figcaption className="sr-only sm:not-sr-only sm:mb-3 text-xs text-[var(--text-muted)]">
           <p className="mb-2 hidden sm:block">{last.label} · valores em reais</p>
           <ul className="flex flex-wrap gap-x-4 gap-y-2">
             {series.map((item, index) => (
@@ -86,7 +86,7 @@ export function ChartFrame({ title, data, series, empty, loading = false, childr
         </figcaption>
       )}
       <div role="img" aria-label={`${title}. ${busy ? "Carregando gráfico." : empty ? "Sem dados no período." : summary}`} aria-busy={busy}
-        className="relative h-40 min-w-0 w-full max-w-full overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--acento)] md:h-72" {...interaction?.handlers}>
+        className="relative h-40 [@media(max-height:700px)]:h-36 min-w-0 w-full max-w-full overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--acento)] md:h-72" {...interaction?.handlers}>
         {busy || empty ? (
           <p role="status" className="flex h-full items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-center text-sm text-[var(--text-muted)]">
             {busy ? "Carregando gráfico…" : "Sem dados no período"}
@@ -101,7 +101,7 @@ export function ChartFrame({ title, data, series, empty, loading = false, childr
         </>}
       </div>
       {!busy && !empty && (
-        <details className="mt-2 text-xs">
+        <details className="text-xs sm:mt-2">
           <summary className="flex min-h-11 cursor-pointer items-center text-[var(--text-muted)]">Ver valores do gráfico</summary>
           <dl className="max-h-64 space-y-3 overflow-y-auto rounded-xl border bg-[var(--surface)] p-3">
             {data.map((row, index) => <div key={index}>

@@ -245,6 +245,7 @@ export default async function DashboardPage({
         <Card className="min-w-0 min-w-0 max-w-full overflow-x-hidden lg:col-span-7">
           <CardHeader
             title="Entrou, saiu e sobrou nos últimos 6 meses"
+            mobileTitle="Fluxo dos últimos 6 meses"
             subtitle="Histórico de entradas, saídas e saldo líquido mês a mês."
           />
           <MonthlyFlowChart data={series} />

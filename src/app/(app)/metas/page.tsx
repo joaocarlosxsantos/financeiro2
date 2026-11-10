@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Target } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
@@ -75,7 +76,7 @@ export default async function GoalsPage() {
             recurringRule={emergency ? (ruleByGoal.get(emergency.id) ?? null) : null}
           />
 
-          <Card className="min-w-0 p-0">
+          <Card className="min-w-0 p-0 max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
             <div className="border-b px-5 py-4">
               <h2 className="text-[0.9375rem] font-semibold tracking-tight">Suas metas</h2>
               <p className="muted mt-0.5 text-[0.8125rem]">
@@ -84,7 +85,7 @@ export default async function GoalsPage() {
             </div>
 
             {others.length ? (
-              <div className="divide-y">
+              <div className="space-y-3 sm:space-y-0 sm:divide-y">
                 {others.map((goal) => (
                   <GoalCard
                     key={goal.id}
@@ -134,7 +135,7 @@ export default async function GoalsPage() {
                   : "Cadastre lançamentos para o sistema estimar quanto você consegue guardar."
               }
             />
-            <GoalComposer />
+            <MobileDisclosure label="Preencher nova meta"><GoalComposer /></MobileDisclosure>
           </Card>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { TrendingDown } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import { getDebtOverview, getMonthSummary, getUser } from "@/server/queries";
@@ -48,7 +49,7 @@ export default async function DebtsPage() {
           </Card>
           <Card className="min-w-0">
             <CardHeader title="Cadastrar dívida" subtitle="Comece pela de maior juros." />
-            <DebtComposer />
+            <MobileDisclosure label="Preencher dívida"><DebtComposer /></MobileDisclosure>
           </Card>
         </div>
       ) : (
@@ -123,7 +124,7 @@ export default async function DebtsPage() {
           <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             <Card className="min-w-0">
               <CardHeader title="Cadastrar dívida" />
-              <DebtComposer />
+              <MobileDisclosure label="Preencher dívida"><DebtComposer /></MobileDisclosure>
             </Card>
 
             <Hint tone="tip" title="A ordem que funciona">

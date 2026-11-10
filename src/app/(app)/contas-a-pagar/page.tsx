@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Wallet } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import { getBillGroupings, getBillRulesStatus, getBillsForMonth } from "@/server/queries";
@@ -80,7 +81,7 @@ export default async function BillsPage({
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card className="min-w-0">
             <h2 className="mb-3 text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">Nova conta</h2>
-            <NewBillForm groupings={groupings} monthRef={ref} />
+            <MobileDisclosure label="Preencher nova conta"><NewBillForm groupings={groupings} monthRef={ref} /></MobileDisclosure>
           </Card>
 
           <Card className="min-w-0">

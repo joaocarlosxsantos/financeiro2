@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { CreditCard, Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
@@ -269,7 +270,7 @@ export default async function TransactionsPage({
                 <Money cents={sobrouCents} tone={sobrouCents < 0 ? "out" : undefined} size="sm" className="font-semibold" />
               </li>
             </ul>
-            <TransactionComposer categories={plainCategories} accounts={plainAccounts} />
+            <MobileDisclosure label="Novo lançamento"><TransactionComposer categories={plainCategories} accounts={plainAccounts} /></MobileDisclosure>
           </Card>
 
           <ReceivablesSection

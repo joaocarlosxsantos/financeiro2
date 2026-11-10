@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Repeat } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import { getAccounts, getCategories, getRecurringStatus, getUser } from "@/server/queries";
@@ -153,7 +154,7 @@ export default async function RecurringPage({
               title="Nova recorrência"
               subtitle="Receitas ou despesas fixas mensais."
             />
-            <RuleComposer
+            <MobileDisclosure label="Preencher recorrência"><RuleComposer
               monthRef={ref}
               accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
               categories={categories.map((c) => ({
@@ -162,7 +163,7 @@ export default async function RecurringPage({
                 kind: c.kind as "INCOME" | "EXPENSE",
                 nature: c.nature as "FIXED" | "VARIABLE",
               }))}
-            />
+            /></MobileDisclosure>
           </Card>
         </div>
       </div>

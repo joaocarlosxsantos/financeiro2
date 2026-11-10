@@ -1,3 +1,4 @@
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import Link from "next/link";
 import { requireUserId } from "@/lib/auth";
 import { getBudgetOverview, getUser } from "@/server/queries";
@@ -52,21 +53,21 @@ export default async function BudgetPage({
                 title={`Nenhum limite definido em ${monthLabel(ref)}`}
                 subtitle="Comece por um dos dois caminhos — depois é só ajustar o que não fizer sentido."
               />
-              <BudgetStarters
+              <MobileDisclosure label="Sugerir ou copiar limites"><BudgetStarters
                 monthRef={ref}
                 canCopyPrevious={overview.previousMonthHasBudgets}
-              />
-              <div className="mt-5">
+              /></MobileDisclosure>
+              <details className="mt-3 text-sm"><summary className="flex min-h-11 cursor-pointer items-center">Por onde começar</summary>
                 <Hint tone="tip" title="Por onde começar">
                   Orçamento que ignora o histórico não se sustenta. Comece pela sua média real dos
                   últimos meses e só então aperte onde você quer mudar de comportamento — normalmente
                   delivery, lazer e compras.
                 </Hint>
-              </div>
+              </details>
             </Card>
           ) : null}
 
-          <Card className="min-w-0 p-0">
+          <Card className="min-w-0 p-0 max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
               <div>
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight">

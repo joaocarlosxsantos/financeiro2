@@ -49,7 +49,7 @@ export function AccountList({ accounts }: { accounts: Account[] }) {
     return <p className="muted px-5 py-8 text-center text-[0.8125rem]">Nada por aqui.</p>;
   }
   return (
-    <ul className="divide-y">
+    <ul className="space-y-3 sm:space-y-0 sm:divide-y">
       {accounts.map((account) => (
         <Row key={account.id} account={account} />
       ))}
@@ -66,7 +66,7 @@ function Row({ account }: { account: Account }) {
   const negativo = account.balanceCents < 0;
 
   return (
-    <li className={cn("px-3 py-3 transition-opacity sm:px-5 sm:py-4", pending && "opacity-50")}>
+    <li className={cn("min-w-0 rounded-xl border bg-[var(--surface)] px-3 py-3 transition-opacity sm:rounded-none sm:border-0 sm:bg-transparent sm:px-5 sm:py-4", pending && "opacity-50")}>
       <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:flex-wrap">
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text)]"
@@ -76,7 +76,7 @@ function Row({ account }: { account: Account }) {
 
         <div className="min-w-0 flex-1">
           <p title={account.name} className="truncate text-[0.875rem] font-medium">{account.name}</p>
-          <p className="muted break-words text-xs [overflow-wrap:anywhere]">
+          <p title={`${TYPE_LABEL[account.type] ?? account.type}${account.institution ? ` · ${account.institution}` : ""} · ${account.transactionCount} lançamento(s)`} className="muted truncate text-xs">
             {TYPE_LABEL[account.type] ?? account.type}
             {account.institution ? ` · ${account.institution}` : ""}
             {` · ${account.transactionCount} lançamento(s)`}

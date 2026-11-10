@@ -50,7 +50,7 @@ export function GoalCard({
   const done = goal.savedCents >= goal.targetCents;
 
   return (
-    <div className={cn("px-5 py-5 transition-opacity", pending && "opacity-50")}>
+    <div className={cn("min-w-0 rounded-xl border bg-[var(--surface)] px-3 py-3 transition-opacity sm:rounded-none sm:border-0 sm:bg-transparent sm:px-5 sm:py-5", pending && "opacity-50")}>
       <div className="mb-3 flex items-start gap-3">
         <span className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ background: "var(--text-info)" }} />
         <div className="min-w-0 flex-1">

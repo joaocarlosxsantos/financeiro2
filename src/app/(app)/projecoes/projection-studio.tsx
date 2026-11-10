@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, MoneyInput, Input } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
@@ -66,7 +67,7 @@ export function ProjectionStudio({
       <div className="order-2 min-w-0 space-y-4 lg:order-1">
         <Card className="min-w-0">
           <CardHeader title="Seus números" subtitle="Preenchemos com o que já sabemos sobre você." />
-          <div className="space-y-4">
+          <MobileDisclosure label="Ajustar valores e horizonte"><div className="space-y-4">
             <Field label="Quanto você já tem guardado">
               <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" value={start} onChange={(e) => setStart(e.target.value)} inputMode="decimal" />
             </Field>
@@ -89,7 +90,7 @@ export function ProjectionStudio({
                 ))}
               </div>
             </Field>
-          </div>
+          </div></MobileDisclosure>
         </Card>
 
         <Hint tone="tip" title="O que move o gráfico">
@@ -103,6 +104,7 @@ export function ProjectionStudio({
         <Card className="min-w-0">
           <CardHeader
             title={`Patrimônio projetado em ${years} ano${years === 1 ? "" : "s"}`}
+            mobileTitle={`Patrimônio em ${years} anos`}
             subtitle="Três cenários de rentabilidade anual sobre os mesmos aportes."
           />
           <ProjectionChart
@@ -125,7 +127,7 @@ export function ProjectionStudio({
           ))}
         </div>
 
-        <Card className="min-w-0">
+        <Card className="min-w-0 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
           <CardHeader title="Decompondo o cenário realista" subtitle="Quanto veio de você e quanto veio do juro." />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Metric label="Você depositou" value={formatCents(invested)} />
@@ -147,7 +149,7 @@ export function ProjectionStudio({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border p-3.5">
+    <div className="min-w-0 rounded-xl border bg-[var(--surface)] p-3 sm:p-3.5">
       <p className="muted text-xs">{label}</p>
       <p className="tnum break-all mt-0.5 text-[0.9375rem] font-semibold">{value}</p>
     </div>

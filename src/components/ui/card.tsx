@@ -22,19 +22,21 @@ export function CardHeader({
   subtitle,
   action,
   className,
+  mobileTitle,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
   className?: string;
+  mobileTitle?: string;
 }) {
   return (
-    <div className={cn("mb-3 flex min-w-0 items-start sm:mb-4 justify-between gap-4", className)}>
+    <div className={cn("mb-3 flex min-w-0 flex-wrap items-start sm:mb-4 justify-between gap-4", mobileTitle && "mb-2", className)}>
       <div className="min-w-0">
-        <h2 className="text-[clamp(1rem,2vw,var(--text-heading))] font-semibold text-[var(--text)]">{title}</h2>
-        {subtitle ? <p className="muted mt-1 text-sm leading-snug">{subtitle}</p> : null}
+        <h2 className="break-words text-[clamp(1rem,2vw,var(--text-heading))] font-semibold text-[var(--text)] [overflow-wrap:anywhere]">{mobileTitle ? <><span className="sm:hidden">{mobileTitle}</span><span className="hidden sm:inline">{title}</span></> : title}</h2>
+        {subtitle ? <p className={cn("muted mt-1 text-sm leading-snug", mobileTitle && "sr-only sm:not-sr-only sm:mt-1 sm:text-sm")}>{subtitle}</p> : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="max-w-full shrink-0">{action}</div> : null}
     </div>
   );
 }

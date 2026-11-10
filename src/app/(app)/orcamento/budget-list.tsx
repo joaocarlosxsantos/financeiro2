@@ -35,7 +35,7 @@ export function BudgetList({ rows, monthRef }: { rows: BudgetRow[]; monthRef: Mo
   }
 
   return (
-    <ul className="divide-y">
+    <ul className="space-y-3 sm:space-y-0 sm:divide-y">
       {rows.map((row) => (
         <Row key={row.categoryId} row={row} monthRef={monthRef} />
       ))}
@@ -80,7 +80,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
     row.limitCents !== null && row.status !== "estourou" && row.projectedCents > row.limitCents;
 
   return (
-    <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
+    <li className={cn("min-w-0 rounded-xl border bg-[var(--surface)] px-3 py-3 transition-opacity sm:rounded-none sm:border-0 sm:bg-transparent sm:px-5 sm:py-4", pending && "opacity-50")}>
       <div className="mb-2.5 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: row.color }} />
         <span title={row.name} className="min-w-0 truncate text-[0.875rem] font-medium">{row.name}</span>

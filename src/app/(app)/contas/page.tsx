@@ -19,7 +19,7 @@ export default async function AccountsPage() {
     return (
       <>
         <PageHeader title="Saldos" description="Saldos atuais e patrimônio líquido consolidado." />
-        <Card className="min-w-0 p-0">
+        <Card className="min-w-0 p-0 max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
           <EmptyState
             icon={Wallet}
             title="Nenhuma conta cadastrada"
@@ -45,8 +45,8 @@ export default async function AccountsPage() {
         description="Saldos atuais e patrimônio líquido consolidado."
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
           {overview.needsOpeningBalance ? (
             <Hint tone="tip" title="Informe o saldo inicial">
               Alguma conta está sem saldo inicial. Informe o saldo na data de referência para
@@ -55,7 +55,7 @@ export default async function AccountsPage() {
           ) : null}
           {overview.totalIncomplete ? <Hint tone="info" title="Total incompleto">Há conta integrada sem snapshot bancário disponível. O consolidado fica incompleto até a próxima sincronização.</Hint> : null}
 
-          <Card className="min-w-0 p-0">
+          <Card className="min-w-0 p-0 max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
             <div className="border-b border-[var(--line)] px-5 py-4">
               <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                 Saldos
@@ -85,7 +85,7 @@ export default async function AccountsPage() {
           </Card>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <div className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card className="min-w-0">
             <CardHeader
               title="Patrimônio líquido"
