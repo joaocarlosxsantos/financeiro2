@@ -1,4 +1,4 @@
-# Financeiro 2.0
+# Mutano Contas
 
 Controle financeiro pessoal com foco em **clareza**: separar gasto fixo de variável,
 construir reserva de emergência com base no custo de vida real, acompanhar metas,

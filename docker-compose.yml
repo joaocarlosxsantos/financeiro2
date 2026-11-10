@@ -1,4 +1,4 @@
-# Financeiro 2.0 — Postgres local para desenvolvimento.
+# Mutano Contas — Postgres local para desenvolvimento.
 #
 #   docker compose up -d      sobe o banco
 #   docker compose ps         mostra se está de pé e saudável

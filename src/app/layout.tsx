@@ -19,12 +19,12 @@ const mono = IBM_Plex_Mono({
 const description = "Seu livro-caixa pessoal: gastos fixos e variáveis, reserva de emergência, metas e extratos.";
 
 export const metadata: Metadata = {
-  title: { default: "Razão", template: "%s — Razão" },
+  title: { default: "Mutano Contas", template: "%s — Mutano Contas" },
   description,
-  applicationName: "Razão",
+  applicationName: "Mutano Contas",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://financeiro2-delta.vercel.app"),
-  openGraph: { type: "website", locale: "pt_BR", siteName: "Razão", title: "Razão", description },
-  twitter: { card: "summary_large_image", title: "Razão", description },
+  openGraph: { type: "website", locale: "pt_BR", siteName: "Mutano Contas", title: "Mutano Contas", description },
+  twitter: { card: "summary_large_image", title: "Mutano Contas", description },
 };
 
 export const viewport: Viewport = {

@@ -17,8 +17,8 @@ export function Sidebar({ userName, userEmail, accounts, categories }: {
 }) {
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
-  const brand = <Link href="/painel" className="flex min-h-11 items-center" aria-label="Razão — ir para o painel">
-    <Logo />
+  const brand = <Link href="/painel" className="flex min-h-11 items-center" aria-label="Mutano Contas — ir para o painel">
+    <Logo compacto />
   </Link>;
   return <>
     <header className="flex min-h-16 items-center justify-between gap-3 border-b bg-[var(--bg)] px-4 lg:fixed lg:top-0 lg:left-0 lg:z-10 lg:w-[232px] lg:border-b-0 lg:pt-4">

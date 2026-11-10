@@ -53,7 +53,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
-        <Link href="/" aria-label="Razão" className="inline-flex min-h-11 items-center"><Logo /></Link>
+        <Link href="/" aria-label="Mutano Contas" className="inline-flex min-h-11 items-center"><Logo /></Link>
         <div className="flex max-w-full flex-wrap items-center gap-2">
           <ThemeToggle />
           <Link
@@ -129,7 +129,7 @@ export default async function LandingPage() {
 
       <footer className="border-t">
         <div className="muted mx-auto max-w-6xl px-4 py-6 sm:px-6 text-xs">
-          Razão — seus dados ficam na sua conta. Este sistema é uma ferramenta de organização
+          Mutano Contas — seus dados ficam na sua conta. Este sistema é uma ferramenta de organização
           e não substitui orientação profissional de investimentos.
         </div>
       </footer>

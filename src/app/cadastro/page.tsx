@@ -13,7 +13,7 @@ export default async function RegisterPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="min-w-0 w-full max-w-sm">
-        <Link href="/" aria-label="Razão" className="mb-8 flex min-h-11 items-center justify-center">
+        <Link href="/" aria-label="Mutano Contas" className="mb-8 flex min-h-11 items-center justify-center">
           <Logo className="justify-center" />
         </Link>
 

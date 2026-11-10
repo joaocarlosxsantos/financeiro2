@@ -7,12 +7,14 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Razão",
-    short_name: "Razão",
+    name: "Mutano Contas",
+    short_name: "Mutano",
     description:
       "Seu livro-caixa pessoal: gastos fixos e variáveis, reserva de emergência, metas e extratos.",
     start_url: "/painel",
+    scope: "/",
     display: "standalone",
+    orientation: "portrait",
     background_color: "#000000",
     theme_color: "#000000",
     lang: "pt-BR",

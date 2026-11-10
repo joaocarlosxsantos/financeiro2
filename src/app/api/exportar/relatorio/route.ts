@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
 
-  doc.fontSize(18).font("Helvetica-Bold").text("Razão — Relatório mensal");
+  doc.fontSize(18).font("Helvetica-Bold").text("Mutano Contas — Relatório mensal");
   doc
     .fontSize(11)
     .font("Helvetica")
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     .moveDown(2)
     .fontSize(8)
     .fillColor("#999")
-    .text(`Gerado em ${new Date().toLocaleDateString("pt-BR")} pela Razão.`);
+    .text(`Gerado em ${new Date().toLocaleDateString("pt-BR")} pelo Mutano Contas.`);
 
   doc.end();
   const buffer = await done;
