@@ -381,6 +381,31 @@ h3 {
   font-family: var(--font-mono);
 }
 
+.loading-bone {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.loading-bone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--surface-3), transparent);
+  opacity: 0.6;
+  transform: translateX(-100%);
+}
+
+@keyframes loading-shimmer {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .loading-bone::after {
+    animation: loading-shimmer 2.4s ease-in-out infinite;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
