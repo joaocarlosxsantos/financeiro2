@@ -8,6 +8,11 @@ import { debtPayments, debts } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { effectiveDelta } from "@/lib/effectiveDelta";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
+import {
+  safeNameSchema,
+  safeNotesSchema,
+  safeOptionalTextSchema,
+} from "@/server/validation/sanitization";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -25,8 +30,8 @@ function parseRateToBps(raw: string): number {
 }
 
 const debtSchema = z.object({
-  name: z.string().trim().min(2, "Dê um nome para a dívida."),
-  creditor: z.string().optional(),
+  name: safeNameSchema(2, 100, "Dê um nome para a dívida."),
+  creditor: safeOptionalTextSchema(100),
   kind: z.enum([
     "CARD_REVOLVING",
     "OVERDRAFT",
@@ -39,7 +44,7 @@ const debtSchema = z.object({
   rate: z.string().optional(),
   minimum: z.string().optional(),
   dueDay: z.coerce.number().int().min(1).max(31),
-  note: z.string().optional(),
+  note: safeNotesSchema(2000),
 });
 
 export async function createDebt(_prev: ActionState, formData: FormData): Promise<ActionState> {

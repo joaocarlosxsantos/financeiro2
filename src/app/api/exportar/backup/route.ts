@@ -1,4 +1,6 @@
+import { NextRequest } from "next/server";
 import { requireUserId } from "@/lib/auth";
+import { verifyExportToken, verifyUserPassword } from "@/lib/reauth";
 import { db } from "@/db";
 import {
   users as usersTable,
@@ -35,9 +37,28 @@ function isTableMissingError(err: unknown): boolean {
   return false;
 }
 
-export async function GET() {
-  const userId = await requireUserId();
+async function checkReauth(
+  userId: string,
+  token?: string | null,
+  password?: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  if (token && verifyExportToken(token, userId)) {
+    return { ok: true };
+  }
 
+  if (password) {
+    const res = await verifyUserPassword(userId, password);
+    if (res.ok) return { ok: true };
+    return { ok: false, error: res.error ?? "Senha incorreta." };
+  }
+
+  return {
+    ok: false,
+    error: "Reautenticação necessária. Confirme sua senha para baixar o backup de dados.",
+  };
+}
+
+async function handleBackupDownload(userId: string) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) return new Response("User not found", { status: 404 });
 
@@ -133,4 +154,71 @@ export async function GET() {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+export async function GET(request: NextRequest) {
+  const userId = await requireUserId();
+  const sp = request.nextUrl.searchParams;
+
+  const token =
+    sp.get("token") ||
+    request.headers.get("x-export-token") ||
+    request.cookies.get("export-token")?.value;
+
+  // Em requisições GET, nunca aceita senha via query string (evita vazamento em logs/histórico).
+  // A senha só pode ser enviada via header seguro ou no corpo de requisições POST.
+  const password = request.headers.get("x-reauth-password");
+
+  const authCheck = await checkReauth(userId, token, password);
+  if (!authCheck.ok) {
+    return new Response(JSON.stringify({ error: authCheck.error }), {
+      status: 401,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+  }
+
+  return handleBackupDownload(userId);
+}
+
+export async function POST(request: NextRequest) {
+  const userId = await requireUserId();
+
+  let token: string | null = null;
+  let password: string | null = null;
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    try {
+      const body = await request.json();
+      token = body.token ?? null;
+      password = body.password ?? null;
+    } catch {
+      // Ignora erro de parse
+    }
+  } else if (contentType.includes("form")) {
+    try {
+      const formData = await request.formData();
+      token = (formData.get("token") as string) ?? null;
+      password = (formData.get("password") as string) ?? null;
+    } catch {
+      // Ignora erro de parse
+    }
+  }
+
+  if (!token) {
+    token = request.headers.get("x-export-token") || request.cookies.get("export-token")?.value || null;
+  }
+  if (!password) {
+    password = request.headers.get("x-reauth-password") || null;
+  }
+
+  const authCheck = await checkReauth(userId, token, password);
+  if (!authCheck.ok) {
+    return new Response(JSON.stringify({ error: authCheck.error }), {
+      status: 401,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
+  }
+
+  return handleBackupDownload(userId);
 }

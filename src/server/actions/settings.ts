@@ -9,6 +9,7 @@ import { accounts, categories, users } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { accountSchema } from "@/lib/account-schema";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
+import { safeNameSchema, safeOptionalTextSchema } from "@/server/validation/sanitization";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -102,11 +103,11 @@ export async function createAccount(_prev: ActionState, formData: FormData): Pro
 }
 
 const categorySchema = z.object({
-  name: z.string().trim().min(2, "Dê um nome para a categoria."),
+  name: safeNameSchema(2, 100, "Dê um nome para a categoria."),
   kind: z.enum(["INCOME", "EXPENSE"]),
   nature: z.enum(["FIXED", "VARIABLE"]),
-  color: z.string().optional(),
-  keywords: z.string().optional(),
+  color: safeOptionalTextSchema(50),
+  keywords: safeOptionalTextSchema(500),
 });
 
 export async function createCategory(_prev: ActionState, formData: FormData): Promise<ActionState> {

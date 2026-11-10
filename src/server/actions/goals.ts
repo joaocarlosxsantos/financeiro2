@@ -8,6 +8,11 @@ import { goalContributions, goals } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { effectiveDelta } from "@/lib/effectiveDelta";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
+import {
+  safeNameSchema,
+  safeNotesSchema,
+  safeOptionalTextSchema,
+} from "@/server/validation/sanitization";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -18,13 +23,13 @@ function refresh() {
 }
 
 const goalSchema = z.object({
-  name: z.string().trim().min(2, "Dê um nome para a meta."),
+  name: safeNameSchema(2, 100, "Dê um nome para a meta."),
   kind: z.enum(["EMERGENCY_FUND", "PURCHASE", "TRIP", "DEBT_PAYOFF", "INVESTMENT", "CUSTOM"]),
   target: z.string().min(1, "Informe o valor da meta."),
   saved: z.string().optional(),
   targetDate: z.string().optional(),
-  color: z.string().optional(),
-  note: z.string().optional(),
+  color: safeOptionalTextSchema(50),
+  note: safeNotesSchema(2000),
 });
 
 export async function createGoal(_prev: ActionState, formData: FormData): Promise<ActionState> {

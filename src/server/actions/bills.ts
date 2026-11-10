@@ -16,6 +16,7 @@ import { parseMoneyToCents, formatCents, MAX_CENTS } from "@/lib/money";
 import { checkManualSplit, recalculateSplit, splitBillEqually } from "@/lib/bills";
 import { shiftMonth } from "@/lib/dates";
 import { billMonthSchema } from "@/server/validation/bill-month";
+import { safeNameSchema, sanitizeFreeText } from "@/server/validation/sanitization";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -55,8 +56,8 @@ async function verifyGroupingOwnership(userId: string, groupingId: string | null
 // ---------------------------------------------------------------- agrupamentos
 
 const groupingSchema = z.object({
-  name: z.string().trim().min(1, "Dê um nome ao agrupamento."),
-  color: z.string().min(1),
+  name: safeNameSchema(1, 100, "Dê um nome ao agrupamento."),
+  color: z.string().trim().min(1).max(50),
 });
 
 export async function createBillGrouping(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -104,8 +105,8 @@ export async function archiveBillGrouping(id: string) {
 // ---------------------------------------------------------------- regras (recorrentes)
 
 function readParticipants(formData: FormData): { name: string; phone: string | null }[] {
-  const names = formData.getAll("participantName").map((v) => String(v).trim());
-  const phones = formData.getAll("participantPhone").map((v) => String(v).trim());
+  const names = formData.getAll("participantName").map((v) => sanitizeFreeText(v, false).slice(0, 100));
+  const phones = formData.getAll("participantPhone").map((v) => sanitizeFreeText(v, false).slice(0, 30));
   const out: { name: string; phone: string | null }[] = [];
   for (let i = 0; i < names.length; i++) {
     if (!names[i]) continue;
@@ -115,7 +116,7 @@ function readParticipants(formData: FormData): { name: string; phone: string | n
 }
 
 const ruleSchema = z.object({
-  name: z.string().trim().min(1, "Dê um nome à conta."),
+  name: safeNameSchema(1, 100, "Dê um nome à conta."),
   type: z.enum(["INDIVIDUAL", "GROUP"]),
   groupingId: z.string().optional(),
   dueDay: dueDaySchema,
@@ -250,7 +251,7 @@ export async function generateBillsForMonth(
 // ---------------------------------------------------------------- conta avulsa
 
 const oneOffSchema = z.object({
-  name: z.string().trim().min(1, "Dê um nome à conta."),
+  name: safeNameSchema(1, 100, "Dê um nome à conta."),
   type: z.enum(["INDIVIDUAL", "GROUP"]),
   groupingId: z.string().optional(),
   year: z.coerce.number().int().min(2000).max(2100, "Ano deve estar entre 2000 e 2100."),

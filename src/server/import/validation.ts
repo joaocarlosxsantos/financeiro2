@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_CENTS } from "@/lib/money";
+import { safeDescriptionSchema, safeNameSchema } from "@/server/validation/sanitization";
 
 export const MAX_IMPORT_ROWS = 10_000;
 export const MAX_IMPORT_CONTENT_BYTES = 3 * 1024 * 1024;
@@ -11,7 +12,7 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month! - 1 && date.getUTCDate() === day;
 }, "Data inválida.");
 
-const fileNameSchema = z.string().trim().min(1).max(MAX_IMPORT_FILE_NAME_LENGTH);
+const fileNameSchema = safeNameSchema(1, MAX_IMPORT_FILE_NAME_LENGTH);
 const accountIdSchema = z.string().min(1).max(64);
 const invoiceMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional();
 
@@ -26,7 +27,7 @@ export const previewImportInputSchema = z.object({
 export const previewImportRowSchema = z.object({
   date: dateSchema,
   originalDate: dateSchema.optional(),
-  description: z.string().trim().min(1).max(500),
+  description: safeDescriptionSchema(1, 500),
   amountCents: z.number().int().min(1).max(MAX_CENTS),
   kind: z.enum(["INCOME", "EXPENSE"]),
   categoryId: z.string().max(64).nullable(),

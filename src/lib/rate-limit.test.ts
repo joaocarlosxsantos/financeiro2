@@ -38,4 +38,16 @@ describe("rate limit", () => {
     expect(checkRateLimit(key, 10, start + 11, 60 * 60 * 1000).allowed).toBe(false);
     expect(checkRateLimit(key, 10, start + 60 * 60 * 1000, 60 * 60 * 1000).allowed).toBe(true);
   });
+
+  it("suporta rate limit de login por IP com limite diferenciado", () => {
+    const ipKey = "login:ip:192.168.1.100";
+    const t0 = 10_000_000;
+    for (let i = 0; i < 20; i++) {
+      expect(isRateLimited(ipKey, 20, t0).allowed).toBe(true);
+      recordFailure(ipKey, t0);
+    }
+    expect(isRateLimited(ipKey, 20, t0).allowed).toBe(false);
+    clearFailures(ipKey);
+    expect(isRateLimited(ipKey, 20, t0).allowed).toBe(true);
+  });
 });

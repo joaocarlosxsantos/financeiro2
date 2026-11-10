@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { transactions, transactionSplits } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { MAX_CENTS } from "@/lib/money";
+import { safeNameSchema, safeOptionalTextSchema } from "@/server/validation/sanitization";
 import { computeSplit } from "@/lib/splits";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -26,8 +27,8 @@ function isTableMissingError(err: unknown): boolean {
 }
 
 const splitPersonSchema = z.object({
-  name: z.string().trim().min(1, "O nome não pode ser vazio."),
-  phone: z.string().trim().nullable().optional(),
+  name: safeNameSchema(1, 100, "O nome não pode ser vazio."),
+  phone: safeOptionalTextSchema(30),
   amount: z.number().int().min(0).max(MAX_CENTS).optional(),
   basisPoints: z.number().int().min(0).max(10_000).optional(),
   percent: z.number().min(0).max(100).optional(),

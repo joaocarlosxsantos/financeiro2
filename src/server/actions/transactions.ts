@@ -13,18 +13,23 @@ import { transferLegs } from "@/lib/transfers";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { insertInstallments } from "@/server/installments";
 import { normalizeDescription } from "@/server/categorization";
+import {
+  safeDescriptionSchema,
+  safeNotesSchema,
+  sanitizeFreeText,
+} from "@/server/validation/sanitization";
 
 export type ActionState = { error?: string; ok?: boolean; groupId?: string };
 
 const schema = z.object({
   date: z.string().min(1, "Informe a data."),
-  description: z.string().trim().min(2, "Descreva o lançamento."),
+  description: safeDescriptionSchema(2, 255, "Descreva o lançamento."),
   amount: z.string().min(1, "Informe o valor."),
   kind: z.enum(["INCOME", "EXPENSE"]),
   nature: z.enum(["FIXED", "VARIABLE"]),
   accountId: z.string().min(1, "Escolha a conta."),
   categoryId: z.string().optional(),
-  notes: z.string().optional(),
+  notes: safeNotesSchema(2000),
   /** 1 = lançamento único. Acima disso vira compra parcelada. */
   installments: z.coerce.number().int().min(1).max(60).optional(),
 });
@@ -378,12 +383,13 @@ export async function createTransfer(
     return { error: "Data inválida." };
   }
 
+  const cleanNote = note ? sanitizeFreeText(note, true).slice(0, 2000) || null : null;
   const groupId = createId();
 
   let outgoingLeg;
   let incomingLeg;
   try {
-    const legs = transferLegs(fromAccountId, toAccountId, amountCents, parsedDate, note, groupId);
+    const legs = transferLegs(fromAccountId, toAccountId, amountCents, parsedDate, cleanNote, groupId);
     outgoingLeg = legs[0];
     incomingLeg = legs[1];
   } catch (err) {
@@ -506,8 +512,9 @@ export async function updateTransfer(
     commonUpdates.date = parsedDate;
   }
   if (updates.note !== undefined) {
-    commonUpdates.notes = updates.note;
-    commonUpdates.description = updates.note?.trim() || "Transferência";
+    const cleanNote = updates.note ? sanitizeFreeText(updates.note, true).slice(0, 2000) || null : null;
+    commonUpdates.notes = cleanNote;
+    commonUpdates.description = cleanNote ? sanitizeFreeText(cleanNote, false).slice(0, 255) || "Transferência" : "Transferência";
   }
 
   try {

@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { accounts, recurringRules, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
+import { safeDescriptionSchema, safeNotesSchema } from "@/server/validation/sanitization";
 import type { MonthRef } from "@/lib/dates";
 import { dateForMonth } from "@/lib/installments";
 
@@ -20,14 +21,14 @@ function refresh() {
 }
 
 const ruleSchema = z.object({
-  description: z.string().trim().min(2, "Descreva o lançamento."),
+  description: safeDescriptionSchema(2, 255, "Descreva o lançamento."),
   amount: z.string().min(1, "Informe o valor."),
   kind: z.enum(["INCOME", "EXPENSE"]),
   nature: z.enum(["FIXED", "VARIABLE"]),
   dayOfMonth: z.coerce.number().int().min(1).max(31),
   accountId: z.string().min(1, "Escolha a conta."),
   categoryId: z.string().optional(),
-  notes: z.string().optional(),
+  notes: safeNotesSchema(2000),
   startMonth: z.string().regex(/^\d{4}-\d{2}$/, "Informe o mês de início."),
   endMonth: z.string().optional(),
 });
