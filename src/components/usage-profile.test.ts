@@ -10,11 +10,38 @@ import { Sidebar } from "./sidebar";
 import { UsageProfileProvider } from "./usage-profile";
 import type { UsageProfile } from "@/lib/usage-profile";
 import { NewAccount } from "@/app/(app)/contas/new-account";
+import { NavigationSections } from "./navigation-sections";
+import { UserMenuFooter } from "./user-menu-footer";
+import { getNavigationSections } from "./navigation-model";
 
 function markup(profile: UsageProfile) {
-  return renderToStaticMarkup(createElement(UsageProfileProvider, { profile }, createElement(Sidebar, { userName: "QA", userEmail: "qa@example.invalid", accounts: [], categories: [] })));
+  return renderToStaticMarkup(createElement(UsageProfileProvider, { profile }, createElement(Sidebar, { userName: "QA", accounts: [], categories: [] })));
 }
 describe("profile-aware shell", () => {
+  it("renders a single named account shortcut with a generic avatar, without email", () => {
+    const html = markup("hibrido");
+    expect(html.match(/href="\/usuario"/g)).toHaveLength(1);
+    expect(html).toContain("lucide-user-round");
+    expect(html).toContain("Minha conta — QA");
+    expect(html).not.toContain("qa@example.invalid");
+    expect(html).not.toContain("@");
+    expect(html).toContain("Sair");
+    expect(html).not.toContain("Sim, sair"); // Confirmation, not an immediate logout form.
+  });
+  it.each(["integracao_total", "manual", "hibrido"] as const)("%s drawer groups secondary links and keeps the account in its footer", (profile) => {
+    const html = renderToStaticMarkup(createElement("div", null,
+      createElement(NavigationSections, { sections: getNavigationSections(profile, "more"), pathname: "/usuario", surface: "more" }),
+      createElement(UserMenuFooter, { userName: "QA", pathname: "/usuario" }),
+    ));
+    expect(html.match(/href="\/usuario"/g)).toHaveLength(1);
+    for (const route of ["/painel", "/lancamentos", "/contas"]) expect(html).not.toContain(`href="${route}"`);
+    expect(html).toContain("Planejamento");
+    expect(html).toContain("aria-labelledby=");
+    expect(html).toContain("focus-visible:outline");
+    expect(html).toContain("min-h-12");
+    if (profile === "manual") expect(html).not.toContain("Integração");
+    if (profile === "integracao_total") expect(html).not.toContain("Movimentações");
+  });
   it("hides account creation in integration-only mode and keeps it for manual/hybrid", () => {
     for (const profile of ["integracao_total", "manual", "hibrido"] as const) {
       const html = renderToStaticMarkup(createElement(UsageProfileProvider, { profile }, createElement(NewAccount)));

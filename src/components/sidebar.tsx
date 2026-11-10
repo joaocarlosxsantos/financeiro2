@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { LogoutButton } from "@/components/logout-button";
+import { UserMenuFooter } from "@/components/user-menu-footer";
+import { NavigationSections } from "@/components/navigation-sections";
+import { getNavigationSections } from "@/components/navigation-model";
 import { useUsageProfile } from "@/components/usage-profile";
-import { canUseCapability, canVisitRoute } from "@/lib/usage-profile";
+import { canUseCapability } from "@/lib/usage-profile";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Logo } from "@/components/brand/logo";
-import { BottomNav, QuickEntry, mainDestinations, moreDestinations, isDestinationActive } from "@/components/bottom-nav";
+import { BottomNav, QuickEntry } from "@/components/bottom-nav";
 import type { PlainAccount, PlainCategory } from "@/app/(app)/lancamentos/types";
 
-export function Sidebar({ userName, userEmail, accounts, categories }: {
-  userName: string; userEmail: string;
+export function Sidebar({ userName, accounts, categories }: {
+  userName: string;
   accounts: PlainAccount[]; categories: PlainCategory[];
 }) {
   const pathname = usePathname();
@@ -34,21 +35,11 @@ export function Sidebar({ userName, userEmail, accounts, categories }: {
         <Plus aria-hidden="true" className="size-5" />Novo lançamento
       </button>}
       <nav aria-label="Navegação principal desktop" className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-        {[...mainDestinations, ...moreDestinations].filter((item) => canVisitRoute(profile, item.href)).map(({ href, label, icon: Icon }) => {
-          const active = isDestinationActive(pathname, href);
-          return <Link key={href} href={href} aria-current={active ? "page" : undefined}
-            className={cn("flex h-10 items-center gap-3 rounded-xl px-3 text-sm transition-colors motion-reduce:transition-none", active ? "bg-[var(--surface-2)] font-medium text-[var(--text)]" : "text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]")}>
-            <Icon aria-hidden="true" className="size-5 shrink-0" strokeWidth={1.5} />{label}
-          </Link>;
-        })}
+        <NavigationSections sections={getNavigationSections(profile, "desktop")} pathname={pathname} surface="desktop" />
       </nav>
-      <div className="mt-4 shrink-0 border-t pt-3">
-        <Link href="/usuario" className="flex min-h-11 items-center truncate px-3 text-sm font-medium hover:underline" aria-label="Minha conta">{userName}</Link>
-        <p className="muted mt-1 truncate px-3 text-xs">{userEmail}</p>
-        <LogoutButton />
-      </div>
+      <UserMenuFooter userName={userName} pathname={pathname} />
     </aside>
-    <BottomNav onNew={() => setNewOpen(true)} />
+    <BottomNav userName={userName} onNew={() => setNewOpen(true)} />
     {newOpen && manualEntry && <QuickEntry accounts={accounts} categories={categories} onClose={() => setNewOpen(false)} />}
   </>;
 }

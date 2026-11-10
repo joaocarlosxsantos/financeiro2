@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!userId) redirect("/login");
 
   const [user] = await db
-    .select({ name: users.name, email: users.email, usageProfile: users.usageProfile, onboardedAt: users.onboardedAt })
+    .select({ name: users.name, usageProfile: users.usageProfile, onboardedAt: users.onboardedAt })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <a href="#conteudo" className="skip-link">
           Pular para o conteúdo
         </a>
-        <Sidebar userName={user.name} userEmail={user.email}
+        <Sidebar userName={user.name}
           accounts={accounts.filter((account) => account.financeMode === "manual").map(({ id, name }) => ({ id, name }))}
           categories={categories.map(({ id, name, kind, nature, color }) => ({ id, name, kind, nature, color }))} />
         <div className="min-w-0 flex-1">

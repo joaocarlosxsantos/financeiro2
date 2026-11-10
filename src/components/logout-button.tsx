@@ -15,7 +15,7 @@ export function LogoutButton() {
         <Button type="button" variant="outline" onClick={() => setConfirming(false)}>Cancelar</Button>
         <form action={logoutAction}><Button type="submit">Sim, sair</Button></form>
       </div>
-    </div> : <button type="button" onClick={() => setConfirming(true)} className="flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-2)]">
+    </div> : <button type="button" onClick={() => setConfirming(true)} className="flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]">
       <LogOut aria-hidden="true" className="size-5" />Sair
     </button>}
   </div>;
