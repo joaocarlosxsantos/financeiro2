@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { CalendarClock } from "lucide-react";
 import { generateBillsForMonth } from "@/server/actions/bills";
 import { Button } from "@/components/ui/button";
-import type { MonthRef } from "@/lib/dates";
+import { monthRefToParam, type MonthRef } from "@/lib/dates";
 
 export type PendingRule = { id: string; name: string };
 
@@ -50,7 +50,7 @@ export function BillsPendingBanner({
           disabled={busy}
           onClick={() =>
             start(async () => {
-              const { created, error } = await generateBillsForMonth(monthRef);
+              const { created, error } = await generateBillsForMonth(monthRefToParam(monthRef));
               setMessage(error ?? `${created} conta(s) criada(s) — falta preencher o valor.`);
             })
           }

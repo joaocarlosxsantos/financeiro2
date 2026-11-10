@@ -13,12 +13,10 @@ export function LancamentosHeaderActions({
   monthRef,
   customRange,
   accounts,
-  userId,
 }: {
   monthRef: MonthRef;
   customRange: { from: string; to: string } | null;
   accounts: PlainAccount[];
-  userId: string;
 }) {
   const [transferOpen, setTransferOpen] = useState(false);
 
@@ -63,7 +61,6 @@ export function LancamentosHeaderActions({
           isOpen={transferOpen}
           onClose={() => setTransferOpen(false)}
           accounts={accounts}
-          userId={userId}
         />
       ) : null}
     </div>

@@ -43,11 +43,11 @@ export function Money({ cents, tone, size = "md", className }: MoneyProps) {
       <span aria-hidden="true" className="inline-flex max-w-full flex-wrap items-baseline"
         style={size === "hero" ? { fontSize: `min(var(--text-hero), calc(100cqw / ${parts.integer.length * 0.6 + 1.75 + (isNegative ? 0.65 : 0)}))` } : undefined}>
         {isNegative && <span className="mr-0.5 font-medium select-none">−</span>}
-        <span className="mr-1 text-[0.5em] font-normal text-[var(--text-muted)] select-none">
+        <span className="mr-1 text-[max(12px,0.5em)] font-normal text-[var(--text-muted)] select-none">
           {parts.currency}
         </span>
         <span className="min-w-0 break-all font-semibold">{parts.integer}</span>
-        <span className="text-[0.5em] font-normal text-[var(--text-muted)]">
+        <span className="text-[max(12px,0.5em)] font-normal text-[var(--text-muted)]">
           {`${parts.decimal}${parts.fraction}`}
         </span>
       </span>

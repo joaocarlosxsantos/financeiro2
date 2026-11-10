@@ -15,6 +15,7 @@ import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, formatCents, MAX_CENTS } from "@/lib/money";
 import { checkManualSplit, recalculateSplit, splitBillEqually } from "@/lib/bills";
 import { shiftMonth, type MonthRef } from "@/lib/dates";
+import { billMonthSchema } from "@/server/validation/bill-month";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -192,10 +193,13 @@ export async function createBill(prev: ActionState, formData: FormData): Promise
 
 /** Gera a conta deste mês para as regras recorrentes que ainda não geraram. */
 export async function generateBillsForMonth(
-  ref: MonthRef,
+  input: unknown,
   ruleId?: string,
 ): Promise<{ created: number; error?: string }> {
   const userId = await requireUserId();
+  const parsed = billMonthSchema.safeParse(input);
+  if (!parsed.success) return { created: 0, error: parsed.error.issues[0]?.message ?? "Mês inválido. Use YYYY-MM." };
+  const ref = parsed.data;
   const { getBillRulesStatus } = await import("@/server/queries");
 
   const status = await getBillRulesStatus(userId, ref);

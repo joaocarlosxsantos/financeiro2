@@ -15,19 +15,16 @@ export function TransferDialog({
   isOpen,
   onClose,
   accounts,
-  userId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   accounts: PlainAccount[];
-  userId: string;
 }) {
   if (!isOpen) return null;
   return (
     <TransferDialogContent
       onClose={onClose}
       accounts={accounts}
-      userId={userId}
     />
   );
 }
@@ -35,11 +32,9 @@ export function TransferDialog({
 function TransferDialogContent({
   onClose,
   accounts,
-  userId,
 }: {
   onClose: () => void;
   accounts: PlainAccount[];
-  userId: string;
 }) {
   const titleId = useId();
   const descId = useId();
@@ -117,7 +112,6 @@ function TransferDialogContent({
 
     startTransition(async () => {
       const res = await createTransfer(
-        userId,
         fromAccountId,
         toAccountId,
         amountCents,

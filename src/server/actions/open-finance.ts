@@ -251,15 +251,34 @@ export async function removeOpenFinanceConnection(input: unknown) {
 }
 
 // Chamado pelo painel a cada visita: só sincroniza se a última tentativa tem 5+ min.
-export async function autoSyncOpenFinance(): Promise<{ synced: boolean }> {
+export async function autoSyncOpenFinance(): Promise<{ synced: boolean; error?: string }> {
   const userId = await requireUserId();
-  const rows = await db.select({ id: openFinanceConnections.id }).from(openFinanceConnections).where(eq(openFinanceConnections.userId, userId));
   let synced = false;
-  for (const row of rows) {
-    const result = await syncOpenFinance(row.id, "auto");
-    if (result && !("error" in result && result.error)) synced = true;
+  let failed = false;
+  try {
+    const rows = await db.select({ id: openFinanceConnections.id }).from(openFinanceConnections).where(eq(openFinanceConnections.userId, userId));
+    for (const row of rows) {
+      try {
+        const result = await syncOpenFinance(row.id, "auto");
+        if (!result || ("skipped" in result && result.skipped)) continue;
+        if ("error" in result && result.error) failed = true;
+        else synced = true;
+      } catch {
+        failed = true;
+        console.error("Open Finance auto sync failed", { code: "AUTO_SYNC_FAILED" });
+        try {
+          await db.update(openFinanceConnections).set({ status: "ERROR", lastErrorCode: "AUTO_SYNC_FAILED" })
+            .where(and(eq(openFinanceConnections.id, row.id), eq(openFinanceConnections.userId, userId)));
+        } catch {
+          console.error("Open Finance auto sync error could not be saved", { code: "AUTO_SYNC_ERROR_WRITE_FAILED" });
+        }
+      }
+    }
+  } catch {
+    failed = true;
+    console.error("Open Finance auto sync unavailable", { code: "AUTO_SYNC_UNAVAILABLE" });
   }
-  return { synced };
+  return { synced, ...(failed ? { error: "Não foi possível concluir a sincronização automática. Confira as integrações e tente novamente." } : {}) };
 }
 
 export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = "manual") {
@@ -273,9 +292,9 @@ export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = 
   if (!connection || !credentials) return { error: "Conexão não encontrada." };
   const now = Date.now();
   const lastAttemptTime = connection?.lastAttemptAt instanceof Date ? connection.lastAttemptAt.getTime() : null;
-  if (lastAttemptTime !== null && now - lastAttemptTime < cooldownMs) return { error: `Aguarde pelo menos ${mode === "auto" ? "5 minutos" : "60 segundos"} entre sincronizações.` };
+  if (lastAttemptTime !== null && now - lastAttemptTime < cooldownMs) return { skipped: true, error: `Aguarde pelo menos ${mode === "auto" ? "5 minutos" : "60 segundos"} entre sincronizações.` };
   const lock = await db.update(openFinanceConnections).set({ status: "SYNCING", lastAttemptAt: new Date(now), lastErrorCode: null }).where(and(eq(openFinanceConnections.id, connectionId), eq(openFinanceConnections.userId, userId), or(isNull(openFinanceConnections.lastAttemptAt), lt(openFinanceConnections.lastAttemptAt, new Date(now - cooldownMs))), or(ne(openFinanceConnections.status, "SYNCING"), lt(openFinanceConnections.lastAttemptAt, new Date(now - 20 * 60_000))))).returning({ id: openFinanceConnections.id });
-  if (!lock.length) return { error: "Esta conexão já está sincronizando. Aguarde e tente novamente." };
+  if (!lock.length) return { skipped: true, error: "Esta conexão já está sincronizando. Aguarde e tente novamente." };
   let upstreamStatus: string | null = null;
   type Summary = { accountName: string; accountType: string; read: number; ignoredByDate: number; ignoredByTombstone: number; ignoredByType: number; invalid: number; inserted: number; updated: number; status: "PENDING" | "OK" | "ERROR"; error?: string };
   const summaries: Summary[] = [];

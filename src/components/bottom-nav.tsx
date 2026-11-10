@@ -73,21 +73,21 @@ export function BottomNav({ onNew }: { onNew: () => void }) {
 }
 
 type QuickEntryProps = {
-  accounts: PlainAccount[]; categories: PlainCategory[]; userId: string; onClose: () => void;
+  accounts: PlainAccount[]; categories: PlainCategory[]; onClose: () => void;
 };
 
 export function QuickEntry(props: QuickEntryProps) {
   return <Sheet title="Novo lançamento" onClose={props.onClose}><QuickEntryForm {...props} /></Sheet>;
 }
 
-function QuickEntryForm({ accounts, categories, userId, onClose }: QuickEntryProps) {
+function QuickEntryForm({ accounts, categories, onClose }: QuickEntryProps) {
   const closeSheet = useSheetClose();
   const router = useRouter();
   const [kind, setKind] = useState("EXPENSE");
   const [state, action, pending] = useActionState(async (_previous: ActionState, form: FormData): Promise<ActionState> => {
     try {
       const result = kind === "TRANSFER"
-        ? await createTransfer(userId, String(form.get("accountId")), String(form.get("toAccountId")), parseMoneyToCents(String(form.get("amount"))), String(form.get("date")), String(form.get("description")))
+        ? await createTransfer(String(form.get("accountId")), String(form.get("toAccountId")), parseMoneyToCents(String(form.get("amount"))), String(form.get("date")), String(form.get("description")))
         : await createTransaction({}, form);
       if (result.ok) { router.refresh(); closeSheet(); }
       return result;

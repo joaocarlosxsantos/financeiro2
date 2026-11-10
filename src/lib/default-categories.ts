@@ -17,7 +17,7 @@ export type DefaultCategory = {
 export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   // ---------------- receitas
   { name: "Salário", kind: "INCOME", nature: "FIXED", color: CATEGORY_PALETTE[0], icon: "wallet", keywords: ["salario", "salário", "pagamento", "folha", "remuneracao", "provento"] },
-  { name: "Renda extra", kind: "INCOME", nature: "VARIABLE", color: CATEGORY_PALETTE[1], icon: "sparkles", keywords: ["freela", "freelance", "bico", "extra", "pix recebido", "venda"] },
+  { name: "Renda extra", kind: "INCOME", nature: "VARIABLE", color: CATEGORY_PALETTE[1], icon: "briefcase", keywords: ["freela", "freelance", "bico", "extra", "pix recebido", "venda"] },
   { name: "Rendimentos", kind: "INCOME", nature: "VARIABLE", color: CATEGORY_PALETTE[6], icon: "trending-up", keywords: ["rendimento", "juros", "dividendo", "cdb", "tesouro", "resgate"] },
 
   // ---------------- gastos fixos

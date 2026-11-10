@@ -10,8 +10,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BottomNav, QuickEntry, mainDestinations, moreDestinations, isDestinationActive } from "@/components/bottom-nav";
 import type { PlainAccount, PlainCategory } from "@/app/(app)/lancamentos/types";
 
-export function Sidebar({ userName, userEmail, userId, accounts, categories }: {
-  userName: string; userEmail: string; userId: string;
+export function Sidebar({ userName, userEmail, accounts, categories }: {
+  userName: string; userEmail: string;
   accounts: PlainAccount[]; categories: PlainCategory[];
 }) {
   const pathname = usePathname();
@@ -45,6 +45,6 @@ export function Sidebar({ userName, userEmail, userId, accounts, categories }: {
       </div>
     </aside>
     <BottomNav onNew={() => setNewOpen(true)} />
-    {newOpen && <QuickEntry accounts={accounts} categories={categories} userId={userId} onClose={() => setNewOpen(false)} />}
+    {newOpen && <QuickEntry accounts={accounts} categories={categories} onClose={() => setNewOpen(false)} />}
   </>;
 }

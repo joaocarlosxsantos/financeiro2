@@ -194,7 +194,6 @@ export default async function TransactionsPage({
             monthRef={ref}
             customRange={customRange}
             accounts={plainAccounts}
-            userId={userId}
           />
         }
       />
@@ -230,7 +229,6 @@ export default async function TransactionsPage({
                 transactions={plain}
                 categories={plainCategories}
                 accounts={plainAccounts}
-                userId={userId}
                 isFilteredByAccount={isFilteredByAccount}
               />
             ) : (

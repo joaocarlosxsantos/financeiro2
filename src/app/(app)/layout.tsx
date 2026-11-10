@@ -33,7 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <a href="#conteudo" className="skip-link">
           Pular para o conteúdo
         </a>
-        <Sidebar userName={user.name} userEmail={user.email} userId={userId}
+        <Sidebar userName={user.name} userEmail={user.email}
           accounts={accounts.map(({ id, name }) => ({ id, name }))}
           categories={categories.map(({ id, name, kind, nature, color }) => ({ id, name, kind, nature, color }))} />
         <div className="min-w-0 flex-1">

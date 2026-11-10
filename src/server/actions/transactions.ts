@@ -333,18 +333,13 @@ export type UpdateTransferInput = {
 };
 
 export async function createTransfer(
-  userId: string,
   fromAccountId: string,
   toAccountId: string,
   amountCents: number,
   date: Date | string,
   note?: string | null,
 ): Promise<ActionState> {
-  const authUserId = await requireUserId();
-  if (userId && userId !== authUserId) {
-    return { error: "Não autorizado." };
-  }
-  const effectiveUserId = authUserId || userId;
+  const userId = await requireUserId();
 
   if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) {
     return { error: "As contas de origem e destino devem ser diferentes." };
@@ -367,7 +362,7 @@ export async function createTransfer(
   const userAccounts = await db
     .select({ id: accounts.id, financeMode: accounts.financeMode })
     .from(accounts)
-    .where(and(eq(accounts.userId, effectiveUserId), inArray(accounts.id, [fromAccountId, toAccountId])));
+    .where(and(eq(accounts.userId, userId), inArray(accounts.id, [fromAccountId, toAccountId])));
 
   if (userAccounts.length !== 2) {
     return { error: "Contas inválidas ou não pertencem ao usuário." };
@@ -399,11 +394,11 @@ export async function createTransfer(
     await tx.insert(transactions).values([
       {
         ...outgoingLeg,
-        userId: effectiveUserId,
+        userId,
       },
       {
         ...incomingLeg,
-        userId: effectiveUserId,
+        userId,
       },
     ]);
   });

@@ -25,13 +25,11 @@ export function TransactionList({
   transactions,
   categories,
   accounts,
-  userId,
   isFilteredByAccount,
 }: {
   transactions: PlainTransaction[];
   categories: PlainCategory[];
   accounts: PlainAccount[];
-  userId?: string;
   isFilteredByAccount?: boolean;
 }) {
   const [transferOpen, setTransferOpen] = useState(false);
@@ -130,7 +128,6 @@ export function TransactionList({
           isOpen={transferOpen}
           onClose={() => setTransferOpen(false)}
           accounts={accounts}
-          userId={userId ?? ""}
         />
       ) : null}
     </div>

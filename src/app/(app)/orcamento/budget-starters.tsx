@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Copy, Sparkles } from "lucide-react";
+import { Copy, ListChecks } from "lucide-react";
 import { copyPreviousMonth, suggestFromHistory } from "@/server/actions/budgets";
 import { Button } from "@/components/ui/button";
 import type { MonthRef } from "@/lib/dates";
@@ -42,7 +42,7 @@ export function BudgetStarters({
             })
           }
         >
-          <Sparkles className="size-4" />
+          <ListChecks className="size-4" aria-hidden="true" />
           Sugerir pelo histórico
         </Button>
 

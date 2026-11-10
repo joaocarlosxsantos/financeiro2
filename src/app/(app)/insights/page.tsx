@@ -1,4 +1,4 @@
-import { Receipt, ArrowDownRight, ArrowUpRight, Minus, Sparkles } from "lucide-react";
+import { Receipt, ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
   getCategoryBreakdown,
