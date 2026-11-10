@@ -1,10 +1,11 @@
 "use client";
 
+import { UsageProfileFields } from "@/components/usage-profile-fields";
+import type { UsageProfile } from "@/lib/usage-profile";
 import { useActionState, useMemo, useState } from "react";
 import { completeOnboarding, type ActionState } from "@/server/actions/settings";
 import { Field, MoneyInput, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
-import { Hint } from "@/components/ui/hint";
 import { formatCents, parseMoneyToCents } from "@/lib/money";
 import { fiftyThirtyTwenty } from "@/lib/finance";
 
@@ -13,7 +14,7 @@ const initial: ActionState = {};
 export function OnboardingForm({
   defaults,
 }: {
-  defaults: { income: number; emergencyMonths: number; savingsTargetPct: number };
+  defaults: { usageProfile: UsageProfile; income: number; emergencyMonths: number; savingsTargetPct: number };
 }) {
   const [state, formAction, pending] = useActionState(completeOnboarding, initial);
   const [income, setIncome] = useState(defaults.income ? (defaults.income / 100).toFixed(2).replace(".", ",") : "");
@@ -27,6 +28,7 @@ export function OnboardingForm({
 
   return (
     <form aria-busy={pending} action={formAction} className="space-y-6">
+      <UsageProfileFields defaultValue={defaults.usageProfile} />
       <div className="card space-y-3 p-3 sm:space-y-5 sm:p-6 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         <Field className="max-sm:rounded-xl max-sm:border max-sm:bg-[var(--surface)] max-sm:p-3"
           label="Renda mensal líquida"
@@ -99,10 +101,7 @@ export function OnboardingForm({
             </div>
           </div>
 
-          <Hint tone="tip" title="Por que a reserva vem antes de investir">
-            Sem reserva, qualquer imprevisto vira dívida de cartão — e o juro do rotativo come qualquer
-            rendimento. Primeiro o colchão, depois o crescimento.
-          </Hint>
+
         </div>
       ) : null}
 

@@ -1,5 +1,8 @@
 "use client";
 
+import { useUsageProfile } from "@/components/usage-profile";
+import { canUseCapability } from "@/lib/usage-profile";
+import { EditTransactionForm } from "./edit-transaction-form";
 import { useState, useTransition } from "react";
 import { ArrowLeftRight, CreditCard, Plus, Repeat, Trash2, Users } from "lucide-react";
 import {
@@ -32,6 +35,8 @@ export function TransactionList({
   accounts: PlainAccount[];
   isFilteredByAccount?: boolean;
 }) {
+  const profile = useUsageProfile();
+  const manualEntry = canUseCapability(profile, "manual-entry");
   const [transferOpen, setTransferOpen] = useState(false);
   const [recategorizing, startRecategorizing] = useTransition();
   const [categorizationMessage, setCategorizationMessage] = useState("");
@@ -52,6 +57,7 @@ export function TransactionList({
               {recategorizing ? "Categorizando…" : "Categorizar não categorizados"}
             </Button>
           ) : null}
+          {manualEntry && <>
           <Button
             type="button"
             variant="outline"
@@ -78,6 +84,7 @@ export function TransactionList({
             <ArrowLeftRight className="size-3.5" />
             <span className="hidden sm:inline">Nova transferência</span>
           </Button>
+          </>}
         </div>
       </div>
       {categorizationMessage ? <p role="status" className="border-b border-[var(--line)] px-4 py-2 text-xs text-[var(--text-muted)]">{categorizationMessage}</p> : null}
@@ -123,7 +130,7 @@ export function TransactionList({
         })}
       </div>
 
-      {transferOpen ? (
+      {transferOpen && manualEntry ? (
         <TransferDialog
           isOpen={transferOpen}
           onClose={() => setTransferOpen(false)}
@@ -143,6 +150,8 @@ function Row({
   categories: PlainCategory[];
   isFilteredByAccount?: boolean;
 }) {
+  const profile = useUsageProfile();
+  const manualEntry = canUseCapability(profile, "manual-entry");
   const [pending, start] = useTransition();
   const [splitOpen, setSplitOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -402,6 +411,7 @@ function Row({
       {categoryOpen && <Sheet title="Detalhes do lançamento" onClose={() => setCategoryOpen(false)}>
         <p className="mb-3 break-words text-sm">{tx.description}</p>
         <p className={`tnum mb-4 text-display ${valueColorClass}`}>{valueSignal} {formatCents(tx.amountCents)}</p>
+        {manualEntry && tx.origin === "MANUAL" && !tx.transferGroupId && <EditTransactionForm transaction={tx} onSaved={() => setCategoryOpen(false)} />}
         {!tx.isTransfer || tx.origin === "PLUGGY" ? <Field label="Categoria">
           <Select value={tx.categoryId ?? ""} disabled={pending} onChange={(e) => chooseCategory(e.target.value)}>
             <option value="">Sem categoria</option>{options.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}

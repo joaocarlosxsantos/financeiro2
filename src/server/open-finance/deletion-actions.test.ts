@@ -1,5 +1,8 @@
 ﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Profile policy is covered separately; these fixtures exercise deletion and sync ownership.
+vi.mock("@/server/usage-profile", () => ({ getProfileRestriction: async () => null }));
+
 const VALID_CONN_ID = "c0000000000000000000000001";
 const VALID_ACC_ID = "a0000000000000000000000001";
 const VALID_TX_ID = "t0000000000000000000000001";

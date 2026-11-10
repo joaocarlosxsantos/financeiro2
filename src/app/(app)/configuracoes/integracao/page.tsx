@@ -1,4 +1,4 @@
-import { requireUserId } from "@/lib/auth";
+import { requireProfileRoute } from "@/server/usage-profile";
 import { getOpenFinanceSetup } from "@/server/actions/open-finance";
 import { PageHeader } from "@/components/page-header";
 import { IntegrationPanel } from "./panel";
@@ -6,7 +6,7 @@ import { IntegrationPanel } from "./panel";
 export const metadata = { title: "Integração" };
 
 export default async function IntegrationPage() {
-  await requireUserId();
+  await requireProfileRoute("/configuracoes/integracao");
   const setup = await getOpenFinanceSetup();
   return (
     <>

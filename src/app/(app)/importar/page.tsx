@@ -1,4 +1,4 @@
-import { requireUserId } from "@/lib/auth";
+import { requireProfileRoute } from "@/server/usage-profile";
 import { getAccounts, getCategories } from "@/server/queries";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -12,7 +12,7 @@ import { ImportHistory } from "./import-history";
 export const metadata = { title: "Importar extrato" };
 
 export default async function ImportPage() {
-  const userId = await requireUserId();
+  const { userId } = await requireProfileRoute("/importar");
 
   const [accounts, categories, history] = await Promise.all([
     getAccounts(userId),

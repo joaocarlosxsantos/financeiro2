@@ -5,6 +5,7 @@ import { and, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, importBatches, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { getProfileRestriction } from "@/server/usage-profile";
 import { parseStatement } from "@/lib/parsers";
 import { fingerprint, suggestCategoryId } from "@/lib/categorize";
 import { resolveImportDate } from "@/lib/import-dates";
@@ -91,6 +92,8 @@ function invoicePeriodRange(ref: MonthRef): { start: string; end: string } {
  */
 export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
   const parsedInput = previewImportInputSchema.safeParse(rawInput);
   if (!parsedInput.success) return { error: "Arquivo ou dados de importação inválidos. Confira o tamanho, nome e campos do arquivo." };
   const input = parsedInput.data;
@@ -308,6 +311,8 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
 
 export async function commitImport(rawInput: unknown): Promise<{ error?: string; saved?: number; replaced?: number }> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
   const parsedInput = commitImportInputSchema.safeParse(rawInput);
   if (!parsedInput.success) return { error: "Dados da importação inválidos. Revise o arquivo antes de confirmar." };
   const input = parsedInput.data;

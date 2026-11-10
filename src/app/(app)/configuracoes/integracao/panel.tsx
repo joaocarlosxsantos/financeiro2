@@ -28,6 +28,8 @@ import {
   syncOpenFinance,
 } from "@/server/actions/open-finance";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useUsageProfile } from "@/components/usage-profile";
+import { canUseCapability } from "@/lib/usage-profile";
 
 type Setup = Awaited<ReturnType<typeof import("@/server/actions/open-finance").getOpenFinanceSetup>>;
 type Remote = { id: string; name: string; type: "BANK" | "CREDIT"; currency: string };
@@ -48,6 +50,7 @@ type SyncAccountSummary = {
 type ActiveSheet = "new" | "accounts" | "sync_details" | "manage" | null;
 
 export function IntegrationPanel({ initial }: { initial: Setup }) {
+  const manualEntry = canUseCapability(useUsageProfile(), "manual-entry");
   const router = useRouter();
   const confirm = useConfirm();
 
@@ -607,7 +610,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                       onChange={(event) => setRemoteSelection((current) => ({ ...current, [a.id]: event.target.value }))}
                       className="min-h-12 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-base! sm:text-sm text-[var(--text)]"
                     >
-                      <option value="">Sem vínculo (modo manual)</option>
+                      <option value="" disabled={!manualEntry}>{manualEntry ? "Sem vínculo (modo manual)" : "Selecione uma conta bancária"}</option>
                       {remote
                         .filter((r) => (r.type === "CREDIT") === (a.type === "CREDIT_CARD"))
                         .map((r) => (

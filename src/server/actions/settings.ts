@@ -7,6 +7,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, users } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { getProfileRestriction } from "@/server/usage-profile";
+import { isUsageProfile } from "@/lib/usage-profile";
 import { accountSchema } from "@/lib/account-schema";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { safeNameSchema, safeOptionalTextSchema } from "@/server/validation/sanitization";
@@ -52,6 +54,8 @@ export async function saveProfile(_prev: ActionState, formData: FormData): Promi
 
 export async function completeOnboarding(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
+  const usageProfile = formData.get("usageProfile");
+  if (!isUsageProfile(usageProfile)) return { error: "Escolha como quer usar o app." };
   const income = Math.abs(parseMoneyToCents(String(formData.get("income") ?? "")));
   if (income > MAX_CENTS) return { error: "Valor muito alto." };
   if (income <= 0) return { error: "Informe sua renda mensal líquida." };
@@ -62,6 +66,7 @@ export async function completeOnboarding(_prev: ActionState, formData: FormData)
   await db
     .update(users)
     .set({
+      usageProfile,
       monthlyIncomeCents: income,
       emergencyMonths: Number.isFinite(emergencyMonths) ? emergencyMonths : 6,
       savingsTargetPct: Number.isFinite(savingsTargetPct) ? savingsTargetPct : 20,
@@ -75,6 +80,8 @@ export async function completeOnboarding(_prev: ActionState, formData: FormData)
 
 export async function createAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
   const parsed = accountSchema.safeParse({
     name: formData.get("name"),
     type: formData.get("type"),
@@ -97,6 +104,7 @@ export async function createAccount(_prev: ActionState, formData: FormData): Pro
     dueDay: isCard ? (parsed.data.dueDay ?? null) : null,
   });
 
+  revalidatePath("/contas");
   revalidatePath("/configuracoes");
   revalidatePath("/importar");
   return { ok: true };
@@ -155,6 +163,8 @@ export async function saveOpeningBalance(input: {
   date?: string | null;
 }): Promise<ActionState> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
 
   const [account] = await db
     .select({ id: accounts.id, financeMode: accounts.financeMode })

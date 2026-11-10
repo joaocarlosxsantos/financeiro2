@@ -12,6 +12,10 @@ type UpdateBuilder = { set(): UpdateBuilder; where(condition: unknown): UpdateBu
 type DeleteBuilder = { where(condition: unknown): DeleteBuilder; returning(): Promise<unknown[]>; then(resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown): Promise<unknown> };
 
 vi.mock("@/lib/auth", () => ({ requireUserId: async () => mockState.userId }));
+vi.mock("@/server/usage-profile", () => ({
+  getProfileRestriction: async () => null,
+  getUsageProfile: async () => "hibrido",
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/db", () => ({

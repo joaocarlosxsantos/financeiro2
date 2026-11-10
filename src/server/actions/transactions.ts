@@ -6,6 +6,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, categoryRules, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { getProfileRestriction } from "@/server/usage-profile";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { fingerprint } from "@/lib/categorize";
 import { createId } from "@/lib/id";
@@ -92,6 +93,8 @@ async function getAccountAndVerify(
 
 export async function createTransaction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
   const parsed = readForm(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
@@ -160,6 +163,8 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
 
 export async function updateTransaction(id: string, formData: FormData): Promise<ActionState> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
   const parsed = readForm(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
@@ -345,6 +350,8 @@ export async function createTransfer(
   note?: string | null,
 ): Promise<ActionState> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
 
   if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) {
     return { error: "As contas de origem e destino devem ser diferentes." };
@@ -420,6 +427,8 @@ export async function updateTransfer(
   updates: UpdateTransferInput & { kind?: never },
 ): Promise<ActionState> {
   const authUserId = await requireUserId();
+  const restriction = await getProfileRestriction(authUserId, "manual-entry");
+  if (restriction) return { error: restriction };
   if (userId && userId !== authUserId) {
     return { error: "Não autorizado." };
   }

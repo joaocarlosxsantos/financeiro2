@@ -1,3 +1,4 @@
+import { canUseCapability } from "@/lib/usage-profile";
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { requireUserId } from "@/lib/auth";
 import { getAccountsWithStats, getCategories, getUser } from "@/server/queries";
@@ -23,18 +24,18 @@ export default async function SettingsPage() {
     <>
       <PageHeader
         title="Configurações"
-        description="Ajuste a sua renda, as contas onde o dinheiro circula e as categorias que organizam os gastos."
+        description="Renda, contas e categorias."
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="min-w-0 lg:col-span-2">
+        {canUseCapability(user.usageProfile, "integration") && (<Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Open Finance" subtitle="Conecte o Pluggy e escolha a fonte de cada conta." />
           <div className="p-4 pt-0"><Link className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--text-brand)] underline" href="/configuracoes/integracao">Configurar integração</Link></div>
-        </Card>
+        </Card>)}
         <Card className="min-w-0">
           <CardHeader
             title="Perfil financeiro"
-            subtitle="Esses números alimentam a reserva de emergência, o 50/30/20 e a nota de saúde."
+            subtitle="Renda e objetivos de economia."
           />
           <MobileDisclosure label="Editar perfil financeiro"><ProfileForm
             defaults={{
@@ -49,7 +50,7 @@ export default async function SettingsPage() {
         <Card className="min-w-0">
           <CardHeader
             title="Contas e cartões"
-            subtitle="Cada lançamento pertence a uma conta. Isso mantém as importações separadas."
+            subtitle="Gerencie suas contas financeiras."
           />
           <AccountsPanel
             accounts={accounts.map((a) => ({

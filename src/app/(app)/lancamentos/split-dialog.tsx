@@ -161,12 +161,12 @@ function SplitDialogContent({
       const othersPayload = people.map((p) => {
         const item: {
           name: string;
-          phone?: string | null;
+          phone?: string;
           amount?: number;
           percent?: number;
         } = {
           name: p.name.trim(),
-          phone: p.phone.trim() || null,
+          phone: p.phone.trim() || undefined,
         };
         if (mode === "VALUE") {
           item.amount = parseMoneyToCents(p.amount);

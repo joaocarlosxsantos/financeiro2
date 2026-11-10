@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Check, CreditCard, Landmark, PiggyBank, TrendingUp, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { saveOpeningBalance } from "@/server/actions/settings";
@@ -44,23 +45,24 @@ const TYPE_LABEL: Record<string, string> = {
   INVESTMENT: "Investimento",
 };
 
-export function AccountList({ accounts }: { accounts: Account[] }) {
+export function AccountList({ accounts, allowManual = true, showIntegration = true }: { accounts: Account[]; allowManual?: boolean; showIntegration?: boolean }) {
   if (!accounts.length) {
     return <p className="muted px-5 py-8 text-center text-[0.8125rem]">Nada por aqui.</p>;
   }
   return (
     <ul className="space-y-3 sm:space-y-0 sm:divide-y">
       {accounts.map((account) => (
-        <Row key={account.id} account={account} />
+        <Row key={account.id} account={account} allowManual={allowManual} showIntegration={showIntegration} />
       ))}
     </ul>
   );
 }
 
-function Row({ account }: { account: Account }) {
+function Row({ account, allowManual, showIntegration }: { account: Account; allowManual: boolean; showIntegration: boolean }) {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
+  const [error, setError] = useState("");
   const Icon = ICONS[account.type] ?? Wallet;
 
   const negativo = account.balanceCents < 0;
@@ -75,7 +77,7 @@ function Row({ account }: { account: Account }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p title={account.name} className="truncate text-[0.875rem] font-medium">{account.name}</p>
+          <Link href={`/lancamentos?accountId=${encodeURIComponent(account.id)}`} title={`Ver extrato de ${account.name}`} className="inline-flex min-h-11 max-w-full items-center text-sm font-medium underline decoration-[var(--line-strong)] underline-offset-4">{account.name}</Link>
           <p title={`${TYPE_LABEL[account.type] ?? account.type}${account.institution ? ` · ${account.institution}` : ""} · ${account.transactionCount} lançamento(s)`} className="muted truncate text-xs">
             {TYPE_LABEL[account.type] ?? account.type}
             {account.institution ? ` · ${account.institution}` : ""}
@@ -90,7 +92,7 @@ function Row({ account }: { account: Account }) {
             className="text-base font-semibold"
             tone={negativo ? "out" : undefined}
           />}
-          <p className="muted text-xs">{account.financeMode === "integracao" ? `snapshot Pluggy${account.bankBalanceAt ? ` · ${formatDate(account.bankBalanceAt.slice(0, 10))}` : " indisponível"}` : "saldo atual"}</p>
+          <p className="muted text-xs">{account.financeMode === "integracao" ? `${showIntegration ? "Saldo bancário" : "Saldo atualizado"}${account.bankBalanceAt ? ` · ${formatDate(account.bankBalanceAt.slice(0, 10))}` : " indisponível"}` : "saldo atual"}</p>
         </div>
       </div>
 
@@ -109,7 +111,7 @@ function Row({ account }: { account: Account }) {
             salvo
           </span>
         ) : null}
-        {account.financeMode === "manual" ? <button
+        {allowManual && account.financeMode === "manual" ? <button
           type="button"
           onClick={() => setEditing((v) => !v)}
           className="min-h-11 min-w-11 ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
@@ -118,16 +120,19 @@ function Row({ account }: { account: Account }) {
         </button> : null}
       </div>
 
-      {editing && account.financeMode === "manual" ? (
+      {error && <p role="alert" className="mt-2 text-sm text-[var(--text-out)]">{error}</p>}
+      {editing && allowManual && account.financeMode === "manual" ? (
         <form
           className="mt-3 grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_1fr_auto] sm:items-end"
           action={(formData) => {
             start(async () => {
-              await saveOpeningBalance({
+              setError("");
+              const result = await saveOpeningBalance({
                 accountId: account.id,
                 amount: String(formData.get("amount") ?? "0"),
                 date: String(formData.get("date") ?? "") || null,
               });
+              if (result.error) { setError(result.error); return; }
               setEditing(false);
               setSaved(true);
               setTimeout(() => setSaved(false), 2500);

@@ -1,3 +1,5 @@
+import { getUsageProfile } from "@/server/usage-profile";
+import { canUseCapability } from "@/lib/usage-profile";
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { CreditCard, Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
@@ -46,6 +48,8 @@ export default async function TransactionsPage({
   }>;
 }) {
   const userId = await requireUserId();
+  const profile = await getUsageProfile(userId);
+  const manualEntry = canUseCapability(profile, "manual-entry");
   const sp = await searchParams;
   const ref = monthRefFromParam(sp.m);
 
@@ -174,7 +178,7 @@ export default async function TransactionsPage({
     color: c.color,
   }));
 
-  const plainAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
+  const plainAccounts = accounts.filter((account) => account.financeMode === "manual").map((a) => ({ id: a.id, name: a.name }));
   const uncategorized = plain.filter((t) => !t.categoryId).length;
 
   const cash = plain.filter((t) => !t.isTransfer && !t.isCard);
@@ -199,13 +203,13 @@ export default async function TransactionsPage({
         }
       />
 
-      <RecurringBanner
+      {manualEntry && (<RecurringBanner
         monthRef={ref}
         monthName={monthLabel(ref)}
         count={recurring.pending.length}
         incomeCents={recurring.pendingIncomeCents}
         expenseCents={recurring.pendingExpenseCents}
-      />
+      />)}
 
       <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
@@ -236,7 +240,7 @@ export default async function TransactionsPage({
               <EmptyState
                 icon={Receipt}
                 title={customRange ? "Nada lançado nesse período" : `Nada lançado em ${monthLabel(ref)}`}
-                description="Adicione um lançamento ao lado ou importe o extrato na aba Importar."
+                description={manualEntry ? "Use o botão + para lançar ou importe um extrato." : "Conecte e sincronize suas contas pelo Open Finance."}
               />
             )}
           </Card>
@@ -270,7 +274,7 @@ export default async function TransactionsPage({
                 <Money cents={sobrouCents} tone={sobrouCents < 0 ? "out" : undefined} size="sm" className="font-semibold" />
               </li>
             </ul>
-            <MobileDisclosure label="Novo lançamento"><TransactionComposer categories={plainCategories} accounts={plainAccounts} /></MobileDisclosure>
+            {manualEntry && (<MobileDisclosure label="Novo lançamento"><TransactionComposer categories={plainCategories} accounts={plainAccounts} /></MobileDisclosure>)}
           </Card>
 
           <ReceivablesSection

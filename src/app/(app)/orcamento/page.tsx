@@ -41,7 +41,7 @@ export default async function BudgetPage({
     <>
       <PageHeader
         title="Orçamento"
-        description="Um teto por categoria transforma boa intenção em número. O sistema acompanha o quanto você já consumiu e avisa antes de estourar."
+        description="Limites e consumo por categoria."
         action={<MonthSwitcher value={ref} />}
       />
 
@@ -57,13 +57,6 @@ export default async function BudgetPage({
                 monthRef={ref}
                 canCopyPrevious={overview.previousMonthHasBudgets}
               /></MobileDisclosure>
-              <details className="mt-3 text-sm"><summary className="flex min-h-11 cursor-pointer items-center">Por onde começar</summary>
-                <Hint tone="tip" title="Por onde começar">
-                  Orçamento que ignora o histórico não se sustenta. Comece pela sua média real dos
-                  últimos meses e só então aperte onde você quer mudar de comportamento — normalmente
-                  delivery, lazer e compras.
-                </Hint>
-              </details>
             </Card>
           ) : null}
 

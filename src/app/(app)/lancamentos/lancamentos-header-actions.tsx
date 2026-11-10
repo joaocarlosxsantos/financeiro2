@@ -1,5 +1,7 @@
 "use client";
 
+import { useUsageProfile } from "@/components/usage-profile";
+import { canUseCapability } from "@/lib/usage-profile";
 import { useState } from "react";
 import { ArrowLeftRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ export function LancamentosHeaderActions({
   customRange: { from: string; to: string } | null;
   accounts: PlainAccount[];
 }) {
+  const manualEntry = canUseCapability(useUsageProfile(), "manual-entry");
   const [transferOpen, setTransferOpen] = useState(false);
 
   function scrollToComposer() {
@@ -30,6 +33,7 @@ export function LancamentosHeaderActions({
     <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
       <PeriodSwitcher value={monthRef} range={customRange} />
 
+      {manualEntry && <>
       <Button
         type="button"
         variant="outline"
@@ -54,9 +58,11 @@ export function LancamentosHeaderActions({
         <span>Novo</span>
       </Button>
 
+      </>}
+
       <ExportMenu />
 
-      {transferOpen ? (
+      {transferOpen && manualEntry ? (
         <TransferDialog
           isOpen={transferOpen}
           onClose={() => setTransferOpen(false)}

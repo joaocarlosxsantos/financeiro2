@@ -1,3 +1,4 @@
+import { canUseCapability } from "@/lib/usage-profile";
 import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
@@ -113,7 +114,7 @@ export default async function DashboardPage({
 
   return (
     <>
-      <AutoSync />
+      {canUseCapability(user.usageProfile, "integration") && <AutoSync />}
       <PageHeader
         title={`Olá, ${user.name.split(" ")[0]}`}
         description="Resumo do mês: entradas, saídas e saldo."
@@ -201,15 +202,15 @@ export default async function DashboardPage({
 
       {/* 2. Alerta/onboarding compacta logo abaixo */}
       <div className="mt-4 space-y-3">
-        <OnboardingCard checklist={onboarding} />
+        <OnboardingCard checklist={onboarding} profile={user.usageProfile} />
 
-        <RecurringBanner
+        {canUseCapability(user.usageProfile, "manual-entry") && (<RecurringBanner
           monthRef={ref}
           monthName={monthLabel(ref)}
           count={recurring.pending.length}
           incomeCents={recurring.pendingIncomeCents}
           expenseCents={recurring.pendingExpenseCents}
-        />
+        />)}
 
         <AlertsCard alerts={alerts} />
 
@@ -218,23 +219,10 @@ export default async function DashboardPage({
             <EmptyState
               icon={Receipt}
               title={`Nenhum lançamento em ${monthLabel(ref)}`}
-              description="Adicione seus lançamentos ou importe o extrato do banco e a fatura do cartão."
-              action={
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Link
-                    href="/lancamentos"
-                    className="inline-flex min-h-11 items-center inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-[var(--on-acento)] hover:bg-brand-700"
-                  >
-                    Adicionar lançamento
-                  </Link>
-                  <Link
-                    href="/importar"
-                    className="inline-flex min-h-11 items-center inline-flex h-10 items-center rounded-xl border px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
-                  >
-                    Importar extrato
-                  </Link>
-                </div>
-              }
+              description={canUseCapability(user.usageProfile, "manual-entry") ? "Use o botão + para lançar uma movimentação." : "Conecte suas contas para receber as movimentações."}
+              action={canUseCapability(user.usageProfile, "manual-entry") ? (
+                <Link href="/lancamentos" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--acento)] px-4 text-sm font-medium text-[var(--on-acento)]">Ver extrato</Link>
+              ) : <Link href="/configuracoes/integracao" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--acento)] px-4 text-sm font-medium text-[var(--on-acento)]">Conectar e sincronizar</Link>}
             />
           </Card>
         ) : null}

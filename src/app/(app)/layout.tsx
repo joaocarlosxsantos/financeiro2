@@ -1,3 +1,4 @@
+import { UsageProfileProvider } from "@/components/usage-profile";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
@@ -16,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!userId) redirect("/login");
 
   const [user] = await db
-    .select({ name: users.name, email: users.email, onboardedAt: users.onboardedAt })
+    .select({ name: users.name, email: users.email, usageProfile: users.usageProfile, onboardedAt: users.onboardedAt })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -28,13 +29,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [accounts, categories] = await Promise.all([getAccounts(userId), getCategories(userId)]);
 
   return (
-    <ConfirmProvider>
+    <UsageProfileProvider profile={user.usageProfile}><ConfirmProvider>
       <div className="flex min-h-screen flex-col lg:flex-row">
         <a href="#conteudo" className="skip-link">
           Pular para o conteúdo
         </a>
         <Sidebar userName={user.name} userEmail={user.email}
-          accounts={accounts.map(({ id, name }) => ({ id, name }))}
+          accounts={accounts.filter((account) => account.financeMode === "manual").map(({ id, name }) => ({ id, name }))}
           categories={categories.map(({ id, name, kind, nature, color }) => ({ id, name, kind, nature, color }))} />
         <div className="min-w-0 flex-1">
           <main id="conteudo" className="mx-auto min-w-0 max-w-[1120px] px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 lg:py-10 xl:px-8">
@@ -42,6 +43,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
-    </ConfirmProvider>
+    </ConfirmProvider></UsageProfileProvider>
   );
 }

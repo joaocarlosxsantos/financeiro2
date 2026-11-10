@@ -5,6 +5,7 @@ import { and, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, categoryRules, openFinanceConnections, openFinanceCredentials, openFinanceDeleted, openFinanceInvoices, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { getProfileRestriction } from "@/server/usage-profile";
 import { amountToCents, deleteAllOpenFinanceSchema, deletePluggyTransactionSchema, isCompatiblePluggyAccount, linkOpenFinanceAccountSchema, openFinanceConnectionIdSchema, removeOpenFinanceConnectionSchema, removeOpenFinanceCredentialsSchema, saveOpenFinanceSetupSchema, shouldImportPluggyTransaction, transactionKind } from "@/server/open-finance/schemas";
 import { canDeletePluggyTransaction, isExternalIdentityTombstoned, planConnectionDataDeletion } from "@/server/open-finance/deletion-policy";
 import { decryptSecret, encryptSecret, secretFingerprint } from "@/server/open-finance/crypto";
@@ -47,6 +48,8 @@ function connectionErrorMessage(value: string | null): string | null {
 
 export async function getOpenFinanceSetup() {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) throw new Error(restriction);
   const [credential] = await db.select({ updatedAt: openFinanceCredentials.updatedAt }).from(openFinanceCredentials).where(eq(openFinanceCredentials.userId, userId)).limit(1);
   const storedConnections = await db.select({ id: openFinanceConnections.id, label: openFinanceConnections.label, status: openFinanceConnections.status, lastErrorCode: openFinanceConnections.lastErrorCode, lastAttemptAt: openFinanceConnections.lastAttemptAt, lastSyncedAt: openFinanceConnections.lastSyncedAt, importFromDate: openFinanceConnections.importFromDate }).from(openFinanceConnections).where(eq(openFinanceConnections.userId, userId));
   const connections = storedConnections.map((connection) => ({ ...connection, lastErrorMessage: connectionErrorMessage(connection.lastErrorCode) }));
@@ -57,6 +60,8 @@ export async function getOpenFinanceSetup() {
 
 export async function saveOpenFinanceSetup(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   if (!checkRateLimit(`open-finance-setup:${userId}`, OPEN_FINANCE_SETUP_LIMIT, Date.now(), OPEN_FINANCE_SETUP_WINDOW_MS).allowed) {
     return { error: "Muitas tentativas de configuração. Aguarde uma hora e tente novamente." };
   }
@@ -84,6 +89,8 @@ export async function saveOpenFinanceSetup(input: unknown) {
 
 export async function discoverOpenFinanceAccounts(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = openFinanceConnectionIdSchema.safeParse({ connectionId: input });
   if (!parsed.success) return { error: "Conexão inválida." };
   const connectionId = parsed.data.connectionId;
@@ -99,9 +106,15 @@ export async function discoverOpenFinanceAccounts(input: unknown) {
 
 export async function linkOpenFinanceAccount(input: { accountId: string; connectionId: string; externalAccountId: string | null; mode: "manual" | "integracao" }) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = linkOpenFinanceAccountSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos informados." };
   const data = parsed.data;
+  if (data.mode === "manual") {
+    const manualRestriction = await getProfileRestriction(userId, "manual-entry");
+    if (manualRestriction) return { error: manualRestriction };
+  }
   const [account] = await db.select({ id: accounts.id, type: accounts.type, financeMode: accounts.financeMode }).from(accounts).where(and(eq(accounts.id, data.accountId), eq(accounts.userId, userId))).limit(1);
   if (!account) return { error: "Conta não encontrada." };
   const [connection] = await db.select().from(openFinanceConnections).where(and(eq(openFinanceConnections.id, data.connectionId), eq(openFinanceConnections.userId, userId))).limit(1);
@@ -124,6 +137,8 @@ export async function linkOpenFinanceAccount(input: { accountId: string; connect
 
 export async function deletePluggyTransaction(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = deletePluggyTransactionSchema.safeParse(input);
   if (!parsed.success) return { error: "Lançamento inválido." };
   try {
@@ -143,6 +158,8 @@ export async function deletePluggyTransaction(input: unknown) {
 
 export async function getOpenFinanceDeletionCounts(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = openFinanceConnectionIdSchema.safeParse(input);
   if (!parsed.success) return { error: "Conexão inválida." };
   try {
@@ -165,6 +182,8 @@ export async function getOpenFinanceDeletionCounts(input: unknown) {
 
 export async function deleteAllOpenFinanceData(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = deleteAllOpenFinanceSchema.safeParse(input);
   if (!parsed.success) return { error: "Confirme explicitamente a exclusão dos dados Pluggy." };
   try {
@@ -195,6 +214,8 @@ export async function deleteAllOpenFinanceData(input: unknown) {
 
 export async function removeOpenFinanceCredentials(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = removeOpenFinanceCredentialsSchema.safeParse(input);
   if (!parsed.success) return { error: "Confirme explicitamente a remoção das credenciais." };
   try {
@@ -213,6 +234,8 @@ export async function removeOpenFinanceCredentials(input: unknown) {
 
 export async function removeOpenFinanceConnection(input: unknown) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = removeOpenFinanceConnectionSchema.safeParse(input);
   if (!parsed.success) return { error: "Confirme explicitamente a remoção da conexão." };
   try {
@@ -253,6 +276,8 @@ export async function removeOpenFinanceConnection(input: unknown) {
 // Chamado pelo painel a cada visita: só sincroniza se a última tentativa tem 5+ min.
 export async function autoSyncOpenFinance(): Promise<{ synced: boolean; error?: string }> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { synced: false, error: restriction };
   let synced = false;
   let failed = false;
   try {
@@ -284,6 +309,8 @@ export async function autoSyncOpenFinance(): Promise<{ synced: boolean; error?: 
 export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = "manual") {
   const cooldownMs = mode === "auto" ? AUTO_SYNC_COOLDOWN_MS : SYNC_COOLDOWN_MS;
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
   const parsed = openFinanceConnectionIdSchema.safeParse({ connectionId: input });
   if (!parsed.success) return { error: "Conexão inválida." };
   const connectionId = parsed.data.connectionId;

@@ -6,6 +6,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, recurringRules, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
+import { getProfileRestriction } from "@/server/usage-profile";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { safeDescriptionSchema, safeNotesSchema } from "@/server/validation/sanitization";
 import type { MonthRef } from "@/lib/dates";
@@ -38,6 +39,8 @@ export async function createRecurringRule(
   formData: FormData,
 ): Promise<ActionState> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { error: restriction };
 
   const parsed = ruleSchema.safeParse({
     description: formData.get("description"),
@@ -96,6 +99,8 @@ export async function createRecurringRule(
 
 export async function toggleRecurringRule(id: string, active: boolean) {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) throw new Error(restriction);
   await db
     .update(recurringRules)
     .set({ active, updatedAt: new Date() })
@@ -121,6 +126,8 @@ export async function generateRecurring(
   ruleId?: string,
 ): Promise<{ created: number; skippedIntegrated?: number; error?: string }> {
   const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "manual-entry");
+  if (restriction) return { created: 0, error: restriction };
   const { getRecurringStatus } = await import("@/server/queries");
 
   const status = await getRecurringStatus(userId, ref);

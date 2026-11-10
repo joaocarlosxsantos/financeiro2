@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useActionState, useState } from "react";
-import { BarChart3, FileUp, LayoutDashboard, LogOut, MoreHorizontal, PiggyBank, Plus, Receipt, ReceiptText, Repeat, Settings, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { BarChart3, FileUp, LayoutDashboard, MoreHorizontal, PiggyBank, Plus, Plug, UserRound, Receipt, ReceiptText, Repeat, Settings, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { Sheet, useSheetClose } from "@/components/sheet";
 import { Field, Input, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { createTransaction, createTransfer, type ActionState } from "@/server/actions/transactions";
-import { logoutAction } from "@/server/actions/auth";
+import { LogoutButton } from "@/components/logout-button";
+import { useUsageProfile } from "@/components/usage-profile";
+import { canUseCapability, canVisitRoute } from "@/lib/usage-profile";
 import { todayRef } from "@/lib/dates";
 import { parseMoneyToCents } from "@/lib/money";
 import { cn } from "@/lib/cn";
@@ -28,6 +30,8 @@ export const moreDestinations = [
   { href: "/recorrentes", label: "Recorrentes", icon: Repeat },
   { href: "/contas-a-pagar", label: "Contas a pagar", icon: ReceiptText },
   { href: "/importar", label: "Importar", icon: FileUp },
+  { href: "/configuracoes/integracao", label: "Conexões e sincronização", icon: Plug },
+  { href: "/usuario", label: "Minha conta", icon: UserRound },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 export function isDestinationActive(pathname: string, href: string) {
@@ -36,6 +40,9 @@ export function isDestinationActive(pathname: string, href: string) {
 
 export function BottomNav({ onNew }: { onNew: () => void }) {
   const pathname = usePathname();
+  const profile = useUsageProfile();
+  const manualEntry = canUseCapability(profile, "manual-entry");
+  const destinations = moreDestinations.filter((item) => canVisitRoute(profile, item.href));
   const [moreOpen, setMoreOpen] = useState(false);
   const itemClass = "relative flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-medium";
   function destination(item: typeof mainDestinations[number]) {
@@ -47,27 +54,27 @@ export function BottomNav({ onNew }: { onNew: () => void }) {
   }
   return <>
     {/* Keep the standard property alongside the glass recipe's WebKit alias. */}
-    <nav aria-label="Navegação principal mobile" style={{ backdropFilter: "blur(20px) saturate(140%)", borderWidth: "1px 0 0" }} className="glass fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-2 px-2 pt-2 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden">
+    <nav aria-label="Navegação principal mobile" style={{ backdropFilter: "blur(20px) saturate(140%)", borderWidth: "1px 0 0" }} className={cn("glass fixed inset-x-0 bottom-0 z-30 grid gap-2 px-2 pt-2 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden", manualEntry ? "grid-cols-5" : "grid-cols-4")}>
       {mainDestinations.slice(0, 2).map(destination)}
-      <button type="button" aria-label="Novo lançamento" aria-haspopup="dialog" onClick={onNew}
+      {manualEntry && <button type="button" aria-label="Novo lançamento" aria-haspopup="dialog" onClick={onNew}
         className={cn(itemClass, "cursor-pointer bg-[var(--acento)] text-[var(--on-acento)]")}>
-        <Plus aria-hidden="true" className="size-6" strokeWidth={1.5} /><span>Novo</span>
-      </button>
+        <Plus aria-hidden="true" className="size-6" strokeWidth={1.5} /><span>Lançar</span>
+      </button>}
       {destination(mainDestinations[2])}
       <button type="button" aria-label="Mais opções" aria-haspopup="dialog" aria-expanded={moreOpen}
-        onClick={() => setMoreOpen(true)} className={cn(itemClass, "cursor-pointer", moreDestinations.some((item) => isDestinationActive(pathname, item.href)) ? "text-[var(--text)] before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-[var(--acento)]" : "text-[var(--text-subtle)]")}>
+        onClick={() => setMoreOpen(true)} className={cn(itemClass, "cursor-pointer", destinations.some((item) => isDestinationActive(pathname, item.href)) ? "text-[var(--text)] before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-[var(--acento)]" : "text-[var(--text-subtle)]")}>
         <MoreHorizontal aria-hidden="true" className="size-6" strokeWidth={1.5} />Mais
       </button>
     </nav>
     {moreOpen && <Sheet title="Mais" onClose={() => setMoreOpen(false)}>
       <nav aria-label="Mais destinos" className="grid grid-cols-1 gap-2">
-        {moreDestinations.map(({ href, label, icon: Icon }) => <Link key={href} href={href} replace
+        {destinations.map(({ href, label, icon: Icon }) => <Link key={href} href={href} replace
           onClick={() => setMoreOpen(false)} aria-current={isDestinationActive(pathname, href) ? "page" : undefined}
           className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm hover:bg-[var(--surface-2)] aria-[current=page]:bg-[var(--surface-2)]">
           <Icon aria-hidden="true" className="size-5" strokeWidth={1.5} />{label}
         </Link>)}
       </nav>
-      <form action={logoutAction}><button className="mt-2 flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-3 text-sm hover:bg-[var(--surface-2)]"><LogOut aria-hidden="true" className="size-5" />Sair</button></form>
+      <LogoutButton />
     </Sheet>}
   </>;
 }
@@ -77,6 +84,8 @@ type QuickEntryProps = {
 };
 
 export function QuickEntry(props: QuickEntryProps) {
+  const profile = useUsageProfile();
+  if (!canUseCapability(profile, "manual-entry")) return null;
   return <Sheet title="Novo lançamento" onClose={props.onClose}><QuickEntryForm {...props} /></Sheet>;
 }
 
@@ -94,7 +103,7 @@ function QuickEntryForm({ accounts, categories, onClose }: QuickEntryProps) {
     } catch { return { error: "Não foi possível salvar. Tente novamente." }; }
   }, {});
   return <>
-    {!accounts.length ? <p className="py-4 text-sm">Cadastre uma conta em <Link href="/configuracoes" replace onClick={onClose} className="underline">Configurações</Link> antes de lançar.</p> :
+    {!accounts.length ? <p className="py-4 text-sm">Cadastre uma conta em <Link href="/contas" replace onClick={onClose} className="underline">Configurações</Link> antes de lançar.</p> :
       <form action={action} className="space-y-4">
         <fieldset disabled={pending} className="grid grid-cols-3 gap-2">
           <legend className="sr-only">Tipo de lançamento</legend>

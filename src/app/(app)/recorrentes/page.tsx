@@ -1,6 +1,6 @@
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Repeat } from "lucide-react";
-import { requireUserId } from "@/lib/auth";
+import { requireProfileRoute } from "@/server/usage-profile";
 import { getAccounts, getCategories, getRecurringStatus, getUser } from "@/server/queries";
 import { monthRefFromParam, monthLabel } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
@@ -20,7 +20,7 @@ export default async function RecurringPage({
 }: {
   searchParams: Promise<{ m?: string }>;
 }) {
-  const userId = await requireUserId();
+  const { userId } = await requireProfileRoute("/recorrentes");
   const { m } = await searchParams;
   const ref = monthRefFromParam(m);
 

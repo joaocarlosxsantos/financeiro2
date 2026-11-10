@@ -1,4 +1,6 @@
-import Link from "next/link";
+import { getUsageProfile } from "@/server/usage-profile";
+import { canUseCapability } from "@/lib/usage-profile";
+import { NewAccount } from "./new-account";
 import { Wallet } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import { getBalances } from "@/server/queries";
@@ -13,25 +15,20 @@ export const metadata = { title: "Saldos" };
 
 export default async function AccountsPage() {
   const userId = await requireUserId();
+  const profile = await getUsageProfile(userId);
+  const manualEntry = canUseCapability(profile, "manual-entry");
   const overview = await getBalances(userId);
 
   if (!overview.accounts.length) {
     return (
       <>
-        <PageHeader title="Saldos" description="Saldos atuais e patrimônio líquido consolidado." />
+        <PageHeader title="Contas e saldos" description="Seu dinheiro por conta." action={<NewAccount />} />
         <Card className="min-w-0 p-0 max-sm:border-0 max-sm:bg-transparent max-sm:shadow-none">
           <EmptyState
             icon={Wallet}
             title="Nenhuma conta cadastrada"
-            description="Cadastre contas e cartões nas configurações para acompanhar os saldos."
-            action={
-              <Link
-                href="/configuracoes"
-                className="inline-flex min-h-11 items-center inline-flex h-10 items-center rounded-[var(--radius-button)] bg-[var(--btn-brand)] px-4 text-sm font-medium text-[var(--on-acento)] hover:opacity-90"
-              >
-                Ir para configurações
-              </Link>
-            }
+            description="Crie sua primeira conta para acompanhar o saldo."
+            action={<NewAccount />}
           />
         </Card>
       </>
@@ -41,13 +38,14 @@ export default async function AccountsPage() {
   return (
     <>
       <PageHeader
-        title="Saldos"
-        description="Saldos atuais e patrimônio líquido consolidado."
+        title="Contas e saldos"
+        description="Seu dinheiro por conta."
+        action={<NewAccount />}
       />
 
       <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
-          {overview.needsOpeningBalance ? (
+          {manualEntry && overview.needsOpeningBalance ? (
             <Hint tone="tip" title="Informe o saldo inicial">
               Alguma conta está sem saldo inicial. Informe o saldo na data de referência para
               conciliação correta com o extrato bancário.
@@ -60,9 +58,11 @@ export default async function AccountsPage() {
               <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                 Saldos
               </h2>
-              <p className="muted mt-0.5 text-xs">Contas manuais usam saldo inicial e movimentações; contas integradas usam snapshot bancário.</p>
+              <p className="muted mt-0.5 text-xs">Saldo atualizado de cada conta e acesso ao extrato.</p>
             </div>
             <AccountList
+              allowManual={manualEntry}
+              showIntegration={canUseCapability(profile, "integration")}
               accounts={overview.accounts.map((a) => ({
                 id: a.id,
                 name: a.name,
@@ -111,10 +111,6 @@ export default async function AccountsPage() {
             </p>
           </Card>
 
-          <Hint tone="info" title="Conciliação com o banco">
-            Se o saldo divergir do extrato, atualize o saldo inicial na data de hoje e lance as
-            movimentações a partir dela.
-          </Hint>
         </div>
       </div>
     </>

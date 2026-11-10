@@ -32,6 +32,7 @@ export default async function OnboardingPage() {
 
       <OnboardingForm
         defaults={{
+          usageProfile: user.usageProfile,
           income: user.monthlyIncomeCents,
           emergencyMonths: user.emergencyMonths,
           savingsTargetPct: user.savingsTargetPct,

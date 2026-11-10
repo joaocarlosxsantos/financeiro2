@@ -1,3 +1,4 @@
+import { canUseCapability, type UsageProfile } from "@/lib/usage-profile";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import type { OnboardingChecklist } from "@/server/queries";
@@ -5,25 +6,29 @@ import { cn } from "@/lib/cn";
 
 export function OnboardingCard({
   checklist,
+  profile,
   className,
 }: {
   checklist: OnboardingChecklist;
+  profile: UsageProfile;
   className?: string;
 }) {
   if (checklist.hasAccount && checklist.hasTransaction) return null;
 
+  const manualEntry = canUseCapability(profile, "manual-entry");
   const steps = [
     {
       done: checklist.hasAccount,
-      title: "Cadastre uma conta e o saldo inicial",
-      href: "/contas",
-      linkLabel: "Cadastrar conta",
+      title: manualEntry ? "Cadastre uma conta" : "Conecte suas contas",
+      href: manualEntry ? "/contas" : "/configuracoes/integracao",
+      linkLabel: manualEntry ? "Cadastrar conta" : "Conectar",
     },
     {
       done: checklist.hasTransaction,
-      title: "Lance ou importe seus primeiros lançamentos",
-      href: "/importar",
-      linkLabel: "Importar extrato",
+      title: manualEntry ? "Registre suas movimenta\u00e7\u00f5es" : "Sincronize suas movimenta\u00e7\u00f5es",
+      href: manualEntry ? "/lancamentos" : "/configuracoes/integracao",
+      linkLabel: manualEntry ? "Ver extrato" : "Sincronizar",
+
     },
   ];
 

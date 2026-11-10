@@ -21,6 +21,10 @@ vi.mock("@/lib/auth", () => ({ requireUserId: async () => {
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/server/queries", () => ({ getBillRulesStatus: (...args: unknown[]) => mocks.billRulesStatus(...args) }));
+vi.mock("@/server/usage-profile", () => ({
+  getProfileRestriction: async () => null,
+  getUsageProfile: async () => "hibrido",
+}));
 vi.mock("@/db", () => ({ db: {
   select: (...args: unknown[]) => mocks.select(...args),
   transaction: (...args: unknown[]) => mocks.transaction(...args),
