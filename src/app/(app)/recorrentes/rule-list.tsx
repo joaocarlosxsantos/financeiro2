@@ -70,7 +70,7 @@ function Row({ rule }: { rule: Rule }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-[0.875rem] font-medium">{rule.description}</span>
-          <span className={cn("rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium", status.className)}>
+          <span className={cn("rounded-md px-1.5 py-0.5 text-xs font-medium", status.className)}>
             {status.label}
           </span>
         </div>
@@ -97,7 +97,7 @@ function Row({ rule }: { rule: Rule }) {
         title={rule.active ? "Pausar" : "Retomar"}
         disabled={pending}
         onClick={() => start(async () => void (await toggleRecurringRule(rule.id, !rule.active)))}
-        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)]"
+        className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--surface-2)]"
       >
         {rule.active ? <Pause className="size-4" /> : <Play className="size-4" />}
       </button>
@@ -116,7 +116,7 @@ function Row({ rule }: { rule: Rule }) {
           if (!ok) return;
           start(async () => void (await deleteRecurringRule(rule.id)));
         }}
-        className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+        className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
       >
         <Trash2 className="size-4" />
       </button>

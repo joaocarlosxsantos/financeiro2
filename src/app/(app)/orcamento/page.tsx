@@ -43,10 +43,10 @@ export default async function BudgetPage({
         action={<MonthSwitcher value={ref} />}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {!hasBudgets ? (
-            <Card>
+            <Card className="min-w-0">
               <CardHeader
                 title={`Nenhum limite definido em ${monthLabel(ref)}`}
                 subtitle="Comece por um dos dois caminhos — depois é só ajustar o que não fizer sentido."
@@ -65,7 +65,7 @@ export default async function BudgetPage({
             </Card>
           ) : null}
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
               <div>
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight">
@@ -108,14 +108,14 @@ export default async function BudgetPage({
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <Card>
+          <Card className="min-w-0">
             <CardHeader
               title="Resumo do mês"
               subtitle="Considera só o gasto das categorias que têm limite."
             />
 
             <div className="mb-2 flex items-baseline justify-between gap-3">
-              <span className="tnum text-2xl font-semibold tracking-tight">
+              <span className="tnum max-w-full break-words text-hero font-medium tracking-tight">
                 {formatCents(overview.budgetedSpentCents)}
               </span>
               <span className="muted tnum text-[0.8125rem]">
@@ -132,7 +132,7 @@ export default async function BudgetPage({
                     ? "var(--color-variable)"
                     : "var(--color-money-in)"
               }
-              height={10}
+              height={6}
             />
 
             <ul className="mt-5 space-y-3 text-[0.8125rem]">
@@ -172,7 +172,7 @@ export default async function BudgetPage({
             </Hint>
           ) : null}
 
-          <Card>
+          <Card className="min-w-0">
             <CardHeader
               title="Como o alerta funciona"
               subtitle="Três estados, para você agir antes do estouro."

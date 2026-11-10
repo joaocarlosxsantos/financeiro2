@@ -8,7 +8,7 @@ import {
   toggleGoalRecurringRule,
   type ActionState,
 } from "@/server/actions/goal-recurring";
-import { Field, Input } from "@/components/ui/field";
+import { Field, MoneyInput, Input } from "@/components/ui/field";
 import { SubmitButton, Button } from "@/components/ui/button";
 import { formatCents } from "@/lib/money";
 import { monthRefToParam, currentMonthRef } from "@/lib/dates";
@@ -59,7 +59,7 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
             type="button"
             title={rule.active ? "Pausar aporte automático" : "Retomar aporte automático"}
             onClick={() => start(async () => void (await toggleGoalRecurringRule(rule.id, !rule.active)))}
-            className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface)]"
+            className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--surface)]"
           >
             {rule.active ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
           </button>
@@ -75,7 +75,7 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
               if (!ok) return;
               start(async () => void (await deleteGoalRecurringRule(rule.id)));
             }}
-            className="muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+            className="min-h-11 min-w-11 muted cursor-pointer rounded-lg p-1.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -89,7 +89,7 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex cursor-pointer items-center gap-1.5 text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
+        className="min-h-11 min-w-11 inline-flex cursor-pointer items-center gap-1.5 text-[0.8125rem] font-medium text-[var(--text-brand)] hover:underline"
       >
         <Repeat className="size-3.5" />
         {open ? "Fechar" : "Configurar aporte automático"}
@@ -105,18 +105,18 @@ export function GoalRecurringControl({ goalId, rule }: { goalId: string; rule: P
           <input type="hidden" name="startMonth" value={monthRefToParam(currentMonthRef())} />
           <div className="min-w-28 flex-1">
             <Field label="Valor">
-              <Input name="amount" inputMode="decimal" placeholder="0,00" required />
+              <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="amount" inputMode="decimal" placeholder="0,00" required />
             </Field>
           </div>
           <div className="w-24">
             <Field label="Dia do mês">
-              <Input name="dayOfMonth" type="number" min={1} max={31} defaultValue={5} required />
+              <Input className="min-h-12 min-w-0 max-w-full text-base!" name="dayOfMonth" type="number" min={1} max={31} defaultValue={5} required />
             </Field>
           </div>
-          <SubmitButton size="sm" pendingLabel="Criando...">
+          <SubmitButton className="min-h-11 min-w-11" size="sm" pendingLabel="Criando...">
             Guardar
           </SubmitButton>
-          <Button type="button" size="sm" variant="outline" onClick={() => setOpen(false)}>
+          <Button className="min-h-11 min-w-11" type="button" size="sm" variant="outline" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
           {state.error ? (

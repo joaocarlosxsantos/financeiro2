@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Minus, Sparkles } from "lucide-react";
+import { Receipt, ArrowDownRight, ArrowUpRight, Minus, Sparkles } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
   getCategoryBreakdown,
@@ -82,9 +82,9 @@ export default async function InsightsPage({
       />
 
       {!hasData ? (
-        <Card className="p-0">
+        <Card className="min-w-0 p-0">
           <EmptyState
-            icon={Sparkles}
+            icon={Receipt}
             title={`Sem dados suficientes em ${monthLabel(ref)}`}
             description="Assim que houver lançamentos neste mês (ou no anterior, pra comparação), os insights aparecem aqui."
           />
@@ -92,7 +92,7 @@ export default async function InsightsPage({
       ) : (
         <>
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+            <Card className="min-w-0 lg:col-span-2">
               <CardHeader
                 title={isCurrentMonth ? "Ritmo de gastos deste mês" : `Comparado a ${monthLabel(prevRef)}`}
                 subtitle={
@@ -160,7 +160,7 @@ export default async function InsightsPage({
               ) : null}
             </Card>
 
-            <Card className="min-w-0">
+            <Card className="min-w-0 min-w-0">
               <CardHeader title="Fixo x variável" subtitle="Últimos 6 meses." />
               <FixedVariableChart data={series} />
               {withExpense.length > 1 ? (
@@ -176,7 +176,7 @@ export default async function InsightsPage({
           </section>
 
           <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
-            <Card className="lg:col-span-3">
+            <Card className="min-w-0 lg:col-span-3">
               <CardHeader
                 title="Comparativo por categoria"
                 subtitle={`O que mudou entre ${monthLabel(prevRef)} e ${monthLabel(ref)}, categoria a categoria.`}
@@ -216,7 +216,7 @@ export default async function InsightsPage({
               )}
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card className="min-w-0 lg:col-span-2">
               <CardHeader title="Maiores gastos do mês" subtitle="As compras mais pesadas, uma a uma." />
               {topExpenses.length ? (
                 <ul className="divide-y">

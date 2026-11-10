@@ -85,7 +85,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: row.color }} />
         <span className="text-[0.875rem] font-medium">{row.name}</span>
         {row.nature === "FIXED" ? (
-          <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.6875rem] font-medium ring-1 ring-[var(--border)] ring-inset">
+          <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium ring-1 ring-[var(--border)] ring-inset">
             fixo
           </span>
         ) : null}
@@ -107,7 +107,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
               inputMode="decimal"
               placeholder="sem limite"
               aria-label={`Limite mensal de ${row.name}`}
-              className="input-base tnum h-9 w-24 py-0 pl-8 text-right text-[0.8125rem] sm:w-32"
+              className="min-h-12 min-w-0 max-w-full text-base! input-base tnum h-9 w-24 py-0 pl-8 text-right text-[0.8125rem] sm:w-32"
             />
           </div>
           <span className="w-4 shrink-0">

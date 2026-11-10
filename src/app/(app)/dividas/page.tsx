@@ -39,14 +39,14 @@ export default async function DebtsPage() {
 
       {!overview.debts.length ? (
         <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <EmptyState
               icon={TrendingDown}
               title="Nenhuma dívida cadastrada"
               description="Se você não tem dívida, ótimo — pule esta tela. Se tem, cadastrar é o passo que transforma um problema difuso em um plano com data para acabar."
             />
           </Card>
-          <Card>
+          <Card className="min-w-0">
             <CardHeader title="Cadastrar dívida" subtitle="Comece pela de maior juros." />
             <DebtComposer />
           </Card>
@@ -54,7 +54,7 @@ export default async function DebtsPage() {
       ) : (
         <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0 space-y-4">
-            <Card>
+            <Card className="min-w-0">
               <CardHeader
                 title="O tamanho do buraco"
                 subtitle="O primeiro passo é enxergar o número real."
@@ -97,7 +97,7 @@ export default async function DebtsPage() {
               </div>
             </Card>
 
-            <Card className="p-0">
+            <Card className="min-w-0 p-0">
               <div className="border-b px-5 py-4">
                 <h2 className="text-[0.9375rem] font-semibold tracking-tight">Suas dívidas</h2>
                 <p className="muted mt-0.5 text-[0.8125rem]">
@@ -121,7 +121,7 @@ export default async function DebtsPage() {
           </div>
 
           <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <Card>
+            <Card className="min-w-0">
               <CardHeader title="Cadastrar dívida" />
               <DebtComposer />
             </Card>

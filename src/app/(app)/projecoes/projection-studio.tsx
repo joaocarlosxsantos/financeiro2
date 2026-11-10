@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Field, MoneyInput, Input } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { ProjectionChart, type ProjectionRow } from "@/components/charts/projection-chart";
 import { formatCents, parseMoneyToCents } from "@/lib/money";
@@ -63,15 +63,15 @@ export function ProjectionStudio({
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <div className="min-w-0 space-y-4">
-        <Card>
+      <div className="order-2 min-w-0 space-y-4 lg:order-1">
+        <Card className="min-w-0">
           <CardHeader title="Seus números" subtitle="Preenchemos com o que já sabemos sobre você." />
           <div className="space-y-4">
             <Field label="Quanto você já tem guardado">
-              <Input value={start} onChange={(e) => setStart(e.target.value)} inputMode="decimal" />
+              <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" value={start} onChange={(e) => setStart(e.target.value)} inputMode="decimal" />
             </Field>
             <Field label="Quanto vai guardar por mês" hint="Sugerimos a sobra do seu mês atual.">
-              <Input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" />
+              <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" />
             </Field>
             <Field label="Horizonte">
               <div className="flex flex-wrap gap-1.5">
@@ -80,11 +80,9 @@ export function ProjectionStudio({
                     key={y}
                     type="button"
                     onClick={() => setYears(y)}
-                    className={
-                      years === y
+                    className={["min-h-11 min-w-11", years === y
                         ? "h-9 cursor-pointer rounded-[var(--radius-button)] border border-[var(--acento)] bg-[var(--color-save-soft)] px-3 text-[0.8125rem] font-medium text-[var(--text-brand)]"
-                        : "h-9 cursor-pointer rounded-[var(--radius-button)] border border-[var(--border)] px-3 text-[0.8125rem] font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"
-                    }
+                        : "h-9 cursor-pointer rounded-[var(--radius-button)] border border-[var(--border)] px-3 text-[0.8125rem] font-medium text-[var(--text)] hover:bg-[var(--surface-2)]"].filter(Boolean).join(" ")}
                   >
                     {y} ano{y === 1 ? "" : "s"}
                   </button>
@@ -101,8 +99,8 @@ export function ProjectionStudio({
         </Hint>
       </div>
 
-      <div className="min-w-0 space-y-4">
-        <Card>
+      <div className="order-1 min-w-0 space-y-4 lg:order-2">
+        <Card className="min-w-0">
           <CardHeader
             title={`Patrimônio projetado em ${years} ano${years === 1 ? "" : "s"}`}
             subtitle="Três cenários de rentabilidade anual sobre os mesmos aportes."
@@ -115,7 +113,7 @@ export function ProjectionStudio({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {finals.map((f) => (
-            <Card key={f.key}>
+            <Card className="min-w-0" key={f.key}>
               <div className="mb-2 flex items-center gap-2">
                 <span className="size-2.5 rounded-[3px]" style={{ background: f.color }} />
                 <p className="text-[0.8125rem] font-medium">{f.name}</p>
@@ -127,7 +125,7 @@ export function ProjectionStudio({
           ))}
         </div>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader title="Decompondo o cenário realista" subtitle="Quanto veio de você e quanto veio do juro." />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Metric label="Você depositou" value={formatCents(invested)} />

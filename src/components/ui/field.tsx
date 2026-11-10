@@ -29,7 +29,7 @@ export function Field({
   const describedChildren = Children.map(children, (child) => {
     if (!isValidElement(child)) return child;
     const isControl =
-      child.type === Input ||
+      child.type === Input || child.type === MoneyInput ||
       child.type === Select ||
       child.type === Textarea ||
       (typeof child.type === "string" && ["input", "select", "textarea"].includes(child.type));
@@ -61,6 +61,13 @@ export function Field({
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn("input-base", className)} {...props} />;
+}
+
+export function MoneyInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return <span className="relative block min-w-0 max-w-full">
+    <span aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-[var(--text-muted)]">R$</span>
+    <Input {...props} inputMode="decimal" className={cn("tnum min-h-12 pl-10 text-base!", className)} />
+  </span>;
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {

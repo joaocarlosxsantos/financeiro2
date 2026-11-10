@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteDebt, registerDebtPayment, updateDebtField } from "@/server/actions/debts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
+import { MoneyInput, Input } from "@/components/ui/field";
 import { formatCents, formatCentsPlain } from "@/lib/money";
 import { DEBT_KIND_LABEL, annualRateFromMonthly, formatRate } from "@/lib/debts";
 import { cn } from "@/lib/cn";
@@ -48,7 +48,7 @@ function Row({ debt }: { debt: Debt }) {
             <h3 className="text-[0.9375rem] font-semibold">{debt.name}</h3>
             {DEBT_KIND_LABEL[debt.kind] &&
             DEBT_KIND_LABEL[debt.kind].toLowerCase() !== debt.name.trim().toLowerCase() ? (
-              <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.6875rem] font-medium ring-1 ring-[var(--border)] ring-inset">
+              <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium ring-1 ring-[var(--border)] ring-inset">
                 {DEBT_KIND_LABEL[debt.kind]}
               </span>
             ) : null}
@@ -77,7 +77,7 @@ function Row({ debt }: { debt: Debt }) {
               }
             });
           }}
-          className="muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
+          className="min-h-11 min-w-11 muted shrink-0 cursor-pointer rounded-lg p-2.5 hover:bg-[var(--color-money-out-soft)] hover:text-[var(--text-out)]"
         >
           <Trash2 className="size-4" />
         </button>
@@ -90,7 +90,7 @@ function Row({ debt }: { debt: Debt }) {
             <button
               type="button"
               onClick={() => setError(null)}
-              className="ml-auto text-[0.75rem] font-medium hover:underline"
+              className="min-h-11 min-w-11 ml-auto text-[0.75rem] font-medium hover:underline"
             >
               Fechar
             </button>
@@ -136,7 +136,7 @@ function Row({ debt }: { debt: Debt }) {
         <button
           type="button"
           onClick={() => setPaying((v) => !v)}
-          className="ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
+          className="min-h-11 min-w-11 ml-auto cursor-pointer font-medium text-[var(--text-brand)] hover:underline"
         >
           {paying ? "Fechar" : "Registrar pagamento"}
         </button>
@@ -152,9 +152,9 @@ function Row({ debt }: { debt: Debt }) {
         >
           <div className="min-w-36 flex-1">
             <label className="mb-1.5 block text-xs font-medium">Valor pago</label>
-            <Input name="amount" inputMode="decimal" placeholder="0,00" required />
+            <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="amount" inputMode="decimal" placeholder="0,00" required />
           </div>
-          <Button type="submit" size="sm">
+          <Button className="min-h-11 min-w-11" type="submit" size="sm">
             Abater do saldo
           </Button>
         </form>
@@ -206,7 +206,7 @@ function EditableField({
           }}
           inputMode="decimal"
           disabled={pending}
-          className={cn("input-base tnum h-9 py-0 text-right text-[0.8125rem]", prefix && "pl-8", suffix && "pr-7")}
+          className={["min-h-12 min-w-0 max-w-full text-base!", cn("input-base tnum h-9 py-0 text-right text-[0.8125rem]", prefix && "pl-8", suffix && "pr-7")].filter(Boolean).join(" ")}
         />
         {suffix ? (
           <span className="muted pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs">

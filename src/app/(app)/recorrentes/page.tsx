@@ -41,7 +41,7 @@ export default async function RecurringPage({
         action={<MonthSwitcher value={ref} />}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {status.pending.length ? (
             <PendingPanel
@@ -65,9 +65,9 @@ export default async function RecurringPage({
             </Hint>
           ) : null}
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <div className="border-b border-[var(--line)] px-5 py-4">
-              <h2 className="text-[0.75rem] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                 Suas recorrências
               </h2>
               <p className="muted mt-0.5 text-xs">
@@ -110,7 +110,7 @@ export default async function RecurringPage({
         </div>
 
         <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <Card>
+          <Card className="min-w-0">
             <CardHeader title="Compromisso mensal" subtitle="Soma das recorrências ativas." />
             <ul className="space-y-3 text-[0.8125rem]">
               <li className="flex items-baseline justify-between gap-3">
@@ -148,7 +148,7 @@ export default async function RecurringPage({
             ) : null}
           </Card>
 
-          <Card>
+          <Card className="min-w-0">
             <CardHeader
               title="Nova recorrência"
               subtitle="Receitas ou despesas fixas mensais."

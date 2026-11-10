@@ -29,7 +29,7 @@ export function BudgetStarters({
   return (
     <div className={compact ? "flex flex-wrap items-center gap-2" : "space-y-3"}>
       <div className="flex flex-wrap gap-2">
-        <Button
+        <Button className="min-h-11 min-w-11"
           size={compact ? "sm" : "md"}
           variant={compact ? "outline" : "primary"}
           disabled={pending}
@@ -47,7 +47,7 @@ export function BudgetStarters({
         </Button>
 
         {canCopyPrevious ? (
-          <Button
+          <Button className="min-h-11 min-w-11"
             size={compact ? "sm" : "md"}
             variant="outline"
             disabled={pending}

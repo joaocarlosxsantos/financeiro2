@@ -32,7 +32,7 @@ export function Progress({
       aria-valuemax={100}
     >
       <div
-        className="h-full rounded-full motion-reduce:transition-none transition-[width] duration-300"
+        className="h-full rounded-full"
         style={{ width: `${v}%`, background: color }}
       />
       {ticks?.map((t) => (

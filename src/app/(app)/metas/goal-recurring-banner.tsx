@@ -39,7 +39,7 @@ export function GoalRecurringBanner({
         </p>
       </div>
 
-      <Button
+      <Button className="min-h-11 min-w-11"
         size="sm"
         disabled={busy}
         onClick={() =>

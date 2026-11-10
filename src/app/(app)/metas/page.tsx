@@ -62,7 +62,7 @@ export default async function GoalsPage() {
 
       <GoalRecurringBanner count={goalRecurring.pending.length} amountCents={goalRecurring.pendingAmountCents} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <EmergencyPanel
             target={emergencyTarget}
@@ -75,7 +75,7 @@ export default async function GoalsPage() {
             recurringRule={emergency ? (ruleByGoal.get(emergency.id) ?? null) : null}
           />
 
-          <Card className="p-0">
+          <Card className="min-w-0 p-0">
             <div className="border-b px-5 py-4">
               <h2 className="text-[0.9375rem] font-semibold tracking-tight">Suas metas</h2>
               <p className="muted mt-0.5 text-[0.8125rem]">
@@ -125,7 +125,7 @@ export default async function GoalsPage() {
         </div>
 
         <div className="lg:sticky lg:top-6 lg:self-start">
-          <Card>
+          <Card className="min-w-0">
             <CardHeader
               title="Nova meta"
               subtitle={

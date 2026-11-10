@@ -43,7 +43,7 @@ export function PendingPanel({
   }
 
   return (
-    <Card className="border-[var(--border)]">
+    <Card className="min-w-0 border-[var(--border)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[var(--color-save-soft)] text-[var(--text-brand)]">
@@ -59,7 +59,7 @@ export function PendingPanel({
             </p>
           </div>
         </div>
-        <Button onClick={() => generate()} disabled={busy}>
+        <Button className="min-h-11 min-w-11" onClick={() => generate()} disabled={busy}>
           {busy ? "Lançando..." : "Lançar todas"}
         </Button>
       </div>
@@ -85,7 +85,7 @@ export function PendingPanel({
               type="button"
               onClick={() => generate(p.id)}
               disabled={busy}
-              className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--surface-2)]"
+              className="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-[var(--text-brand)] hover:bg-[var(--surface-2)]"
             >
               lançar
             </button>

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createDebt, type ActionState } from "@/server/actions/debts";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Field, MoneyInput, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { DEBT_KIND_LABEL, TYPICAL_RATES } from "@/lib/debts";
 
@@ -34,7 +34,7 @@ export function DebtComposer() {
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
       <Field label="Tipo">
-        <Select name="kind" value={kind} onChange={(e) => onKindChange(e.target.value)}>
+        <Select className="min-h-12 min-w-0 max-w-full text-base!" name="kind" value={kind} onChange={(e) => onKindChange(e.target.value)}>
           {Object.entries(DEBT_KIND_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -44,15 +44,15 @@ export function DebtComposer() {
       </Field>
 
       <Field label="Nome">
-        <Input name="name" required placeholder="Ex.: Rotativo Nubank" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required placeholder="Ex.: Rotativo Nubank" />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Saldo devedor (R$)">
-          <Input name="balance" inputMode="decimal" required placeholder="0,00" />
+          <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="balance" inputMode="decimal" required placeholder="0,00" />
         </Field>
         <Field label="Juros ao mês (%)" hint="Está na fatura ou no contrato.">
-          <Input
+          <Input className="min-h-12 min-w-0 max-w-full text-base!"
             name="rate"
             inputMode="decimal"
             value={rate}
@@ -63,19 +63,19 @@ export function DebtComposer() {
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Parcela mínima (R$)">
-          <Input name="minimum" inputMode="decimal" placeholder="0,00" />
+          <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="minimum" inputMode="decimal" placeholder="0,00" />
         </Field>
         <Field label="Vence no dia">
-          <Input name="dueDay" type="number" min={1} max={31} defaultValue={10} required />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="dueDay" type="number" min={1} max={31} defaultValue={10} required />
         </Field>
       </div>
 
       <Field label="Credor (opcional)">
-        <Input name="creditor" placeholder="Ex.: Banco Inter" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="creditor" placeholder="Ex.: Banco Inter" />
       </Field>
 
       <Field label="Observação (opcional)">
-        <Textarea name="note" placeholder="Ex.: renegociar em novembro" />
+        <Textarea className="min-h-12 min-w-0 max-w-full text-base!" name="note" placeholder="Ex.: renegociar em novembro" />
       </Field>
 
       {state.error ? (
@@ -84,7 +84,7 @@ export function DebtComposer() {
         </p>
       ) : null}
 
-      <SubmitButton className="w-full" pendingLabel="Salvando...">
+      <SubmitButton className="min-h-11 min-w-11 w-full" pendingLabel="Salvando...">
         Adicionar dívida
       </SubmitButton>
     </form>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Award, CalendarCheck } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/field";
+import { Field, MoneyInput, Input } from "@/components/ui/field";
 import { Hint } from "@/components/ui/hint";
 import { ProjectionChart } from "@/components/charts/projection-chart";
 import { VIZ } from "@/components/charts/palette";
@@ -44,7 +44,7 @@ export function PayoffPlanner({
   const impossible = avalanche.impossible ?? snowball.impossible;
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader
         title="Plano de quitação"
         subtitle="Quanto você consegue pagar por mês além dos mínimos muda tudo. Mexa no valor e compare."
@@ -56,7 +56,7 @@ export function PayoffPlanner({
           hint={`Os mínimos já somam ${formatCents(totalMinimumCents)}.`}
           className="max-w-64"
         >
-          <Input value={extra} onChange={(e) => setExtra(e.target.value)} inputMode="decimal" />
+          <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" value={extra} onChange={(e) => setExtra(e.target.value)} inputMode="decimal" />
         </Field>
 
         {impossible ? (
@@ -163,7 +163,7 @@ function StrategyCard({
         <p className="text-[0.875rem] font-semibold">{title}</p>
         {winner ? (
           <span
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium"
             style={{
               color: textColor,
               background: `color-mix(in srgb, ${color} 12%, transparent)`,

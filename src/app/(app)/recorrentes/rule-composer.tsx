@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createRecurringRule, type ActionState } from "@/server/actions/recurring";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Field, MoneyInput, Input, Select, Textarea } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { monthRefToParam, type MonthRef } from "@/lib/dates";
@@ -54,14 +54,14 @@ export function RuleComposer({
               setKind(k);
               setCategoryId("");
             }}
-            className={cn(
+            className={["min-h-11 min-w-11", cn(
               "cursor-pointer rounded-[var(--radius-button)] py-2 text-[0.8125rem] font-medium transition-colors",
               kind === k
                 ? k === "EXPENSE"
-                  ? "bg-[var(--btn-out)] text-white shadow-sm"
-                  : "bg-[var(--btn-in)] text-white shadow-sm"
+                  ? "bg-[var(--btn-out)] text-[var(--on-acento)] shadow-sm"
+                  : "bg-[var(--btn-in)] text-[var(--on-acento)] shadow-sm"
                 : "hover:bg-[var(--surface)] text-[var(--text-muted)]",
-            )}
+            )].filter(Boolean).join(" ")}
           >
             {k === "EXPENSE" ? "Sai todo mês" : "Entra todo mês"}
           </button>
@@ -71,20 +71,20 @@ export function RuleComposer({
       <input type="hidden" name="nature" value={nature} />
 
       <Field label="Descrição">
-        <Input name="description" required placeholder="Ex.: Aluguel" />
+        <Input className="min-h-12 min-w-0 max-w-full text-base!" name="description" required placeholder="Ex.: Aluguel" />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Valor (R$)">
-          <Input name="amount" inputMode="decimal" required placeholder="0,00" />
+          <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="amount" inputMode="decimal" required placeholder="0,00" />
         </Field>
         <Field label="Dia do mês" hint="Meses curtos usam o último dia.">
-          <Input name="dayOfMonth" type="number" min={1} max={31} defaultValue={5} required />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="dayOfMonth" type="number" min={1} max={31} defaultValue={5} required />
         </Field>
       </div>
 
       <Field label="Categoria">
-        <Select name="categoryId" value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
+        <Select className="min-h-12 min-w-0 max-w-full text-base!" name="categoryId" value={categoryId} onChange={(e) => onCategoryChange(e.target.value)}>
           <option value="">Sem categoria</option>
           {visible.map((c) => (
             <option key={c.id} value={c.id}>
@@ -95,7 +95,7 @@ export function RuleComposer({
       </Field>
 
       <Field label="Conta">
-        <Select name="accountId" required defaultValue={accounts[0]?.id ?? ""}>
+        <Select className="min-h-12 min-w-0 max-w-full text-base!" name="accountId" required defaultValue={accounts[0]?.id ?? ""}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -113,15 +113,15 @@ export function RuleComposer({
       */}
       <div className="space-y-3">
         <Field label="Começa em">
-          <Input name="startMonth" type="month" required defaultValue={monthRefToParam(monthRef)} />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="startMonth" type="month" required defaultValue={monthRefToParam(monthRef)} />
         </Field>
         <Field label="Até (opcional)" hint="Deixe vazio para não ter fim.">
-          <Input name="endMonth" type="month" />
+          <Input className="min-h-12 min-w-0 max-w-full text-base!" name="endMonth" type="month" />
         </Field>
       </div>
 
       <Field label="Observação (opcional)">
-        <Textarea name="notes" placeholder="Ex.: reajusta em janeiro" />
+        <Textarea className="min-h-12 min-w-0 max-w-full text-base!" name="notes" placeholder="Ex.: reajusta em janeiro" />
       </Field>
 
       {state.error ? (
@@ -130,7 +130,7 @@ export function RuleComposer({
         </p>
       ) : null}
 
-      <SubmitButton className="w-full" pendingLabel="Criando...">
+      <SubmitButton className="min-h-11 min-w-11 w-full" pendingLabel="Criando...">
         Criar recorrência
       </SubmitButton>
     </form>

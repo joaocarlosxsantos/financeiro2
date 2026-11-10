@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
-import { Input } from "@/components/ui/field";
+import { MoneyInput, Input } from "@/components/ui/field";
 import { formatCents } from "@/lib/money";
 import { monthsToTarget, monthsOfRunway } from "@/lib/finance";
 import { GoalRecurringControl, type PlainGoalRecurringRule } from "./goal-recurring-control";
@@ -38,7 +38,7 @@ export function EmergencyPanel({
   const done = target > 0 && saved >= target;
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <div className="mb-5 flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-save-soft)] text-[var(--color-save)]">
           <LifeBuoy className="size-5" />
@@ -53,14 +53,14 @@ export function EmergencyPanel({
       </div>
 
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="tnum text-3xl font-semibold tracking-tight">{formatCents(saved)}</span>
+        <span className="tnum max-w-full break-words text-hero font-medium tracking-tight">{formatCents(saved)}</span>
         <span className="muted tnum text-[0.875rem]">meta: {formatCents(target)}</span>
       </div>
       <Progress
         label="Progresso da reserva de emergência"
         value={target ? (saved / target) * 100 : 0}
         color="var(--color-save)"
-        height={12}
+        height={6}
       />
 
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -81,12 +81,12 @@ export function EmergencyPanel({
         >
           <div className="min-w-40 flex-1">
             <label className="mb-1.5 block text-[0.8125rem] font-medium">Registrar aporte</label>
-            <Input name="amount" inputMode="decimal" placeholder="0,00" required />
+            <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="amount" inputMode="decimal" placeholder="0,00" required />
           </div>
-          <Button type="submit" name="mode" value="add">
+          <Button className="min-h-11 min-w-11" type="submit" name="mode" value="add">
             Guardar
           </Button>
-          <Button
+          <Button className="min-h-11 min-w-11"
             type="submit"
             name="mode"
             value="withdraw"
@@ -99,7 +99,7 @@ export function EmergencyPanel({
         </form>
       ) : (
         <div className="mt-5">
-          <Button
+          <Button className="min-h-11 min-w-11"
             disabled={pending || target <= 0}
             onClick={() => start(async () => void (await upsertEmergencyGoal(target)))}
           >
