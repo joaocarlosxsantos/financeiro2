@@ -657,8 +657,8 @@ export async function getTransferCounterparts(
   return map;
 }
 
-export async function getTotalSavedCents(userId: string): Promise<number> {
-  const [row] = await db
+export async function getTotalSavedCents(userId: string, connection: Pick<typeof db, "select"> = db): Promise<number> {
+  const [row] = await connection
     .select({ total: sql<number>`coalesce(sum(${goalsTable.savedCents}), 0)::int` })
     .from(goalsTable)
     .where(and(eq(goalsTable.userId, userId), eq(goalsTable.archived, false)));
@@ -1071,9 +1071,9 @@ export type BalancesOverview = {
   totalIncomplete: boolean;
 };
 
-export async function getBalances(userId: string): Promise<BalancesOverview> {
+export async function getBalances(userId: string, connection: Pick<typeof db, "select"> = db): Promise<BalancesOverview> {
   const accountRows = (
-    await db
+    await connection
       .select()
       .from(accountsTable)
       .where(and(eq(accountsTable.userId, userId), eq(accountsTable.archived, false)))
@@ -1094,7 +1094,7 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
 
   const [movements, savedInGoals, debtRows] = await Promise.all([
     // Só contam os lançamentos a partir da data do saldo inicial de cada conta.
-    db
+    connection
       .select({
         accountId: txTable.accountId,
         kind: txTable.kind,
@@ -1112,9 +1112,9 @@ export async function getBalances(userId: string): Promise<BalancesOverview> {
       )
       .groupBy(txTable.accountId, txTable.kind),
 
-    getTotalSavedCents(userId),
+    getTotalSavedCents(userId, connection),
 
-    db
+    connection
       .select({ total: sql<number>`coalesce(sum(${debtsTable.balanceCents}), 0)::int` })
       .from(debtsTable)
       .where(and(eq(debtsTable.userId, userId), eq(debtsTable.archived, false))),

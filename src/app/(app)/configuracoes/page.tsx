@@ -7,6 +7,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ProfileForm } from "./profile-form";
 import { AccountsPanel } from "./accounts-panel";
 import { CategoriesPanel } from "./categories-panel";
+import { TelegramPanel } from "./telegram-panel";
 import { BackupButton } from "./backup-button";
 import Link from "next/link";
 
@@ -28,6 +29,10 @@ export default async function SettingsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 lg:col-span-2">
+          <CardHeader title="Telegram" subtitle="Vincule seu chat privado ao Mutano Contas." />
+          <TelegramPanel />
+        </Card>
         {canUseCapability(user.usageProfile, "integration") && (<Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Open Finance" subtitle="Conecte o Pluggy e escolha a fonte de cada conta." />
           <div className="p-4 pt-0"><Link className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--text-brand)] underline" href="/configuracoes/integracao">Configurar integração</Link></div>

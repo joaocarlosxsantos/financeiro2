@@ -77,6 +77,59 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Telegram: credenciais de vínculo nunca são armazenadas em texto puro. */
+export const telegramLinkCodes = pgTable("telegram_link_codes", {
+  userId: varchar("user_id", { length: 32 }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  codeHash: varchar("code_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
+
+export const telegramLinks = pgTable("telegram_links", {
+  userId: varchar("user_id", { length: 32 }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  chatId: text("chat_id").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Uma linha por chat: limite distribuído e proteção contra replay. */
+export const telegramChatState = pgTable("telegram_chat_state", {
+  chatId: text("chat_id").primaryKey(),
+  lastUpdateId: integer("last_update_id").notNull(),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+  requestCount: integer("request_count").notNull(),
+});
+
+export const telegramPreferences = pgTable("telegram_preferences", {
+  userId: varchar("user_id", { length: 32 }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  enabled: boolean("enabled").notNull().default(false),
+  hours: integer("hours").array().notNull().default([8, 14, 20]),
+  summary: boolean("summary").notNull().default(true),
+  spending: boolean("spending").notNull().default(true),
+  dueBills: boolean("due_bills").notNull().default(true),
+  budget: boolean("budget").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [check("telegram_preferences_hours_chk", sql`cardinality(${t.hours}) between 1 and 3 and ${t.hours} <@ ARRAY[8,14,20]::integer[]`)]);
+
+/** Limite distribuído de perguntas: nenhuma mensagem ou dado financeiro persistido. */
+export const telegramAiUsage = pgTable("telegram_ai_usage", {
+  chatId: text("chat_id").primaryKey().references(() => telegramChatState.chatId, { onDelete: "cascade" }),
+  day: varchar("day", { length: 10 }).notNull(),
+  dayCount: integer("day_count").notNull(),
+  minuteStartedAt: timestamp("minute_started_at", { withTimezone: true }).notNull(),
+  minuteCount: integer("minute_count").notNull(),
+});
+
+/** Reserva antes do envio: uma tentativa por usuário/janela, inclusive após timeout. */
+export const telegramDeliveries = pgTable("telegram_deliveries", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  windowKey: varchar("window_key", { length: 13 }).notNull(),
+  status: text("status").notNull().default("CLAIMED"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("telegram_deliveries_user_window_key").on(t.userId, t.windowKey),
+  check("telegram_deliveries_status_chk", sql`${t.status} in ('CLAIMED', 'SENT', 'FAILED', 'CANCELLED')`),
+]);
+
 export const accounts = pgTable(
   "accounts",
   {

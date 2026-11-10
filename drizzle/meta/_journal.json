@@ -134,6 +134,34 @@
       "when": 1794002887028,
       "tag": "0018_categorization_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794330630548,
+      "tag": "0019_telegram_b1",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794331329504,
+      "tag": "0020_telegram_insights_b2",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794332040374,
+      "tag": "0021_user_usage_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794332959352,
+      "tag": "0022_telegram_ai_usage",
+      "breakpoints": true
     }
   ]
 }
