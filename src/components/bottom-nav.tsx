@@ -40,9 +40,9 @@ export function BottomNav({ onNew }: { onNew: () => void }) {
   const itemClass = "relative flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-medium";
   function destination(item: typeof mainDestinations[number]) {
     const active = isDestinationActive(pathname, item.href);
-    return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined}
+    return <Link key={item.href} href={item.href} aria-label={item.label} title={item.label} aria-current={active ? "page" : undefined}
       className={cn(itemClass, active ? "text-[var(--text)] before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-[var(--acento)]" : "text-[var(--text-subtle)]")}>
-      <item.icon aria-hidden="true" className="size-6" strokeWidth={1.5} />{item.label}
+      <item.icon aria-hidden="true" className="size-6" strokeWidth={1.5} /><span className="max-w-full truncate px-0.5">{item.href === "/lancamentos" ? "Extrato" : item.label}</span>
     </Link>;
   }
   return <>

@@ -55,7 +55,7 @@ export function GoalCard({
         <span className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ background: "var(--text-info)" }} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[0.9375rem] font-semibold">{goal.name}</h3>
+            <h3 title={goal.name} className="min-w-0 break-words text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{goal.name}</h3>
             <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium ring-1 ring-[var(--border)] ring-inset">
               {KIND_LABEL[goal.kind] ?? "Meta"}
             </span>
@@ -106,7 +106,7 @@ export function GoalCard({
       )}
 
       <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="tnum text-lg font-semibold">{formatCents(goal.savedCents)}</span>
+        <span className="tnum break-all text-lg font-semibold">{formatCents(goal.savedCents)}</span>
         <span className="muted tnum text-[0.8125rem]">
           {pct(goal.savedCents, goal.targetCents)}% de {formatCents(goal.targetCents)}
         </span>

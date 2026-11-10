@@ -119,7 +119,7 @@ export function ProjectionStudio({
                 <p className="text-[0.8125rem] font-medium">{f.name}</p>
                 <span className="muted ml-auto text-xs">{f.rate}% a.a.</span>
               </div>
-              <p className="tnum text-xl font-semibold tracking-tight">{formatCents(f.finalCents)}</p>
+              <p className="tnum break-all text-[clamp(1rem,2vw,1.25rem)] font-semibold tracking-tight">{formatCents(f.finalCents)}</p>
               <p className="muted mt-1 text-xs leading-snug">{f.desc}</p>
             </Card>
           ))}
@@ -149,7 +149,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border p-3.5">
       <p className="muted text-xs">{label}</p>
-      <p className="tnum mt-0.5 text-[0.9375rem] font-semibold">{value}</p>
+      <p className="tnum break-all mt-0.5 text-[0.9375rem] font-semibold">{value}</p>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { MonthSwitcher } from "@/components/month-switcher";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Hint } from "@/components/ui/hint";
 import { Progress } from "@/components/ui/progress";
+import { Money } from "@/components/ui/money";
 import { BudgetList } from "./budget-list";
 import { BudgetStarters } from "./budget-starters";
 
@@ -43,8 +44,8 @@ export default async function BudgetPage({
         action={<MonthSwitcher value={ref} />}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
           {!hasBudgets ? (
             <Card className="min-w-0">
               <CardHeader
@@ -107,17 +108,15 @@ export default async function BudgetPage({
           ) : null}
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <div className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card className="min-w-0">
             <CardHeader
               title="Resumo do mês"
               subtitle="Considera só o gasto das categorias que têm limite."
             />
 
-            <div className="mb-2 flex items-baseline justify-between gap-3">
-              <span className="tnum max-w-full break-words text-hero font-medium tracking-tight">
-                {formatCents(overview.budgetedSpentCents)}
-              </span>
+            <div className="mb-2 flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <Money cents={overview.budgetedSpentCents} size="hero" />
               <span className="muted tnum text-[0.8125rem]">
                 de {formatCents(overview.totalLimitCents)} orçados
               </span>

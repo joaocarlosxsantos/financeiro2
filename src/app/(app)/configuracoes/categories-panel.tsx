@@ -138,16 +138,16 @@ function Group({
             <div className="flex items-center gap-3">
               <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[0.875rem] font-medium">
+                <p title={c.name} className="break-words text-[0.875rem] font-medium [overflow-wrap:anywhere]">
                   {c.name}
                   {c.kind === "EXPENSE" ? (
-                    <span className="muted ml-2 text-xs font-normal">
+                    <span className="muted block text-xs font-normal">
                       {c.nature === "FIXED" ? "fixo" : "variável"}
                     </span>
                   ) : null}
                 </p>
                 {c.keywords.length ? (
-                  <p className="muted truncate text-xs">{c.keywords.slice(0, 6).join(", ")}</p>
+                  <p title={c.keywords.join(", ")} className="muted break-words text-xs [overflow-wrap:anywhere]">{c.keywords.slice(0, 6).join(", ")}</p>
                 ) : null}
               </div>
               <button

@@ -45,7 +45,7 @@ function Row({ debt }: { debt: Debt }) {
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[0.9375rem] font-semibold">{debt.name}</h3>
+            <h3 title={debt.name} className="min-w-0 break-words text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{debt.name}</h3>
             {DEBT_KIND_LABEL[debt.kind] &&
             DEBT_KIND_LABEL[debt.kind].toLowerCase() !== debt.name.trim().toLowerCase() ? (
               <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium ring-1 ring-[var(--border)] ring-inset">

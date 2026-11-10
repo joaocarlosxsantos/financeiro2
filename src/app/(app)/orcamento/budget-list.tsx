@@ -81,19 +81,19 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
 
   return (
     <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
-      <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="mb-2.5 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
         <span className="size-2.5 shrink-0 rounded-full" style={{ background: row.color }} />
-        <span className="text-[0.875rem] font-medium">{row.name}</span>
+        <span title={row.name} className="min-w-0 truncate text-[0.875rem] font-medium">{row.name}</span>
         {row.nature === "FIXED" ? (
           <span className="muted rounded-md bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium ring-1 ring-[var(--border)] ring-inset">
             fixo
           </span>
         ) : null}
 
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <span className="tnum text-[0.875rem] font-semibold">{formatCents(row.spentCents)}</span>
+        <div className="col-span-3 flex min-w-0 flex-wrap items-center gap-2">
+          <span className="tnum w-full break-all text-[0.875rem] font-semibold sm:w-auto">{formatCents(row.spentCents)}</span>
           <span className="muted text-[0.8125rem]">de</span>
-          <div className="relative">
+          <div className="relative min-w-0 flex-1 sm:ml-auto sm:flex-none">
             <span className="muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs">
               R$
             </span>
@@ -107,7 +107,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
               inputMode="decimal"
               placeholder="sem limite"
               aria-label={`Limite mensal de ${row.name}`}
-              className="min-h-12 min-w-0 max-w-full text-base! input-base tnum h-9 w-24 py-0 pl-8 text-right text-[0.8125rem] sm:w-32"
+              className="input-base tnum min-h-12 min-w-0 max-w-full w-full py-0 pl-8 text-right text-base! sm:w-40"
             />
           </div>
           <span className="w-4 shrink-0">
@@ -124,7 +124,7 @@ function Row({ row, monthRef }: { row: BudgetRow; monthRef: MonthRef }) {
             color={color}
             height={7}
           />
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs [overflow-wrap:anywhere]">
             <span className="tnum font-medium" style={{ color: textColor }}>
               {row.usedPct}% do limite
             </span>

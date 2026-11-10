@@ -66,8 +66,8 @@ function Row({ account }: { account: Account }) {
   const negativo = account.balanceCents < 0;
 
   return (
-    <li className={cn("px-5 py-4 transition-opacity", pending && "opacity-50")}>
-      <div className="flex flex-wrap items-center gap-3">
+    <li className={cn("px-3 py-3 transition-opacity sm:px-5 sm:py-4", pending && "opacity-50")}>
+      <div className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-3 sm:flex sm:flex-wrap">
         <span
           className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-2)] text-[var(--text)]"
         >
@@ -75,15 +75,15 @@ function Row({ account }: { account: Account }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[0.875rem] font-medium">{account.name}</p>
-          <p className="muted truncate text-xs">
+          <p title={account.name} className="truncate text-[0.875rem] font-medium">{account.name}</p>
+          <p className="muted break-words text-xs [overflow-wrap:anywhere]">
             {TYPE_LABEL[account.type] ?? account.type}
             {account.institution ? ` · ${account.institution}` : ""}
             {` · ${account.transactionCount} lançamento(s)`}
           </p>
         </div>
 
-        <div className="text-right">
+        <div className="col-start-2 min-w-0 max-w-full sm:text-right">
           {account.financeMode === "integracao" && account.bankBalanceCents === null ? <span className="text-sm font-medium">Indisponível</span> : <Money
             cents={account.balanceCents}
             size="md"

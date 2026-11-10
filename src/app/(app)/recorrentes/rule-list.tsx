@@ -69,7 +69,7 @@ function Row({ rule }: { rule: Rule }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-[0.875rem] font-medium">{rule.description}</span>
+          <span title={rule.description} className="min-w-0 truncate text-[0.875rem] font-medium">{rule.description}</span>
           <span className={cn("rounded-md px-1.5 py-0.5 text-xs font-medium", status.className)}>
             {status.label}
           </span>
