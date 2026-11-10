@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sheet } from "@/components/sheet";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Plus, RefreshCw, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronRight,
+  CreditCard,
+  Plus,
+  ReceiptText,
+  RefreshCw,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { Button, SubmitButton } from "@/components/ui/button";
+import { Sheet } from "@/components/sheet";
 import { formatCents } from "@/lib/money";
 import { Field, Input, Select } from "@/components/ui/field";
 import {
@@ -22,7 +31,21 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Setup = Awaited<ReturnType<typeof import("@/server/actions/open-finance").getOpenFinanceSetup>>;
 type Remote = { id: string; name: string; type: "BANK" | "CREDIT"; currency: string };
-type SyncAccountSummary = { accountName: string; accountType: string; read: number; ignoredByDate: number; ignoredByTombstone: number; ignoredByType: number; invalid: number; inserted: number; updated: number; status: string; error?: string };
+type SyncAccountSummary = {
+  accountName: string;
+  accountType: string;
+  read: number;
+  ignoredByDate: number;
+  ignoredByTombstone: number;
+  ignoredByType: number;
+  invalid: number;
+  inserted: number;
+  updated: number;
+  status: string;
+  error?: string;
+};
+
+type ActiveSheet = "new" | "accounts" | "sync_details" | "manage" | null;
 
 export function IntegrationPanel({ initial }: { initial: Setup }) {
   const router = useRouter();
@@ -33,23 +56,24 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
   const [remote, setRemote] = useState<Remote[]>([]);
   const [remoteSelection, setRemoteSelection] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
-  const [syncSummary, setSyncSummary] = useState<{ status: string; imported: number; error?: string; accounts: SyncAccountSummary[] } | null>(null);
+  const [syncSummary, setSyncSummary] = useState<{
+    status: string;
+    imported: number;
+    error?: string;
+    accounts: SyncAccountSummary[];
+  } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
   const [fromDate, setFromDate] = useState(() => `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`);
 
-
-
   useEffect(() => {
-// eslint-disable-next-line react-hooks/set-state-in-effect -- Apply refreshed server setup props and repair a connection selection that no longer exists.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Apply refreshed server setup props and repair a connection selection that no longer exists.
     setSetup(initial);
     if (!initial.connections.some((c) => c.id === connectionId)) {
       setConnectionId(initial.connections[0]?.id ?? "");
       setRemote([]);
     }
   }, [initial, connectionId]);
-
-
 
   const activeConnection = setup.connections.find((c) => c.id === connectionId) ?? setup.connections[0];
 
@@ -68,12 +92,14 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       return setMessage(result.error);
     }
 
-    const inputs = document.querySelectorAll<HTMLInputElement>('input[name="clientId"], input[name="clientSecret"], input[name="itemId"], input[name="label"]');
+    const inputs = document.querySelectorAll<HTMLInputElement>(
+      'input[name="clientId"], input[name="clientSecret"], input[name="itemId"], input[name="label"]',
+    );
     inputs.forEach((input) => {
       input.value = "";
     });
 
-    setIsNewModalOpen(false);
+    setActiveSheet(null);
     setMessage("Conexão salva com sucesso. Os campos de credenciais foram limpos.");
     router.refresh();
   }
@@ -84,7 +110,10 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
     const result = await discoverOpenFinanceAccounts(activeConnection.id);
     setBusy(false);
     if (result.error) setMessage(result.error);
-    else { setRemote(result.accounts ?? []); setRemoteSelection({}); }
+    else {
+      setRemote(result.accounts ?? []);
+      setRemoteSelection({});
+    }
   }
 
   async function readDeletionCounts(id: string) {
@@ -119,6 +148,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       return;
     }
 
+    setActiveSheet(null);
     setMessage(`${result.transactions} lançamento(s), ${result.invoices} fatura(s) e ${result.tombstones} bloqueio(s) excluídos com sucesso.`);
     router.refresh();
   }
@@ -154,6 +184,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       return;
     }
 
+    setActiveSheet(null);
     setMessage(
       deleteImported
         ? `Conexão removida com sucesso e ${result.deletedTransactions} lançamento(s) apagados.`
@@ -174,508 +205,629 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
     setBusy(true);
     const result = await removeOpenFinanceCredentials({ confirmation: "REMOVER CREDENCIAIS" });
     setBusy(false);
+    setActiveSheet(null);
     setMessage(result.error ? result.error : "Credenciais removidas com sucesso.");
     router.refresh();
   }
 
   const hasConnections = setup.connections.length > 0;
+  const linkedAccountsCount = setup.accounts.filter((a) => a.financeMode === "integracao").length;
 
   return (
-    <div className="max-w-3xl space-y-6">
-      {/* Topo / Destaque quando há conexões vinculadas */}
-      {hasConnections ? (
-        <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              {setup.connections.length > 1 ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-[var(--text-muted)]">Conexão:</span>
-                  <Select
-                    aria-label="Conexão ativa"
-                    value={activeConnection?.id ?? ""}
-                    onChange={(e) => {
-                      setConnectionId(e.target.value);
-                      setRemote([]);
-                      setRemoteSelection({});
-                    }}
-                    className="min-h-12 min-w-0 max-w-full text-base! h-9 text-xs"
-                  >
-                    {setup.connections.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label || "Sem nome"} ({c.status})
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              ) : null}
-            </div>
-
-            <Button
-              type="button"
-              onClick={() => setIsNewModalOpen(true)}
-              className="min-h-11 min-w-11 gap-1.5 self-start sm:self-auto"
-            >
-              <Plus className="size-4" />
-              Nova Conexão
-            </Button>
-          </div>
-
-          {/* Card Principal: Conexão Ativa e Contas Vinculadas */}
-          {activeConnection ? (
-            <section className="space-y-5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xs">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--line)] pb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-semibold text-[var(--text)]">
-                      {activeConnection.label || "Conexão sem nome"}
-                    </h2>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        activeConnection.status === "UPDATED"
-                          ? "bg-[var(--in-soft)] text-[var(--text-in)] dark:text-[var(--text-in)] border border-[var(--line-strong)]"
-                          : activeConnection.lastErrorMessage
-                          ? "bg-[var(--out-soft)] text-[var(--text-out)] dark:text-[var(--text-out)] border border-[var(--line-strong)]"
-                          : "bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--border)]"
-                      }`}
-                    >
-                      {activeConnection.status === "UPDATED" ? "Sincronizado" : activeConnection.status}
-                    </span>
-                  </div>
-                  <p className="muted text-xs">
-                    Última sincronização bem-sucedida:{" "}
-                    <span className="font-medium text-[var(--text)]">
-                      {activeConnection.lastSyncedAt
-                        ? new Date(activeConnection.lastSyncedAt).toLocaleString("pt-BR")
-                        : "Nenhuma leitura concluída"}
-                    </span>
-                  </p>
-                </div>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={async () => {
-                    setBusy(true);
-                    setMessage("");
-                    setSyncSummary(null);
-                    const result = await syncOpenFinance(activeConnection.id);
-                    setBusy(false);
-                    setSyncSummary({ status: result.status ?? (result.error ? "ERROR" : "UPDATED"), imported: result.imported ?? 0, error: result.error, accounts: result.accounts ?? [] });
-                    setMessage(result.error ?? `${result.imported} linha(s) lidas e atualizadas.`);
-                    router.refresh();
-                  }}
-                  disabled={busy}
-                  className="min-h-11 min-w-11 gap-1.5 shrink-0"
-                >
-                  <RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`} />
-                  Sincronizar agora
-                </Button>
-              </div>
-
-              {activeConnection.lastErrorMessage ? (
-                <div className="flex items-start gap-2 rounded-lg bg-[var(--out-soft)] border border-[var(--line-strong)] p-3 text-xs text-[var(--text-out)] dark:text-[var(--text-out)]">
-                  <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="font-semibold">Erro na última leitura:</strong>{" "}
-                    <span>{activeConnection.lastErrorMessage}</span>
-                  </div>
-                </div>
-              ) : null}
-
-              {syncSummary ? (
-                <section aria-live="polite" className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-[var(--text)]">Resumo da última sincronização</h3>
-                    <span className="text-xs text-[var(--text-muted)]">Status: {syncSummary.status} · {syncSummary.imported} inseridos/atualizados</span>
-                  </div>
-                  {syncSummary.error ? <p className="text-xs text-[var(--text-out)] dark:text-[var(--text-out)]">{syncSummary.error}</p> : null}
-                  {syncSummary.accounts.length ? syncSummary.accounts.map((account, index) => (
-                    <div key={`${account.accountName}-${index}`} className="space-y-1 border-t border-[var(--border)] pt-3 text-xs">
-                      <div className="flex flex-wrap justify-between gap-2 font-medium text-[var(--text)]">
-                        <span>{account.accountName} · {account.accountType}</span>
-                        <span>{account.status}</span>
-                      </div>
-                      <p className="text-[var(--text-muted)]">
-                        Lidos: {account.read} · Ignorados por data: {account.ignoredByDate} · Bloqueados por exclusão: {account.ignoredByTombstone} · Tipo não importado: {account.ignoredByType} · Inválidos: {account.invalid} · Inseridos: {account.inserted} · Atualizados: {account.updated}
-                      </p>
-                      {account.error ? <p className="text-[var(--text-out)] dark:text-[var(--text-out)]">{account.error}</p> : null}
-                    </div>
-                  )) : <p className="text-xs text-[var(--text-muted)]">Nenhuma conta local vinculada a esta conexão.</p>}
-                </section>
-              ) : null}
-
-              {/* Contas Vinculadas */}
-              <div className="space-y-3 pt-1">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-[var(--text)]">Contas Vinculadas</h3>
-                    <p className="muted text-xs">Associe as contas descobertas na Pluggy às suas contas locais.</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void loadAccounts()}
-                    disabled={busy}
-                    className="min-h-11 min-w-11 gap-1.5 self-start sm:self-auto"
-                  >
-                    <RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`} />
-                    Carregar contas Pluggy
-                  </Button>
-                </div>
-
-                {remote.some((account) => account.type === "CREDIT") && !setup.accounts.some((account) => account.type === "CREDIT_CARD") ? (
-                  <div role="status" className="rounded-lg border border-[var(--line-strong)] bg-[var(--warn-soft)] p-3 text-xs text-[var(--text-muted)]">
-                    O item Pluggy tem cartÃ£o de crÃ©dito, mas ainda nÃ£o hÃ¡ uma conta local de cartÃ£o para vinculÃ¡-lo. Em <Link className="inline-flex min-h-11 items-center font-medium text-[var(--text-brand)] underline" href="/configuracoes">ConfiguraÃ§Ãµes → Contas e cartÃµes → Nova conta</Link>, crie uma conta do tipo &ldquo;CartÃ£o de crÃ©dito&rdquo; e volte para selecionÃ¡-la aqui.
-                  </div>
-                ) : null}
-
-                {remote.length ? (
-                  <ul className="space-y-3">
-                    {setup.accounts.map((a) => (
-                      <li
-                        key={a.id}
-                        className="grid gap-2 rounded-lg bg-[var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_1fr_auto] sm:items-end"
-                      >
-                        <label htmlFor={`remote-${a.id}`} className="text-sm font-medium text-[var(--text)]">
-                          {a.name}
-                          <span className="muted block text-xs font-normal">
-                            {a.type === "CREDIT_CARD" ? "Cartão de Crédito" : "Conta Bancária"} · modo{" "}
-                            <strong className={a.financeMode === "integracao" ? "text-[var(--text-in)] dark:text-[var(--text-in)] font-medium" : "text-[var(--text-muted)] font-normal"}>
-                              {a.financeMode === "integracao" ? "automático (Pluggy)" : "manual"}
-                            </strong>
-                            {a.type === "CREDIT_CARD" && a.creditLimitCents !== null
-                              ? ` · limite ${formatCents(a.creditLimitCents ?? 0)} (${a.availableCreditCents === null ? "disponível indisponível" : `${formatCents(a.availableCreditCents)} disponível`})`
-                              : ""}
-                          </span>
-                        </label>
-                        <select
-                          className="min-h-12 min-w-0 max-w-full text-base! h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]"
-                          id={`remote-${a.id}`}
-                          value={remoteSelection[a.id] ?? a.externalAccountId ?? ""}
-                          onChange={(event) => setRemoteSelection((current) => ({ ...current, [a.id]: event.target.value }))}
-                        >
-                          <option value="">Sem vínculo (modo manual)</option>
-                          {remote
-                            .filter((r) => (r.type === "CREDIT") === (a.type === "CREDIT_CARD"))
-                            .map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name} ({r.currency})
-                              </option>
-                            ))}
-                        </select>
-                        <Button className="min-h-11 min-w-11"
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={busy}
-                          onClick={async () => {
-                            const externalAccountId = (remoteSelection[a.id] ?? a.externalAccountId ?? "") || null;
-                            setBusy(true);
-                            const result = await linkOpenFinanceAccount({
-                              accountId: a.id,
-                              connectionId: activeConnection.id,
-                              externalAccountId,
-                              mode: externalAccountId ? "integracao" : "manual",
-                            });
-                            setBusy(false);
-                            setMessage(result.error ?? "Vínculo salvo com sucesso; histórico preservado.");
-                            router.refresh();
-                          }}
-                        >
-                          Salvar modo
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-[var(--border)] p-4 text-center">
-                    <p className="muted text-xs">
-                      Clique em &ldquo;Carregar contas Pluggy&rdquo; acima para listar as contas disponíveis nesta conexão e configurar os vínculos locais.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Faturas Pluggy */}
-              {setup.invoices.length ? (
-                <div className="space-y-2 border-t border-[var(--line)] pt-4">
-                  <h3 className="text-xs font-semibold tracking-normal text-[var(--text-muted)]">Faturas Pluggy</h3>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {setup.invoices.map((invoice) => (
-                      <div
-                        key={`${invoice.accountId}-${invoice.invoiceRef}-${invoice.dueDate.toISOString()}`}
-                        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-xs space-y-1"
-                      >
-                        <p className="font-medium text-[var(--text)]">
-                          {setup.accounts.find((a) => a.id === invoice.accountId)?.name ?? "Cartão"}
-                        </p>
-                        <p className="muted">
-                          Vencimento: {invoice.dueDate.toLocaleDateString("pt-BR")}
-                        </p>
-                        <div className="flex items-center justify-between pt-1 text-[var(--text)] font-medium">
-                          <span>Total: {invoice.totalAmountCents === null ? "indisponível" : formatCents(invoice.totalAmountCents)}</span>
-                          {invoice.minimumPaymentCents !== null ? (
-                            <span className="muted font-normal text-[0.7rem]">
-                              Mínimo: {formatCents(invoice.minimumPaymentCents)}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </section>
-          ) : null}
-
-          {/* Área de Gerenciamento e Exclusão */}
-          {activeConnection ? (
-            <section className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
-              <div className="border-b border-[var(--line)] pb-3">
-                <h2 className="text-sm font-semibold text-[var(--text)]">Administração da Conexão</h2>
-                <p className="muted text-xs">
-                  Gerencie ou remova a conexão &ldquo;{activeConnection.label || "ativa"}&rdquo; e seus dados importados.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-[var(--text)]">Limpar lançamentos importados</p>
-                    <p className="muted text-xs">
-                      Exclui os lançamentos e faturas trazidos da Pluggy por esta conexão, mantendo o vínculo ativo.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void deleteAll(activeConnection)}
-                    className="min-h-11 min-w-11 shrink-0 text-[var(--text-out)] hover:text-[var(--text-out)] hover:bg-[var(--out-soft)]"
-                  >
-                    Excluir dados importados da Pluggy
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-[var(--text)]">Remover conexão (preservar lançamentos)</p>
-                    <p className="muted text-xs">
-                      Desvincula esta conexão, mas mantém todos os lançamentos já importados no seu histórico.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void removeConnection(activeConnection, false)}
-                    className="min-h-11 min-w-11 shrink-0"
-                  >
-                    Remover conexão e manter lançamentos
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-[var(--text-out)] dark:text-[var(--text-out)]">
-                      Remover conexão e excluir lançamentos
-                    </p>
-                    <p className="muted text-xs">
-                      Desvincula esta conexão e apaga todos os lançamentos e faturas originados por ela.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void removeConnection(activeConnection, true)}
-                    className="min-h-11 min-w-11 shrink-0 text-[var(--text-out)] hover:text-[var(--text-out)] hover:bg-[var(--out-soft)]"
-                  >
-                    Remover conexão e excluir lançamentos Pluggy
-                  </Button>
-                </div>
-              </div>
-
-              <div className="border-t border-[var(--line)] pt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-medium text-[var(--text)]">Credenciais Pluggy</p>
-                  <p className="muted text-xs">
-                    {setup.connections.length > 0
-                      ? "Remova todas as conexões antes de apagar as credenciais salvas."
-                      : "Client ID e Client Secret cifrados salvos no banco."}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={busy || setup.connections.length > 0 || !setup.credentialSaved}
-                  onClick={() => void removeCredentials()}
-                  className="min-h-11 min-w-11 shrink-0"
-                >
-                  Remover credenciais
-                </Button>
-              </div>
-            </section>
-          ) : null}
-        </>
-      ) : (
-        /* Primeiro acesso: Formulário direto para cadastrar a primeira conexão */
-        <section className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xs">
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold text-[var(--text)]">Conectar ao Open Finance (Pluggy)</h2>
-            <p className="muted text-xs leading-relaxed">
-              Conecte suas contas bancárias e cartões para sincronizar transações e saldos automaticamente.
-              Os dados de acesso (Client ID, Client Secret e Item ID) são guardados cifrados com chave individual no banco de dados.
-              {setup.credentialSaved
-                ? " Suas credenciais já estão salvas; deixe Client ID e Client Secret em branco para manter os valores salvos."
-                : " Preencha Client ID e Client Secret na primeira conexão."}
-            </p>
-          </div>
-
-          <form action={save} className="space-y-3 pt-2">
-            <Field label="Client ID">
-              <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                name="clientId"
-                placeholder={setup.credentialSaved ? "Salvo (deixe em branco para manter)" : "Informe seu Client ID"}
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="Client Secret">
-              <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                name="clientSecret"
-                type="password"
-                placeholder={setup.credentialSaved ? "•••••••••••• (deixe em branco para manter)" : "Informe seu Client Secret"}
-                autoComplete="new-password"
-              />
-            </Field>
-            <Field label="Item ID (Pluggy)">
-              <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                name="itemId"
-                placeholder="Identificador do item gerado pelo Pluggy Connect"
-                autoComplete="off"
-                required
-              />
-            </Field>
-            <Field label="Nome desta conexão">
-              <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                name="label"
-                placeholder="Ex.: Nubank Principal, Itaú PJ..."
-                maxLength={100}
-              />
-            </Field>
-            <Field label="Data inicial de importação">
-              <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                required
-              />
-            </Field>
-            <p className="muted text-xs">
-              Padrão: dia 1º do mês atual. Lançamentos manuais ou importados via CSV/OFX existentes não serão sobrescritos nem deduplicados automaticamente.
-            </p>
-            <SubmitButton className="min-h-11 min-w-11" disabled={busy}>Salvar e Conectar</SubmitButton>
-          </form>
-        </section>
-      )}
-
-      {/* Mensagem de status */}
+    <div className="max-w-2xl space-y-6">
+      {/* Mensagem de Feedback */}
       {message ? (
         <div
           role="status"
-          className={`flex items-center justify-between gap-2 rounded-lg p-3 text-xs ${
+          className={`flex items-center justify-between gap-3 rounded-xl p-3.5 text-xs ${
             message.toLowerCase().includes("erro") ||
             message.toLowerCase().includes("falha") ||
             message.toLowerCase().includes("confira")
-              ? "bg-[var(--out-soft)] border border-[var(--line-strong)] text-[var(--text-out)] dark:text-[var(--text-out)]"
-              : "bg-[var(--in-soft)] border border-[var(--line-strong)] text-[var(--text-in)] dark:text-[var(--text-in)]"
+              ? "bg-[var(--out-soft)] border border-[var(--line-strong)] text-[var(--text-out)]"
+              : "bg-[var(--in-soft)] border border-[var(--line-strong)] text-[var(--text-in)]"
           }`}
         >
           <span>{message}</span>
           <button
             type="button"
             onClick={() => setMessage("")}
-            className="inline-flex items-center justify-center min-h-11 min-w-11 rounded p-1 hover:bg-black/5 dark:hover:bg-[var(--surface)]"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white/5"
             aria-label="Dispensar aviso"
           >
-            <X className="size-3.5" />
+            <X className="size-4" />
           </button>
         </div>
       ) : null}
 
-      <p className="muted text-xs">
-        Não há atualização em segundo plano do item, rotina agendada (cron), webhook ou widget na interface. As ações apenas leem e sincronizam os dados já processados e disponíveis na Pluggy.
-      </p>
+      {hasConnections && activeConnection ? (
+        <>
+          {/* 1. Status Principal & Ação Primária */}
+          <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 md:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1.5 min-w-0">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span
+                    className={`inline-block size-2.5 rounded-full ${
+                      activeConnection.status === "UPDATED"
+                        ? "bg-[var(--text-in)] shadow-[0_0_8px_rgba(79,214,160,0.4)]"
+                        : activeConnection.lastErrorMessage
+                        ? "bg-[var(--text-out)] shadow-[0_0_8px_rgba(255,122,107,0.4)]"
+                        : "bg-[var(--text-warn)]"
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <h2 className="text-heading font-semibold text-[var(--text)] truncate">
+                    {activeConnection.label || "Conexão sem nome"}
+                  </h2>
+                  <span className="rounded-md border border-[var(--line)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--text-muted)]">
+                    {activeConnection.status === "UPDATED" ? "Conectado" : activeConnection.status}
+                  </span>
+                </div>
 
-      {/* Modal para Adicionar Nova Conexão */}
-      {isNewModalOpen && <Sheet title="Nova conexão Open Finance" onClose={() => setIsNewModalOpen(false)}>
-                <p className="muted text-xs mb-4">
-                  {setup.credentialSaved
-                    ? "Suas credenciais gerais da Pluggy já estão cadastradas. Informe o Item ID e um nome para esta nova conexão (ou preencha novos valores de Client ID e Secret se desejar alterá-los)."
-                    : "Informe suas credenciais da Pluggy e o Item ID gerado pelo Pluggy Connect para iniciar a sincronização."}
+                <p className="text-xs text-[var(--text-muted)]">
+                  {activeConnection.lastSyncedAt
+                    ? `Última sincronização: ${new Date(activeConnection.lastSyncedAt).toLocaleString("pt-BR")}`
+                    : "Nenhuma sincronização concluída"}
                 </p>
 
-                <form action={save} className="space-y-3">
-                  <Field label="Client ID">
-                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                      name="clientId"
-                      placeholder={setup.credentialSaved ? "Salvo (deixe em branco para manter)" : "Informe seu Client ID"}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field label="Client Secret">
-                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                      name="clientSecret"
-                      type="password"
-                      placeholder={setup.credentialSaved ? "•••••••••••• (deixe em branco para manter)" : "Informe seu Client Secret"}
-                      autoComplete="new-password"
-                    />
-                  </Field>
-                  <Field label="Item ID (Pluggy)">
-                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                      name="itemId"
-                      placeholder="Identificador do item Pluggy"
-                      autoComplete="off"
-                      required
-                    />
-                  </Field>
-                  <Field label="Nome desta conexão">
-                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                      name="label"
-                      placeholder="Ex.: Nubank Principal, Itaú PJ..."
-                      maxLength={100}
-                    />
-                  </Field>
-                  <Field label="Data inicial de importação">
-                    <Input className="min-h-12 min-w-0 max-w-full text-base!"
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      required
-                    />
-                  </Field>
-                  <p className="muted text-xs">
-                    Padrão: dia 1º do mês atual. Lançamentos manuais ou importações CSV/OFX existentes não serão apagados.
-                  </p>
-
-                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--line)]">
-                    <Button className="min-h-11 min-w-11"
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsNewModalOpen(false)}
-                      disabled={busy}
+                {setup.connections.length > 1 ? (
+                  <div className="pt-2">
+                    <label htmlFor="conn-selector" className="sr-only">Trocar conexão</label>
+                    <Select
+                      id="conn-selector"
+                      value={activeConnection.id}
+                      onChange={(e) => {
+                        setConnectionId(e.target.value);
+                        setRemote([]);
+                        setRemoteSelection({});
+                      }}
+                      className="h-9 min-h-11 text-xs"
                     >
-                      Cancelar
-                    </Button>
-                    <SubmitButton className="min-h-11 min-w-11" disabled={busy}>Salvar Conexão</SubmitButton>
+                      {setup.connections.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label || "Sem nome"} ({c.status})
+                        </option>
+                      ))}
+                    </Select>
                   </div>
-                </form>
-      </Sheet>}
+                ) : null}
+              </div>
+
+              {/* Ação Primária Única */}
+              <Button
+                type="button"
+                onClick={async () => {
+                  setBusy(true);
+                  setMessage("");
+                  setSyncSummary(null);
+                  const result = await syncOpenFinance(activeConnection.id);
+                  setBusy(false);
+                  setSyncSummary({
+                    status: result.status ?? (result.error ? "ERROR" : "UPDATED"),
+                    imported: result.imported ?? 0,
+                    error: result.error,
+                    accounts: result.accounts ?? [],
+                  });
+                  setMessage(result.error ?? `${result.imported} lançamento(s) atualizados.`);
+                  router.refresh();
+                }}
+                disabled={busy}
+                className="min-h-12 w-full sm:w-auto shrink-0 gap-2 font-medium"
+              >
+                <RefreshCw className={`size-4 ${busy ? "animate-spin" : ""}`} />
+                Sincronizar agora
+              </Button>
+            </div>
+
+            {activeConnection.lastErrorMessage ? (
+              <div className="flex items-start gap-2.5 rounded-xl border border-[var(--line-strong)] bg-[var(--out-soft)] p-3 text-xs text-[var(--text-out)]">
+                <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="font-semibold">Erro na leitura:</strong>{" "}
+                  <span>{activeConnection.lastErrorMessage}</span>
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          {/* 2. Menu Secundário: Linhas de Navegação para Sheets */}
+          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+            <div className="divide-y divide-[var(--line)]">
+              {/* Contas Vinculadas */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSheet("accounts");
+                  if (remote.length === 0) void loadAccounts();
+                }}
+                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                    <CreditCard className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text)]">Contas vinculadas</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">
+                      {linkedAccountsCount > 0
+                        ? `${linkedAccountsCount} conta(s) em sincronização automática`
+                        : "Nenhuma conta local associada à Pluggy"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+              </button>
+
+              {/* Faturas e Resumo de Sincronização */}
+              <button
+                type="button"
+                onClick={() => setActiveSheet("sync_details")}
+                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                    <ReceiptText className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text)]">Histórico e faturas</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">
+                      {setup.invoices.length > 0
+                        ? `${setup.invoices.length} fatura(s) detectada(s) · ver detalhes de importação`
+                        : "Detalhes e contadores da última leitura"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+              </button>
+
+              {/* Adicionar Nova Conexão */}
+              <button
+                type="button"
+                onClick={() => setActiveSheet("new")}
+                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text)]">Adicionar nova conexão</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">
+                      Conectar outro banco ou conta Pluggy
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+              </button>
+
+              {/* Administração da Conexão */}
+              <button
+                type="button"
+                onClick={() => setActiveSheet("manage")}
+                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text-muted)]">
+                    <SlidersHorizontal className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text)]">Gerenciar conexão</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">
+                      Limpar lançamentos importados, desvincular ou remover
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+              </button>
+            </div>
+          </section>
+        </>
+      ) : (
+        /* Estado Vazio: Nenhum banco conectado */
+        <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 md:p-8 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+            <CreditCard className="size-6" />
+          </div>
+
+          <div className="space-y-1.5 max-w-md mx-auto">
+            <h2 className="text-heading font-semibold text-[var(--text)]">Conectar ao Open Finance</h2>
+            <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+              Sincronize transações e saldos de suas contas bancárias e cartões diretamente pelo Pluggy.
+              Suas credenciais são guardadas de forma cifrada no banco de dados.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              type="button"
+              onClick={() => setActiveSheet("new")}
+              className="min-h-12 w-full sm:w-auto px-6 font-medium gap-2"
+            >
+              <Plus className="size-4" />
+              Conectar conta
+            </Button>
+          </div>
+
+          {setup.credentialSaved ? (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => void removeCredentials()}
+                disabled={busy}
+                className="text-xs text-[var(--text-muted)] underline hover:text-[var(--text)]"
+              >
+                Remover credenciais Pluggy salvas
+              </button>
+            </div>
+          ) : null}
+        </section>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SHEET 1: Nova Conexão */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSheet === "new" ? (
+        <Sheet title="Nova conexão Open Finance" onClose={() => setActiveSheet(null)}>
+          <div className="space-y-4">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+              {setup.credentialSaved
+                ? "Suas credenciais gerais da Pluggy já estão salvas. Preencha apenas o Item ID e um nome (ou informe novas credenciais se desejar atualizá-las)."
+                : "Informe seu Client ID, Client Secret e o Item ID gerado pelo Pluggy Connect para iniciar a integração."}
+            </p>
+
+            <form action={save} className="space-y-3.5">
+              <Field label="Client ID">
+                <Input
+                  className="min-h-12 text-base!"
+                  name="clientId"
+                  placeholder={setup.credentialSaved ? "Salvo (deixe em branco para manter)" : "Informe seu Client ID"}
+                  autoComplete="off"
+                />
+              </Field>
+
+              <Field label="Client Secret">
+                <Input
+                  className="min-h-12 text-base!"
+                  name="clientSecret"
+                  type="password"
+                  placeholder={setup.credentialSaved ? "•••••••••••• (deixe em branco para manter)" : "Informe seu Client Secret"}
+                  autoComplete="new-password"
+                />
+              </Field>
+
+              <Field label="Item ID (Pluggy)">
+                <Input
+                  className="min-h-12 text-base!"
+                  name="itemId"
+                  placeholder="Identificador do item Pluggy"
+                  autoComplete="off"
+                  required
+                />
+              </Field>
+
+              <Field label="Nome desta conexão">
+                <Input
+                  className="min-h-12 text-base!"
+                  name="label"
+                  placeholder="Ex.: Nubank Principal, Itaú PJ..."
+                  maxLength={100}
+                />
+              </Field>
+
+              <Field label="Data inicial de importação">
+                <Input
+                  className="min-h-12 text-base!"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  required
+                />
+              </Field>
+
+              <p className="text-xs text-[var(--text-muted)]">
+                Lançamentos manuais ou importações CSV/OFX existentes não serão apagados.
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--line)]">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setActiveSheet(null)}
+                  disabled={busy}
+                  className="min-h-11"
+                >
+                  Cancelar
+                </Button>
+                <SubmitButton className="min-h-11" disabled={busy}>
+                  Salvar Conexão
+                </SubmitButton>
+              </div>
+            </form>
+          </div>
+        </Sheet>
+      ) : null}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SHEET 2: Contas Vinculadas */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSheet === "accounts" && activeConnection ? (
+        <Sheet title="Contas vinculadas" onClose={() => setActiveSheet(null)}>
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--line)] pb-3">
+              <p className="text-xs text-[var(--text-muted)]">
+                Associe as contas descobertas na Pluggy às suas contas locais cadastradas.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void loadAccounts()}
+                disabled={busy}
+                className="min-h-11 gap-1.5 shrink-0 self-start sm:self-auto"
+              >
+                <RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`} />
+                Atualizar contas Pluggy
+              </Button>
+            </div>
+
+            {remote.some((account) => account.type === "CREDIT") &&
+            !setup.accounts.some((account) => account.type === "CREDIT_CARD") ? (
+              <div role="status" className="rounded-xl border border-[var(--line-strong)] bg-[var(--warn-soft)] p-3 text-xs text-[var(--text-muted)]">
+                O item Pluggy tem cartão de crédito, mas ainda não há uma conta local de cartão. Em{" "}
+                <Link className="font-medium text-[var(--text)] underline inline-flex min-h-11 items-center" href="/configuracoes">
+                  Configurações → Contas e cartões → Nova conta
+                </Link>
+                , crie uma conta do tipo &ldquo;Cartão de crédito&rdquo; e volte para vinculá-la.
+              </div>
+            ) : null}
+
+            {remote.length ? (
+              <ul className="space-y-3">
+                {setup.accounts.map((a) => (
+                  <li
+                    key={a.id}
+                    className="grid gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3.5 sm:grid-cols-[minmax(0,1fr)_1fr_auto] sm:items-end"
+                  >
+                    <label htmlFor={`remote-${a.id}`} className="text-sm font-medium text-[var(--text)]">
+                      {a.name}
+                      <span className="block text-xs font-normal text-[var(--text-muted)] mt-0.5">
+                        {a.type === "CREDIT_CARD" ? "Cartão de Crédito" : "Conta Bancária"} · modo{" "}
+                        <strong className={a.financeMode === "integracao" ? "text-[var(--text-in)] font-medium" : "text-[var(--text-muted)] font-normal"}>
+                          {a.financeMode === "integracao" ? "automático (Pluggy)" : "manual"}
+                        </strong>
+                        {a.type === "CREDIT_CARD" && a.creditLimitCents !== null
+                          ? ` · limite ${formatCents(a.creditLimitCents ?? 0)} (${a.availableCreditCents === null ? "indisponível" : `${formatCents(a.availableCreditCents)} disponível`})`
+                          : ""}
+                      </span>
+                    </label>
+
+                    <select
+                      id={`remote-${a.id}`}
+                      value={remoteSelection[a.id] ?? a.externalAccountId ?? ""}
+                      onChange={(event) => setRemoteSelection((current) => ({ ...current, [a.id]: event.target.value }))}
+                      className="min-h-12 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-base! sm:text-sm text-[var(--text)]"
+                    >
+                      <option value="">Sem vínculo (modo manual)</option>
+                      {remote
+                        .filter((r) => (r.type === "CREDIT") === (a.type === "CREDIT_CARD"))
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} ({r.currency})
+                          </option>
+                        ))}
+                    </select>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={async () => {
+                        const externalAccountId = (remoteSelection[a.id] ?? a.externalAccountId ?? "") || null;
+                        setBusy(true);
+                        const result = await linkOpenFinanceAccount({
+                          accountId: a.id,
+                          connectionId: activeConnection.id,
+                          externalAccountId,
+                          mode: externalAccountId ? "integracao" : "manual",
+                        });
+                        setBusy(false);
+                        setMessage(result.error ?? "Vínculo salvo com sucesso; histórico preservado.");
+                        router.refresh();
+                      }}
+                      className="min-h-11 shrink-0"
+                    >
+                      Salvar vínculo
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[var(--line-strong)] p-6 text-center space-y-1">
+                <p className="text-xs font-medium text-[var(--text)]">Contas ainda não carregadas</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Clique no botão &ldquo;Atualizar contas Pluggy&rdquo; acima para listar as contas disponíveis nesta conexão.
+                </p>
+              </div>
+            )}
+          </div>
+        </Sheet>
+      ) : null}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SHEET 3: Histórico e Faturas */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSheet === "sync_details" && activeConnection ? (
+        <Sheet title="Histórico e faturas" onClose={() => setActiveSheet(null)}>
+          <div className="space-y-5">
+            {/* Resumo da última sync */}
+            {syncSummary ? (
+              <section aria-live="polite" className="space-y-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2.5">
+                  <h3 className="text-sm font-semibold text-[var(--text)]">Última leitura realizada</h3>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    Status: {syncSummary.status} · {syncSummary.imported} inseridos/atualizados
+                  </span>
+                </div>
+                {syncSummary.error ? (
+                  <p className="text-xs text-[var(--text-out)]">{syncSummary.error}</p>
+                ) : null}
+                {syncSummary.accounts.length ? (
+                  syncSummary.accounts.map((account, index) => (
+                    <div key={`${account.accountName}-${index}`} className="space-y-1 text-xs pt-1">
+                      <div className="flex flex-wrap justify-between gap-2 font-medium text-[var(--text)]">
+                        <span>{account.accountName} ({account.accountType})</span>
+                        <span className="text-[var(--text-muted)]">{account.status}</span>
+                      </div>
+                      <p className="text-[var(--text-muted)]">
+                        Lidos: {account.read} · Inseridos: {account.inserted} · Atualizados: {account.updated} · Ignorados: {account.ignoredByDate + account.ignoredByType + account.ignoredByTombstone}
+                      </p>
+                      {account.error ? <p className="text-[var(--text-out)]">{account.error}</p> : null}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-[var(--text-muted)]">Nenhuma conta local vinculada a esta conexão.</p>
+                )}
+              </section>
+            ) : (
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-xs text-[var(--text-muted)]">
+                Nenhuma sincronização executada nesta sessão. Clique em &ldquo;Sincronizar agora&rdquo; na tela principal para ler novos dados.
+              </div>
+            )}
+
+            {/* Faturas Pluggy */}
+            <div className="space-y-2.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Faturas Pluggy ({setup.invoices.length})
+              </h3>
+              {setup.invoices.length ? (
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {setup.invoices.map((invoice) => (
+                    <div
+                      key={`${invoice.accountId}-${invoice.invoiceRef}-${invoice.dueDate.toISOString()}`}
+                      className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3.5 text-xs space-y-1.5"
+                    >
+                      <p className="font-semibold text-[var(--text)]">
+                        {setup.accounts.find((a) => a.id === invoice.accountId)?.name ?? "Cartão"}
+                      </p>
+                      <p className="text-[var(--text-muted)]">
+                        Vencimento: {invoice.dueDate.toLocaleDateString("pt-BR")}
+                      </p>
+                      <div className="flex items-center justify-between pt-1 font-medium text-[var(--text)] border-t border-[var(--line)]">
+                        <span>Total: {invoice.totalAmountCents === null ? "indisponível" : formatCents(invoice.totalAmountCents)}</span>
+                        {invoice.minimumPaymentCents !== null ? (
+                          <span className="text-[var(--text-muted)] font-normal text-[0.6875rem]">
+                            Mín: {formatCents(invoice.minimumPaymentCents)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)]">Nenhuma fatura de cartão de crédito registrada no momento.</p>
+              )}
+            </div>
+          </div>
+        </Sheet>
+      ) : null}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SHEET 4: Gerenciar Conexão */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSheet === "manage" && activeConnection ? (
+        <Sheet title="Gerenciar conexão" onClose={() => setActiveSheet(null)}>
+          <div className="space-y-4">
+            <p className="text-xs text-[var(--text-muted)]">
+              Opções de manutenção e desvinculação da conexão &ldquo;{activeConnection.label || "ativa"}&rdquo;.
+            </p>
+
+            <div className="space-y-3">
+              {/* Opção 1: Limpar dados */}
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 space-y-2.5">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text)]">Limpar lançamentos importados</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Exclui transações e faturas trazidas por esta conexão, mantendo a conexão ativa para futuras leituras.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void deleteAll(activeConnection)}
+                  className="min-h-11 w-full sm:w-auto text-[var(--text-out)] hover:bg-[var(--out-soft)] hover:text-[var(--text-out)]"
+                >
+                  Excluir dados importados
+                </Button>
+              </div>
+
+              {/* Opção 2: Desconectar mantendo histórico */}
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 space-y-2.5">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text)]">Desconectar e manter histórico</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Desvincula esta conexão, mas preserva todos os lançamentos já importados no seu histórico contábil.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void removeConnection(activeConnection, false)}
+                  className="min-h-11 w-full sm:w-auto"
+                >
+                  Desconectar (manter histórico)
+                </Button>
+              </div>
+
+              {/* Opção 3: Desconectar e apagar tudo */}
+              <div className="rounded-xl border border-[var(--line-strong)] bg-[var(--surface-2)] p-4 space-y-2.5">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-out)]">Desconectar e apagar lançamentos</p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Desvincula a conexão e remove todas as transações e faturas originadas por ela.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void removeConnection(activeConnection, true)}
+                  className="min-h-11 w-full sm:w-auto text-[var(--text-out)] hover:bg-[var(--out-soft)] hover:text-[var(--text-out)]"
+                >
+                  Desconectar e apagar lançamentos
+                </Button>
+              </div>
+            </div>
+
+            {/* Credenciais Gerais */}
+            <div className="pt-3 border-t border-[var(--line)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium text-[var(--text)]">Credenciais gerais Pluggy</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {setup.connections.length > 0
+                    ? "Remova todas as conexões ativas antes de apagar as credenciais salvas."
+                    : "Client ID e Client Secret cifrados salvos no banco."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy || setup.connections.length > 0 || !setup.credentialSaved}
+                onClick={() => void removeCredentials()}
+                className="min-h-11 shrink-0"
+              >
+                Remover credenciais
+              </Button>
+            </div>
+          </div>
+        </Sheet>
+      ) : null}
     </div>
   );
 }

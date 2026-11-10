@@ -4,8 +4,17 @@ import { PageHeader } from "@/components/page-header";
 import { IntegrationPanel } from "./panel";
 
 export const metadata = { title: "Integração" };
+
 export default async function IntegrationPage() {
   await requireUserId();
   const setup = await getOpenFinanceSetup();
-  return <><PageHeader title="Integração" description="Conecte suas contas Pluggy e escolha quais contas locais serão alimentadas automaticamente." /><IntegrationPanel initial={setup} /></>;
+  return (
+    <>
+      <PageHeader
+        title="Integração"
+        description="Conecte e sincronize suas contas bancárias automaticamente via Open Finance."
+      />
+      <IntegrationPanel initial={setup} />
+    </>
+  );
 }
