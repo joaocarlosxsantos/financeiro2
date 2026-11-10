@@ -9,12 +9,14 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -200,6 +202,8 @@ export const categoryRules = pgTable(
     normalizedPattern: text("normalized_pattern").notNull(),
     categoryId: varchar("category_id", { length: 32 }).notNull().references(() => categories.id, { onDelete: "cascade" }),
     source: text("source").notNull().default("USER"),
+    matchCount: integer("match_count").notNull().default(1),
+    lastAppliedAt: timestamp("last_applied_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -716,6 +720,62 @@ export const transactionSplits = pgTable(
     index("transaction_splits_transaction_idx").on(t.transactionId),
   ],
 );
+
+// Private shared expense ledgers. Participants are names, never linked user accounts.
+export const sharedGroups = pgTable("shared_groups", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("shared_groups_owner_idx").on(t.userId)]);
+
+export const sharedMembers = pgTable("shared_members", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  groupId: varchar("group_id", { length: 32 }).notNull().references(() => sharedGroups.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+}, (t) => [
+  unique("shared_members_group_id_key").on(t.groupId, t.id),
+  uniqueIndex("shared_members_group_name_key").on(t.groupId, sql`lower(${t.name})`),
+]);
+
+export const sharedExpenses = pgTable("shared_expenses", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  groupId: varchar("group_id", { length: 32 }).notNull().references(() => sharedGroups.id, { onDelete: "cascade" }),
+  payerId: varchar("payer_id", { length: 32 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  unique("shared_expenses_group_id_key").on(t.groupId, t.id),
+  foreignKey({ name: "shared_expenses_group_payer_fk", columns: [t.groupId, t.payerId], foreignColumns: [sharedMembers.groupId, sharedMembers.id] }),
+  check("shared_expenses_positive_chk", sql`${t.amountCents} between 1 and 2000000000`),
+]);
+
+export const sharedExpenseShares = pgTable("shared_expense_shares", {
+  groupId: varchar("group_id", { length: 32 }).notNull(),
+  expenseId: varchar("expense_id", { length: 32 }).notNull(),
+  memberId: varchar("member_id", { length: 32 }).notNull(),
+  amountCents: integer("amount_cents").notNull(),
+}, (t) => [
+  uniqueIndex("shared_shares_group_expense_member_key").on(t.groupId, t.expenseId, t.memberId),
+  foreignKey({ name: "shared_shares_group_expense_fk", columns: [t.groupId, t.expenseId], foreignColumns: [sharedExpenses.groupId, sharedExpenses.id] }).onDelete("cascade"),
+  foreignKey({ name: "shared_shares_group_member_fk", columns: [t.groupId, t.memberId], foreignColumns: [sharedMembers.groupId, sharedMembers.id] }),
+  check("shared_shares_amount_chk", sql`${t.amountCents} between 0 and 2000000000`),
+]);
+
+export const sharedSettlements = pgTable("shared_settlements", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  groupId: varchar("group_id", { length: 32 }).notNull().references(() => sharedGroups.id, { onDelete: "cascade" }),
+  fromId: varchar("from_id", { length: 32 }).notNull(),
+  toId: varchar("to_id", { length: 32 }).notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("shared_settlements_group_idx").on(t.groupId),
+  foreignKey({ name: "shared_settlements_group_from_fk", columns: [t.groupId, t.fromId], foreignColumns: [sharedMembers.groupId, sharedMembers.id] }),
+  foreignKey({ name: "shared_settlements_group_to_fk", columns: [t.groupId, t.toId], foreignColumns: [sharedMembers.groupId, sharedMembers.id] }),
+  check("shared_settlements_amount_chk", sql`${t.amountCents} between 1 and 2000000000 and ${t.fromId} <> ${t.toId}`),
+]);
 
 // ---------------------------------------------------------------- relations
 

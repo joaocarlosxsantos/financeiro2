@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MobileDisclosure } from "@/components/ui/mobile-disclosure";
 import { Wallet } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
@@ -40,7 +41,10 @@ export default async function BillsPage({
       <PageHeader
         title="Contas a pagar"
         description="Controle de vencimentos e rateio de despesas do mês."
-        action={<MonthSwitcher value={ref} />}
+        action={<>
+          <Link href="/contas-a-pagar/grupos" className="inline-flex min-h-11 items-center rounded-xl border border-[var(--line-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-[var(--acento)]">Grupos e acertos</Link>
+          <MonthSwitcher value={ref} />
+        </>}
       />
 
       <BillsPendingBanner monthRef={ref} monthName={monthLabel(ref)} pending={rulesStatus.pending} />

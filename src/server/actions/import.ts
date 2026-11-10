@@ -8,6 +8,7 @@ import { requireUserId } from "@/lib/auth";
 import { getProfileRestriction } from "@/server/usage-profile";
 import { parseStatement } from "@/lib/parsers";
 import { fingerprint, suggestCategoryId } from "@/lib/categorize";
+import { loadUserRulesMap, matchLearnedRule, learnCategoryRule } from "@/server/categorization/learning";
 import { resolveImportDate } from "@/lib/import-dates";
 import { isInvoicePaymentLine } from "@/lib/import-filters";
 import { formatDate, monthLabel, monthRange, monthRefFromParam, monthRefToParam, type MonthRef } from "@/lib/dates";
@@ -135,16 +136,19 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
     };
   }
 
-  const cats = await db
-    .select({
-      id: categories.id,
-      name: categories.name,
-      keywords: categories.keywords,
-      kind: categories.kind,
-      nature: categories.nature,
-    })
-    .from(categories)
-    .where(and(eq(categories.userId, userId), eq(categories.archived, false)));
+  const [cats, userRulesMap] = await Promise.all([
+    db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        keywords: categories.keywords,
+        kind: categories.kind,
+        nature: categories.nature,
+      })
+      .from(categories)
+      .where(and(eq(categories.userId, userId), eq(categories.archived, false))),
+    loadUserRulesMap(db, userId),
+  ]);
 
   const natureById = new Map(cats.map((c) => [c.id, c.nature]));
 
@@ -166,12 +170,12 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
     });
     prints.add(fp);
 
-    // Transferência (pagamento de fatura, transferência entre contas suas) não
-    // dá pra adivinhar com segurança pelo texto — cada banco escreve diferente,
-    // e um palpite errado escondia gasto real dos relatórios sem o usuário
-    // perceber. Todas as linhas entram como não-transferência; quem sabe o que
-    // é o quê é o usuário, marcando na prévia.
-    const categoryId = suggestCategoryId(r.description, cats, kind);
+    // 1) Prioridade para regra aprendida do histórico do usuário (por descrição normalizada)
+    const learned = matchLearnedRule(r.description, kind, userRulesMap);
+    const categoryId = learned ? learned.categoryId : suggestCategoryId(r.description, cats, kind);
+    const resolvedNature = (learned?.nature ?? (categoryId ? (natureById.get(categoryId) ?? "VARIABLE") : "VARIABLE")) as
+      | "FIXED"
+      | "VARIABLE";
 
     return {
       date: resolved.date.toISOString().slice(0, 10),
@@ -181,9 +185,7 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
       kind,
       categoryId,
       isTransfer: false,
-      nature: (categoryId ? (natureById.get(categoryId) ?? "VARIABLE") : "VARIABLE") as
-        | "FIXED"
-        | "VARIABLE",
+      nature: resolvedNature,
       // Todas as linhas começam marcadas para importar — é o usuário quem
       // desmarca, mesmo quando há uma possível duplicata (veja abaixo).
       duplicate: false,
@@ -458,6 +460,18 @@ export async function commitImport(rawInput: unknown): Promise<{ error?: string;
       .returning({ id: transactions.id });
 
     await tx.update(importBatches).set({ savedRows: inserted.length }).where(eq(importBatches.id, batch.id));
+
+    // Grava regras aprendidas para os lançamentos confirmados com categoria
+    for (const r of rows) {
+      if (r.categoryId) {
+        await learnCategoryRule(tx, {
+          userId,
+          description: r.description,
+          categoryId: r.categoryId,
+          source: "USER",
+        });
+      }
+    }
 
     return { saved: inserted.length, replaced };
   });

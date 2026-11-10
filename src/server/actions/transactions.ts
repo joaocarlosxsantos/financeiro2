@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { accounts, categories, categoryRules, transactions } from "@/db/schema";
+import { accounts, categories, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { getProfileRestriction } from "@/server/usage-profile";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
@@ -13,7 +13,7 @@ import { createId } from "@/lib/id";
 import { transferLegs } from "@/lib/transfers";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { insertInstallments } from "@/server/installments";
-import { normalizeDescription } from "@/server/categorization";
+import { learnCategoryRule, findLearnedCategory } from "@/server/categorization/learning";
 import {
   safeDescriptionSchema,
   safeNotesSchema,
@@ -99,6 +99,15 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
   const d = parsed.data;
+  const userExplicitCategory = Boolean(d.categoryId);
+  if (!d.categoryId) {
+    const learned = await findLearnedCategory(db, { userId, description: d.description, kind: d.kind });
+    if (learned) {
+      d.categoryId = learned.categoryId;
+      if (!d.nature && learned.nature) d.nature = learned.nature;
+    }
+  }
+
   const amountCents = Math.abs(parseMoneyToCents(d.amount));
   if (amountCents > MAX_CENTS) return { error: "Valor muito alto." };
   if (amountCents <= 0) return { error: "O valor precisa ser maior que zero." };
@@ -131,6 +140,10 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
       dueDay: account.dueDay,
     });
 
+    if (userExplicitCategory && d.categoryId) {
+      await learnCategoryRule(db, { userId, description: d.description, categoryId: d.categoryId, source: "USER" });
+    }
+
     refresh();
     return created ? { ok: true } : { error: "Não foi possível criar as parcelas." };
   }
@@ -156,6 +169,10 @@ export async function createTransaction(_prev: ActionState, formData: FormData):
     // sufixo "m" = manual, para não colidir com uma linha importada idêntica
     fingerprint: `${fingerprint({ accountId: d.accountId, date, amountCents, description: d.description })}|m|${Date.now()}`,
   });
+
+  if (userExplicitCategory && d.categoryId) {
+    await learnCategoryRule(db, { userId, description: d.description, categoryId: d.categoryId, source: "USER" });
+  }
 
   refresh();
   return { ok: true };
@@ -183,6 +200,7 @@ export async function updateTransaction(id: string, formData: FormData): Promise
     .select({
       accountId: transactions.accountId,
       date: transactions.date,
+      description: transactions.description,
       installmentGroupId: transactions.installmentGroupId,
       importBatchId: transactions.importBatchId,
       transferGroupId: transactions.transferGroupId,
@@ -194,6 +212,9 @@ export async function updateTransaction(id: string, formData: FormData): Promise
   if (!existing) return { error: "Não encontrado." };
   if (existing.origin === "PLUGGY") {
     await db.update(transactions).set({ categoryId: d.categoryId || null, notes: d.notes || null, updatedAt: new Date() }).where(and(eq(transactions.id, id), eq(transactions.userId, userId)));
+    if (d.categoryId) {
+      await learnCategoryRule(db, { userId, description: existing.description, categoryId: d.categoryId, source: "USER" });
+    }
     refresh();
     return { ok: true };
   }
@@ -235,6 +256,11 @@ export async function updateTransaction(id: string, formData: FormData): Promise
     .returning({ id: transactions.id });
 
   if (result.length === 0) return { error: "Não encontrado." };
+
+  if (d.categoryId) {
+    await learnCategoryRule(db, { userId, description: d.description, categoryId: d.categoryId, source: "USER" });
+  }
+
   refresh();
   return { ok: true };
 }
@@ -600,9 +626,7 @@ export async function setTransactionCategory(id: string, categoryId: string | nu
 
   if (result.length === 0) return { error: "Não encontrado." };
   if (categoryId) {
-    const normalizedPattern = normalizeDescription(ownedTransaction.description).key;
-    await db.insert(categoryRules).values({ userId, normalizedPattern, categoryId, source: "USER", updatedAt: new Date() })
-      .onConflictDoUpdate({ target: [categoryRules.userId, categoryRules.normalizedPattern], set: { categoryId, source: "USER", updatedAt: new Date() } });
+    await learnCategoryRule(db, { userId, description: ownedTransaction.description, categoryId, source: "USER" });
   }
   refresh();
   return { ok: true };

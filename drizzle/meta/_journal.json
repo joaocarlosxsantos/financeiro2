@@ -162,6 +162,20 @@
       "when": 1794332959352,
       "tag": "0022_telegram_ai_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794349674599,
+      "tag": "0023_categorization_learning",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794350965356,
+      "tag": "0024_f7_shared_groups",
+      "breakpoints": true
     }
   ]
 }
