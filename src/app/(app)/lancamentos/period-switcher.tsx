@@ -126,7 +126,7 @@ export function PeriodSwitcher({
       {open ? (
         <div className="absolute top-full right-0 z-20 mt-2 w-72 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow-overlay)]">
           <p className="mb-2 text-[0.8125rem] font-semibold">Período customizado</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-2 min-[480px]:grid-cols-2">
             <label className="text-[0.75rem]">
               <span className="muted mb-1 block">De</span>
               <input

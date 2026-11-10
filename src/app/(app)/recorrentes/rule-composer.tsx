@@ -74,7 +74,7 @@ export function RuleComposer({
         <Input className="min-h-12 min-w-0 max-w-full text-base!" name="description" required placeholder="Ex.: Aluguel" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-3 min-[480px]:grid-cols-2">
         <Field label="Valor (R$)">
           <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="amount" inputMode="decimal" required placeholder="0,00" />
         </Field>

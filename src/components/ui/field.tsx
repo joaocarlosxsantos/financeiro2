@@ -60,7 +60,7 @@ export function Field({
 }
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn("input-base", className)} {...props} />;
+  return <input className={cn("input-base min-w-0 max-w-full", className)} {...props} />;
 }
 
 export function MoneyInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
@@ -71,7 +71,7 @@ export function MoneyInput({ className, ...props }: InputHTMLAttributes<HTMLInpu
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn("input-base cursor-pointer appearance-none pr-9", className)} {...props} />;
+  return <select className={cn("input-base min-w-0 max-w-full cursor-pointer appearance-none pr-9", className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

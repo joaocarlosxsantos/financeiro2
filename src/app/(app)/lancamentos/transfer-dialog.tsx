@@ -210,7 +210,7 @@ function TransferDialogContent({
             </Select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-2.5 min-[480px]:grid-cols-2">
             <Field label="Valor (R$)">
               <Input className="min-h-12 min-w-0 max-w-full text-base!"
                 name="amount"

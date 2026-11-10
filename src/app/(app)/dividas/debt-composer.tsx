@@ -47,7 +47,7 @@ export function DebtComposer() {
         <Input className="min-h-12 min-w-0 max-w-full text-base!" name="name" required placeholder="Ex.: Rotativo Nubank" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-3 min-[480px]:grid-cols-2">
         <Field label="Saldo devedor (R$)">
           <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="balance" inputMode="decimal" required placeholder="0,00" />
         </Field>
@@ -61,7 +61,7 @@ export function DebtComposer() {
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-3 min-[480px]:grid-cols-2">
         <Field label="Parcela mínima (R$)">
           <MoneyInput className="min-h-12 min-w-0 max-w-full text-base!" name="minimum" inputMode="decimal" placeholder="0,00" />
         </Field>
