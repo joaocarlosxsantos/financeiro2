@@ -16,7 +16,7 @@ import { Hint } from "@/components/ui/hint";
 import { EmptyState } from "@/components/ui/empty";
 import { FixedVariableChart } from "@/components/charts/monthly-flow";
 
-export const metadata = { title: "Insights — Financeiro 2.0" };
+export const metadata = { title: "Insights" };
 
 export default async function InsightsPage({
   searchParams,

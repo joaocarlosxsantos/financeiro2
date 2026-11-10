@@ -9,7 +9,7 @@ import { Hint } from "@/components/ui/hint";
 import { ImportWizard } from "./import-wizard";
 import { ImportHistory } from "./import-history";
 
-export const metadata = { title: "Importar extrato — Financeiro 2.0" };
+export const metadata = { title: "Importar extrato" };
 
 export default async function ImportPage() {
   const userId = await requireUserId();

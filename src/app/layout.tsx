@@ -16,11 +16,15 @@ const mono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const description = "Seu livro-caixa pessoal: gastos fixos e variáveis, reserva de emergência, metas e extratos.";
+
 export const metadata: Metadata = {
-  title: "Financeiro 2.0",
-  description:
-    "Organize gastos fixos e variáveis, monte sua reserva de emergência, acompanhe metas e importe extratos e faturas.",
-  applicationName: "Financeiro 2.0",
+  title: { default: "Razão", template: "%s — Razão" },
+  description,
+  applicationName: "Razão",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://financeiro2-delta.vercel.app"),
+  openGraph: { type: "website", locale: "pt_BR", siteName: "Razão", title: "Razão", description },
+  twitter: { card: "summary_large_image", title: "Razão", description },
 };
 
 export const viewport: Viewport = {

@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { BudgetList } from "./budget-list";
 import { BudgetStarters } from "./budget-starters";
 
-export const metadata = { title: "Orçamento — Financeiro 2.0" };
+export const metadata = { title: "Orçamento" };
 
 export default async function BudgetPage({
   searchParams,

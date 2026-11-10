@@ -7,19 +7,19 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Financeiro 2.0",
-    short_name: "Financeiro",
+    name: "Razão",
+    short_name: "Razão",
     description:
-      "Organize gastos fixos e variáveis, monte sua reserva de emergência e acompanhe metas.",
+      "Seu livro-caixa pessoal: gastos fixos e variáveis, reserva de emergência, metas e extratos.",
     start_url: "/painel",
     display: "standalone",
-    background_color: "#F6F7F9",
-    theme_color: "#2349C9",
+    background_color: "#000000",
+    theme_color: "#000000",
     lang: "pt-BR",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { OnboardingForm } from "./onboarding-form";
 
-export const metadata = { title: "Primeiros passos — Financeiro 2.0" };
+export const metadata = { title: "Primeiros passos" };
 
 export default async function OnboardingPage() {
   const session = await auth();

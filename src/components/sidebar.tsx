@@ -7,6 +7,7 @@ import { LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logoutAction } from "@/server/actions/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/brand/logo";
 import { BottomNav, QuickEntry, mainDestinations, moreDestinations, isDestinationActive } from "@/components/bottom-nav";
 import type { PlainAccount, PlainCategory } from "@/app/(app)/lancamentos/types";
 
@@ -16,9 +17,8 @@ export function Sidebar({ userName, userEmail, accounts, categories }: {
 }) {
   const pathname = usePathname();
   const [newOpen, setNewOpen] = useState(false);
-  const brand = <Link href="/painel" className="flex min-h-11 items-center gap-2.5" aria-label="Financeiro 2.0 — Painel">
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-[4px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-brand)]"><span className="font-display text-base font-bold leading-none">F</span></div>
-    <span className="font-display text-base font-medium tracking-tight">Financeiro <span className="text-xs font-normal text-[var(--text-muted)]">2.0</span></span>
+  const brand = <Link href="/painel" className="flex min-h-11 items-center" aria-label="Razão — ir para o painel">
+    <Logo />
   </Link>;
   return <>
     <header className="flex min-h-16 items-center justify-between gap-3 border-b bg-[var(--bg)] px-4 lg:fixed lg:top-0 lg:left-0 lg:z-10 lg:w-[232px] lg:border-b-0 lg:pt-4">

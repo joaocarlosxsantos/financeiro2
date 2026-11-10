@@ -13,7 +13,7 @@ import { BillRulesManager } from "./bill-rules-manager";
 import { BillGroupingsManager } from "./bill-groupings-manager";
 import { BillsTabs, type BillsTabType } from "./bills-tabs";
 
-export const metadata = { title: "Contas a pagar — Financeiro 2.0" };
+export const metadata = { title: "Contas a pagar" };
 
 export default async function BillsPage({
   searchParams,

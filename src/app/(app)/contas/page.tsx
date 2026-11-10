@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty";
 import { Money } from "@/components/ui/money";
 import { AccountList } from "./account-list";
 
-export const metadata = { title: "Saldos — Financeiro 2.0" };
+export const metadata = { title: "Saldos" };
 
 export default async function AccountsPage() {
   const userId = await requireUserId();

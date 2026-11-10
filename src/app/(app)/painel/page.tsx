@@ -44,7 +44,7 @@ import { DebtCard } from "./debt-card";
 import { AlertsCard } from "./alerts-card";
 import { OnboardingCard } from "./onboarding-card";
 
-export const metadata = { title: "Painel — Financeiro 2.0" };
+export const metadata = { title: "Painel" };
 
 export default async function DashboardPage({
   searchParams,

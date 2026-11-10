@@ -7,7 +7,7 @@ import { AccountsPanel } from "./accounts-panel";
 import { CategoriesPanel } from "./categories-panel";
 import Link from "next/link";
 
-export const metadata = { title: "Configurações — Financeiro 2.0" };
+export const metadata = { title: "Configurações" };
 
 export default async function SettingsPage() {
   const userId = await requireUserId();

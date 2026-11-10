@@ -25,7 +25,7 @@ import { ReceivablesSection } from "./receivables-section";
 import { Filters } from "./filters";
 import { LancamentosHeaderActions } from "./lancamentos-header-actions";
 
-export const metadata = { title: "Lançamentos — Financeiro 2.0" };
+export const metadata = { title: "Lançamentos" };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 

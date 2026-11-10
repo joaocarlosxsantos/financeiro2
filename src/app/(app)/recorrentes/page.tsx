@@ -12,7 +12,7 @@ import { PendingPanel } from "./pending-panel";
 import { RuleList } from "./rule-list";
 import { RuleComposer } from "./rule-composer";
 
-export const metadata = { title: "Recorrentes — Financeiro 2.0" };
+export const metadata = { title: "Recorrentes" };
 
 export default async function RecurringPage({
   searchParams,

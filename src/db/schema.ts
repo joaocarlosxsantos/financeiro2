@@ -1,5 +1,5 @@
 /**
- * Financeiro 2.0 — schema do banco (Drizzle ORM / Postgres).
+ * Razão — schema do banco (Drizzle ORM / Postgres).
  *
  * Regra de ouro: todo valor monetário é armazenado em CENTAVOS (integer).
  * Isso evita erro de arredondamento de float e problema de serialização

@@ -5,7 +5,7 @@ import { balanceCents } from "@/lib/finance";
 import { PageHeader } from "@/components/page-header";
 import { ProjectionStudio } from "./projection-studio";
 
-export const metadata = { title: "Projeções — Financeiro 2.0" };
+export const metadata = { title: "Projeções" };
 
 export default async function ProjectionsPage() {
   const userId = await requireUserId();

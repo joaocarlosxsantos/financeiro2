@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/brand/logo";
 
 const features = [
   {
@@ -52,12 +53,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-[var(--on-acento)] shadow-sm">
-            <ChartPie className="size-4.5" />
-          </div>
-          <span className="text-[0.9375rem] font-semibold tracking-tight">Financeiro 2.0</span>
-        </div>
+        <Link href="/" aria-label="Razão" className="inline-flex min-h-11 items-center"><Logo /></Link>
         <div className="flex max-w-full flex-wrap items-center gap-2">
           <ThemeToggle />
           <Link
@@ -133,7 +129,7 @@ export default async function LandingPage() {
 
       <footer className="border-t">
         <div className="muted mx-auto max-w-6xl px-4 py-6 sm:px-6 text-xs">
-          Financeiro 2.0 — seus dados ficam na sua conta. Este sistema é uma ferramenta de organização
+          Razão — seus dados ficam na sua conta. Este sistema é uma ferramenta de organização
           e não substitui orientação profissional de investimentos.
         </div>
       </footer>

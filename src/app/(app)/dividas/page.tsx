@@ -12,7 +12,7 @@ import { DebtList } from "./debt-list";
 import { DebtComposer } from "./debt-composer";
 import { PayoffPlanner } from "./payoff-planner";
 
-export const metadata = { title: "Dívidas — Financeiro 2.0" };
+export const metadata = { title: "Dívidas" };
 
 export default async function DebtsPage() {
   const userId = await requireUserId();

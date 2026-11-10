@@ -20,7 +20,7 @@ import { GoalComposer } from "./goal-composer";
 import { GoalRecurringBanner } from "./goal-recurring-banner";
 import type { PlainGoalRecurringRule } from "./goal-recurring-control";
 
-export const metadata = { title: "Metas e reserva — Financeiro 2.0" };
+export const metadata = { title: "Metas e reserva" };
 
 export default async function GoalsPage() {
   const userId = await requireUserId();
