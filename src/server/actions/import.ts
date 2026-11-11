@@ -100,7 +100,7 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
   const input = parsedInput.data;
 
   const [account] = await db
-    .select({ id: accounts.id, type: accounts.type, financeMode: accounts.financeMode })
+    .select({ id: accounts.id, type: accounts.type, financeMode: accounts.financeMode, closingDay: accounts.closingDay, dueDay: accounts.dueDay })
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
     .limit(1);
@@ -160,11 +160,13 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
     const amountCents = Math.abs(r.amountCents);
     const printedDate = new Date(`${r.date}T12:00:00.000Z`);
 
-    const resolved = resolveImportDate(printedDate, r.description, { isCard, invoiceRef });
+    const resolved = resolveImportDate(printedDate, r.description, {
+      isCard, invoiceRef, closingDay: account.closingDay, dueDay: account.dueDay,
+    });
 
     const fp = fingerprint({
       accountId: input.accountId,
-      date: resolved.date,
+      date: resolved.fingerprintDate,
       amountCents,
       description: r.description,
     });
@@ -206,12 +208,7 @@ export async function previewImport(rawInput: unknown): Promise<PreviewResult> {
     isCard && !input.invertSign && rows.length >= 3 && rows.filter((r) => r.kind === "INCOME").length > rows.length / 2;
 
   if (isCard && invoiceRef) {
-    const installmentCount = rows.filter((r) => r.installmentNumber !== null).length;
-    warnings.push(
-      installmentCount > 0
-        ? `Fatura de ${monthLabel(invoiceRef)}: ${installmentCount} parcela(s) foram gravadas nesse mês (dia da compra original, mês da fatura escolhida); as demais linhas mantêm a data real da compra, impressa no arquivo.`
-        : `Fatura de ${monthLabel(invoiceRef)}: as linhas mantêm a data real de cada compra, impressa no arquivo.`,
-    );
+    warnings.push(`Fatura de ${monthLabel(invoiceRef)}: compras à vista e primeiras parcelas mantêm a data de compra. As parcelas seguintes usam a data da cobrança no ciclo selecionado.`);
   }
   if (paymentLinesSkipped > 0) {
     warnings.push(
@@ -428,12 +425,11 @@ export async function commitImport(rawInput: unknown): Promise<{ error?: string;
       .values(
         rows.map((r) => {
           const rowDate = new Date(`${r.date}T12:00:00.000Z`);
-          const rowInvoiceRef = resolveTransactionInvoiceRef({
+          const rowInvoiceRef = invoiceParam ?? resolveTransactionInvoiceRef({
             accountType: account.type,
             closingDay: account.closingDay,
             dueDay: account.dueDay,
             date: rowDate,
-            batchInvoiceRef: invoiceParam ?? null,
           });
 
           return {

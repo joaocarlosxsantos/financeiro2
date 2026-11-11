@@ -1,13 +1,23 @@
 import { z } from "zod";
 import { MAX_CENTS } from "@/lib/money";
 
+const optionalCardDate = z.union([z.string().date(), z.string().datetime({ offset: true })]).nullish().catch(null);
+const optionalInstallment = z.number().int().min(1).max(2147483647).nullish().catch(null);
+
 export const pluggyTransactionSchema = z.object({
   id: z.string().min(1).max(200), accountId: z.string().min(1).max(200),
   description: z.string().min(1).max(500), date: z.string().datetime({ offset: true }),
   amount: z.number().finite(), currencyCode: z.string().length(3),
   type: z.enum(["DEBIT", "CREDIT"]), status: z.enum(["POSTED", "PENDING"]),
   operationType: z.string().nullable().optional(), billId: z.string().nullable().optional(), billPostDate: z.string().nullable().optional(), billForecastDate: z.string().nullable().optional(),
-  creditCardMetadata: z.object({ payeeMCC: z.number().int().nullable().optional() }).passthrough().nullable().optional(),
+  creditCardMetadata: z.object({
+    payeeMCC: z.number().int().nullable().optional(),
+    installmentNumber: optionalInstallment,
+    totalInstallments: optionalInstallment,
+    purchaseDate: optionalCardDate,
+    billPostDate: optionalCardDate,
+    billId: z.string().min(1).max(200).nullish().catch(null),
+  }).passthrough().nullable().optional(),
 });
 export const pluggyAccountSchema = z.object({
   id: z.string().min(1).max(200), itemId: z.string().min(1).max(200),

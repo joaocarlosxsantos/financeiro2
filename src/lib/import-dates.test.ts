@@ -2,6 +2,26 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 import { resolveImportDate } from "./import-dates";
 
+test("primeira parcela importada mantém a compra de 30/09 na fatura de outubro", () => {
+  const original = new Date("2026-09-30T12:00:00Z");
+  const row = resolveImportDate(original, "LOJA 1/3", {
+    isCard: true, invoiceRef: { year: 2026, month: 10 }, closingDay: 20, dueDay: 28,
+  });
+  assert.equal(row.date.toISOString(), original.toISOString());
+  assert.equal(row.adjusted, false);
+  assert.equal(row.fingerprintDate.toISOString(), "2026-10-30T12:00:00.000Z");
+});
+
+test("segunda parcela importada fica em 30/10 no ciclo da fatura de novembro", () => {
+  const original = new Date("2026-09-30T12:00:00Z");
+  const row = resolveImportDate(original, "LOJA 2/3", {
+    isCard: true, invoiceRef: { year: 2026, month: 11 }, closingDay: 20, dueDay: 28,
+  });
+  assert.equal(row.date.toISOString(), "2026-10-30T12:00:00.000Z");
+  assert.equal(row.adjusted, true);
+  assert.equal(row.fingerprintDate.toISOString(), "2026-11-30T12:00:00.000Z");
+});
+
 test("cartão com mês de referência: linha vai para o mês escolhido, preservando o dia", () => {
   const impressa = new Date("2026-01-17T12:00:00Z"); // data de compra original no arquivo
   const r = resolveImportDate(impressa, "AMAZON 9/12", { isCard: true, invoiceRef: { year: 2026, month: 9 } });

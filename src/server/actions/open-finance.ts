@@ -396,7 +396,7 @@ export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = 
         const existingRows = await tx.select({ externalId: transactions.externalId }).from(transactions).where(and(eq(transactions.userId, userId), eq(transactions.accountId, batch.local.id), eq(transactions.origin, "PLUGGY")));
         const existingExternalIds = new Set(existingRows.map((row) => row.externalId).filter((id): id is string => Boolean(id)));
         await tx.update(accounts).set(batch.remote.type === "BANK" ? { bankBalanceCents: batch.snapshot, bankBalanceAt: batch.snapshotAt } : { bankBalanceCents: batch.snapshot, bankBalanceAt: batch.snapshotAt, creditLimitCents: amountToCents(batch.remote.creditData?.creditLimit), availableCreditCents: amountToCents(batch.remote.creditData?.availableCreditLimit), creditSnapshotAt: batch.snapshotAt }).where(and(eq(accounts.id, batch.local.id), eq(accounts.userId, userId), eq(accounts.financeMode, "integracao")));
-        const validRows: Array<{ row: typeof batch.transactions.transactions[number]; amountCents: number; kind: ReturnType<typeof transactionKind>; date: Date; invoiceRef: string | null; wasExisting: boolean }> = [];
+        const validRows: Array<{ row: typeof batch.transactions.transactions[number]; amountCents: number; kind: ReturnType<typeof transactionKind>; date: Date; invoiceRef: string | null; installmentNumber: number | null; installmentTotal: number | null }> = [];
         for (const row of batch.transactions.transactions) {
           if (row.accountId !== batch.remote.id) { batch.summary.invalid++; continue; }
           if (isBeforeCutoff(row.date, cutoff)) { batch.summary.ignoredByDate++; continue; }
@@ -411,9 +411,18 @@ export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = 
           }
           const wasExisting = existingExternalIds.has(row.id);
           const kind = transactionKind(batch.remote.type, row.type);
-      const date = anchorPluggyCivilDate(row.date);
-          const invoiceRef = batch.local.type === "CREDIT_CARD" ? (row.billId ? billMonth.get(row.billId) ?? null : row.billForecastDate?.slice(0, 7) ?? null) ?? resolveTransactionInvoiceRef({ accountType: batch.local.type, closingDay: batch.local.closingDay, dueDay: batch.local.dueDay, date }) : null;
-          validRows.push({ row, amountCents: Math.abs(value), kind, date, invoiceRef, wasExisting });
+          const isCard = batch.local.type === "CREDIT_CARD";
+          const metadata = isCard ? row.creditCardMetadata : null;
+          const installmentNumber = metadata?.installmentNumber ?? null;
+          const total = metadata?.totalInstallments ?? null;
+          const installmentTotal = installmentNumber !== null && total !== null && total >= installmentNumber ? total : null;
+          const cardDate = installmentNumber === 1 ? metadata?.purchaseDate
+            : installmentNumber !== null ? metadata?.billPostDate : null;
+          const date = anchorPluggyCivilDate(cardDate?.slice(0, 10) ?? row.date);
+          const billId = row.billId ?? metadata?.billId;
+          const invoiceRef = isCard ? (billId ? billMonth.get(billId) : row.billForecastDate?.slice(0, 7))
+            ?? resolveTransactionInvoiceRef({ accountType: batch.local.type, closingDay: batch.local.closingDay, dueDay: batch.local.dueDay, date }) : null;
+          validRows.push({ row, amountCents: Math.abs(value), kind, date, invoiceRef, installmentNumber, installmentTotal });
           existingExternalIds.add(row.id);
           if (wasExisting) batch.summary.updated++;
           else batch.summary.inserted++;
@@ -424,9 +433,23 @@ export async function syncOpenFinance(input: unknown, mode: "manual" | "auto" = 
         if (validRows.length) {
           const upsertRows = validRows.map((candidate, index) => {
             const category = categorized.results[index]!;
-            return { id: createId(), userId, accountId: batch.local.id, date: candidate.date, description: candidate.row.description, amountCents: candidate.amountCents, kind: candidate.kind, nature: category.nature ?? "VARIABLE", categoryId: category.categoryId, isTransfer: category.isTransfer, origin: "PLUGGY" as const, externalId: candidate.row.id, externalStatus: candidate.row.status, invoiceRef: candidate.invoiceRef };
+            return { id: createId(), userId, accountId: batch.local.id, date: candidate.date, description: candidate.row.description, amountCents: candidate.amountCents, kind: candidate.kind, nature: category.nature ?? "VARIABLE", categoryId: category.categoryId, isTransfer: category.isTransfer, origin: "PLUGGY" as const, externalId: candidate.row.id, externalStatus: candidate.row.status, invoiceRef: candidate.invoiceRef, installmentNumber: candidate.installmentNumber, installmentTotal: candidate.installmentTotal };
           });
-          await tx.insert(transactions).values(upsertRows).onConflictDoUpdate({ target: [transactions.userId, transactions.accountId, transactions.externalId], targetWhere: sql`${transactions.externalId} is not null`, set: { date: sql`excluded.date`, description: sql`excluded.description`, amountCents: sql`excluded.amount_cents`, kind: sql`excluded.kind`, categoryId: sql`COALESCE(${transactions.categoryId}, excluded.category_id)`, nature: sql`CASE WHEN ${transactions.categoryId} IS NULL THEN excluded.nature ELSE ${transactions.nature} END`, isTransfer: sql`CASE WHEN ${transactions.categoryId} IS NULL THEN excluded.is_transfer ELSE ${transactions.isTransfer} END`, externalStatus: sql`excluded.external_status`, invoiceRef: sql`excluded.invoice_ref`, updatedAt: new Date() } });
+          await tx.insert(transactions).values(upsertRows).onConflictDoUpdate({
+            target: [transactions.userId, transactions.accountId, transactions.externalId],
+            targetWhere: sql`${transactions.externalId} is not null`,
+            set: {
+              date: sql`excluded.date`, description: sql`excluded.description`,
+              amountCents: sql`excluded.amount_cents`, kind: sql`excluded.kind`,
+              categoryId: sql`COALESCE(${transactions.categoryId}, excluded.category_id)`,
+              nature: sql`CASE WHEN ${transactions.categoryId} IS NULL THEN excluded.nature ELSE ${transactions.nature} END`,
+              isTransfer: sql`CASE WHEN ${transactions.categoryId} IS NULL THEN excluded.is_transfer ELSE ${transactions.isTransfer} END`,
+              externalStatus: sql`excluded.external_status`, invoiceRef: sql`excluded.invoice_ref`,
+              installmentNumber: sql`COALESCE(excluded.installment_number, ${transactions.installmentNumber})`,
+              installmentTotal: sql`COALESCE(excluded.installment_total, ${transactions.installmentTotal})`,
+              updatedAt: new Date(),
+            },
+          });
         }
         if (batch.remote.type === "CREDIT") {
           for (const bill of batch.bills) {

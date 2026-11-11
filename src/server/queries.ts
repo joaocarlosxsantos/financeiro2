@@ -20,11 +20,12 @@ import {
   transactions as txTable,
   users as usersTable,
 } from "@/db/schema";
-import { monthRange, monthShortLabel, lastNMonths, shiftMonth, type MonthRef } from "@/lib/dates";
+import { monthRange, monthRefToParam, monthShortLabel, lastNMonths, shiftMonth, type MonthRef } from "@/lib/dates";
 import type { MonthSummary } from "@/lib/finance";
 import { monthlyInterestCents } from "@/lib/debts";
 import { accountBalance, netWorth } from "@/lib/balances";
 import { detectSubscriptions } from "@/lib/subscriptions";
+import { transactionDateOrder, transactionsInInvoice } from "./transaction-dates";
 
 /**
  * O usuário da sessão.
@@ -319,8 +320,7 @@ export async function getCardCategoryBreakdown(userId: string, ref: MonthRef): P
         eq(txTable.isTransfer, false),
         or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
         eq(accountsTable.type, "CREDIT_CARD"),
-        gte(txTable.date, start),
-        lt(txTable.date, end),
+        transactionsInInvoice(monthRefToParam(ref), and(gte(txTable.date, start), lt(txTable.date, end))),
       ),
     )
     .groupBy(txTable.categoryId, categoriesTable.name, categoriesTable.color, categoriesTable.nature);
@@ -537,6 +537,7 @@ export type TransactionFilters = {
 
 export async function getTransactions(userId: string, filters: TransactionFilters, take = 300) {
   const conditions = [eq(txTable.userId, userId)];
+  let byInvoice = false;
 
   if (filters.dateFrom && filters.dateTo) {
     const start = new Date(`${filters.dateFrom}T00:00:00.000Z`);
@@ -545,7 +546,15 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     conditions.push(gte(txTable.date, start), lt(txTable.date, end));
   } else if (filters.ref) {
     const { start, end } = monthRange(filters.ref);
-    conditions.push(gte(txTable.date, start), lt(txTable.date, end));
+    byInvoice = filters.accountKind === "CARD";
+    if (!filters.accountKind && filters.accountId) {
+      const [account] = await db.select({ type: accountsTable.type }).from(accountsTable)
+        .where(and(eq(accountsTable.userId, userId), eq(accountsTable.id, filters.accountId)))
+        .limit(1);
+      byInvoice = account?.type === "CREDIT_CARD";
+    }
+    const dateFilter = and(gte(txTable.date, start), lt(txTable.date, end))!;
+    conditions.push(byInvoice ? transactionsInInvoice(monthRefToParam(filters.ref), dateFilter) : dateFilter);
   }
   if (filters.uncategorized) conditions.push(isNull(txTable.categoryId));
   else if (filters.categoryId) conditions.push(eq(txTable.categoryId, filters.categoryId));
@@ -587,7 +596,7 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
     .innerJoin(accountsTable, eq(accountsTable.id, txTable.accountId))
     .where(and(...conditions))
-    .orderBy(desc(txTable.date), desc(txTable.createdAt))
+    .orderBy(...transactionDateOrder(byInvoice ? "asc" : "desc"))
     .limit(take);
 }
 

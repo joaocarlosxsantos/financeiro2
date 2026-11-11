@@ -224,7 +224,7 @@ export function ImportWizard({ accounts, categories }: { accounts: Account[]; ca
           </p>
           <p className="muted mt-1 text-[0.8125rem]">
             {isCard
-              ? `Parcela (ex.: "2/12") vai para ${monthLabel(monthRefFromParam(invoiceMonth))}, dia original preservado. Compra à vista entra com a data real de compra do arquivo, mesmo fora desse mês.`
+              ? `As linhas serão vinculadas à fatura de ${monthLabel(monthRefFromParam(invoiceMonth))}. Compras à vista e primeiras parcelas mantêm a data do arquivo. As parcelas seguintes usam a data da cobrança.`
               : "Aceita CSV e OFX de extrato bancário — cada linha entra com a própria data do arquivo."}
           </p>
         </label>

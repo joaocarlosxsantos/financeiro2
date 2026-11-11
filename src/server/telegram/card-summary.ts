@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, openFinanceInvoices, transactions } from "@/db/schema";
 import { getCivilToday, invoiceCycle } from "@/lib/invoices";
+import { cardPurchasesThrough, transactionDateOrder, transactionsInInvoice } from "../transaction-dates";
 
 export interface CardPurchase {
   description: string;
@@ -179,14 +180,13 @@ export async function loadCardSummary(
 
         if (currentCycleRef && periodStart && closesOn) {
           invoiceConditions.push(
-            or(
-              eq(transactions.invoiceRef, currentCycleRef),
+            transactionsInInvoice(
+              currentCycleRef,
               and(
-                isNull(transactions.invoiceRef),
                 sql`${transactions.date} >= ${periodStart.toISOString()}::timestamptz`,
                 sql`${transactions.date} <= ${closesOn.toISOString()}::timestamptz`,
               ),
-            )!,
+            ),
           );
         }
 
@@ -226,6 +226,7 @@ export async function loadCardSummary(
             eq(transactions.kind, "EXPENSE"),
             eq(transactions.isTransfer, false),
             eq(transactions.isCardPayment, false),
+            cardPurchasesThrough(civilToday),
             or(
               isNull(transactions.externalStatus),
               eq(transactions.externalStatus, "POSTED"),
@@ -233,7 +234,7 @@ export async function loadCardSummary(
             ),
           ),
         )
-        .orderBy(desc(transactions.date), desc(transactions.createdAt))
+        .orderBy(...transactionDateOrder("desc"))
         .limit(5);
 
       return {

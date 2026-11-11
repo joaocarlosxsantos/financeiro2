@@ -12,7 +12,7 @@ type MockConnection = { id: string; userId: string; status?: string; label?: str
 type MockAccount = { id: string; userId: string; name?: string; type?: "CHECKING" | "CREDIT_CARD"; externalConnectionId?: string; externalAccountId?: string; financeMode?: string; archived?: boolean; closingDay?: number; dueDay?: number };
 type MockPluggyAccount = { id: string; itemId: string; type: "BANK" | "CREDIT"; subtype?: string; name?: string; currencyCode: string; balance?: number; updatedAt?: string; creditData?: { creditLimit?: number; availableCreditLimit?: number } };
 type MockBill = { id: string; dueDate: string; totalAmount: number; totalAmountCurrencyCode: string; minimumPaymentAmount: number };
-type MockPluggyTransaction = { id: string; accountId: string; description: string; date: string; amount: number; currencyCode: string; type: "DEBIT" | "CREDIT"; status: "POSTED" | "PENDING"; operationType?: string; billId?: string; billForecastDate?: string; creditCardMetadata?: { payeeMCC?: number | null } };
+type MockPluggyTransaction = { id: string; accountId: string; description: string; date: string; amount: number; currencyCode: string; type: "DEBIT" | "CREDIT"; status: "POSTED" | "PENDING"; operationType?: string; billId?: string; billForecastDate?: string; creditCardMetadata?: { payeeMCC?: number | null; installmentNumber?: number; totalInstallments?: number; purchaseDate?: string; billPostDate?: string; billId?: string } };
 type MockQuery = {
   where: (...args: unknown[]) => MockQuery;
   for: (...args: unknown[]) => MockQuery;
@@ -346,15 +346,18 @@ describe("Open Finance deletion actions", () => {
       mocks.state.remoteTransactions = [
         { id: "bank-tx", accountId: "pluggy-bank", description: "bank row", date: "2026-09-10T00:00:00.000Z", amount: 30, currencyCode: "BRL", type: "DEBIT", status: "POSTED" },
         { id: "bank-tx-2", accountId: "pluggy-bank", description: "bank row 2", date: "2026-09-10T00:00:00.000Z", amount: 10, currencyCode: "BRL", type: "DEBIT", status: "POSTED" },
-        { id: "card-purchase", accountId: cardExternalId, description: "card purchase", date: "2026-09-11T00:00:00.000Z", amount: 40, currencyCode: "BRL", type: "DEBIT", status: "POSTED" },
+        { id: "card-purchase", accountId: cardExternalId, description: "card purchase", date: "2026-09-11T12:00:00.000Z", amount: 40, currencyCode: "BRL", type: "DEBIT", status: "POSTED", creditCardMetadata: { installmentNumber: 1, totalInstallments: 3, purchaseDate: "2026-09-10", billId: "bill-1" } },
+        { id: "card-charge", accountId: cardExternalId, description: "card charge", date: "2026-10-11T12:00:00.000Z", amount: 40, currencyCode: "BRL", type: "DEBIT", status: "PENDING", creditCardMetadata: { installmentNumber: 2, totalInstallments: 3, purchaseDate: "2026-09-10", billPostDate: "2026-10-10" } },
         { id: "card-payment", accountId: cardExternalId, description: "payment record", date: "2026-09-12T00:00:00.000Z", amount: 40, currencyCode: "BRL", type: "CREDIT", status: "POSTED", operationType: "PAGAMENTO_FATURA" },
       ];
 
       const result = await syncOpenFinance(VALID_CONN_ID);
 
-      expect(result).toMatchObject({ ok: true, imported: 3, status: "UPDATED" });
-      expect(mocks.upsertedTransactions.map((row) => row.externalId)).toEqual(["bank-tx", "bank-tx-2", "card-purchase"]);
-      expect(mocks.transactionBatchSizes).toEqual([2, 1]);
+      expect(result).toMatchObject({ ok: true, imported: 4, status: "UPDATED" });
+      expect(mocks.upsertedTransactions.map((row) => row.externalId)).toEqual(["bank-tx", "bank-tx-2", "card-purchase", "card-charge"]);
+      expect(mocks.upsertedTransactions[2]).toMatchObject({ installmentNumber: 1, installmentTotal: 3, date: new Date("2026-09-10T12:00:00.000Z"), invoiceRef: "2026-10" });
+      expect(mocks.upsertedTransactions[3]).toMatchObject({ installmentNumber: 2, installmentTotal: 3, date: new Date("2026-10-10T12:00:00.000Z"), invoiceRef: "2026-11" });
+      expect(mocks.transactionBatchSizes).toEqual([2, 2]);
       expect(mocks.transactionConflictTargets).toEqual([
         [transactions.userId, transactions.accountId, transactions.externalId],
         [transactions.userId, transactions.accountId, transactions.externalId],
@@ -363,16 +366,16 @@ describe("Open Finance deletion actions", () => {
       expect(mocks.updatedAccounts).toContainEqual({ values: expect.objectContaining({ creditLimitCents: 100000, availableCreditCents: 80000 }) });
       expect(result.accounts).toEqual(expect.arrayContaining([
         expect.objectContaining({ accountName: "Conta corrente", inserted: 2, status: "OK" }),
-        expect.objectContaining({ accountName: "Cartão Itaú", inserted: 1, ignoredByType: 1, status: "OK" }),
+        expect.objectContaining({ accountName: "Cartão Itaú", inserted: 2, ignoredByType: 1, status: "OK" }),
       ]));
 
       mocks.state.transactions = mocks.upsertedTransactions.map((row) => ({ userId: "user-a", accountId: String(row.accountId), externalId: String(row.externalId), origin: "PLUGGY" }));
       mocks.state.connections[0]!.lastAttemptAt = new Date(Date.now() - 61_000);
       const secondSync = await syncOpenFinance(VALID_CONN_ID);
-      expect(secondSync).toMatchObject({ ok: true, imported: 3, status: "UPDATED" });
+      expect(secondSync).toMatchObject({ ok: true, imported: 4, status: "UPDATED" });
       expect(secondSync.accounts).toEqual(expect.arrayContaining([
         expect.objectContaining({ accountName: "Conta corrente", inserted: 0, updated: 2 }),
-        expect.objectContaining({ accountType: "CREDIT_CARD", inserted: 0, updated: 1 }),
+        expect.objectContaining({ accountType: "CREDIT_CARD", inserted: 0, updated: 2 }),
       ]));
     });
   });

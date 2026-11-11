@@ -12,20 +12,20 @@
  *   fatura escolhida (uma compra do fim de julho aparecer na fatura de
  *   setembro é normal, e é assim que deve continuar aparecendo: 16/08, não
  *   forçado para setembro).
- * - **Parcela N/T**: o arquivo só traz a data da compra original (a da
- *   primeira parcela), não a da parcela atual — não dá para calcular isso
- *   com segurança só pelo texto "N/T" (já tentamos, é frágil demais). Por
- *   isso quem decide o mês/ano é o mês de referência que o usuário escolheu
- *   para aquela fatura; só o dia do mês é preservado da linha original.
+ * - **Parcela N/T**: a primeira preserva a data da compra impressa. Para as
+ *   demais, a fatura selecionada determina o ciclo; sem fechamento e
+ *   vencimento configurados, usa-se o mês selecionado e o dia impresso.
  *
  * Conta que não é cartão nunca tem a data mexida: extrato bancário tem data
  * real de cada movimento, e essa data importa.
  */
-import { dateForMonth, parseInstallmentMarker, type InstallmentMarker } from "./installments";
-import type { MonthRef } from "./dates";
+import { addMonthsKeepingDay, dateForMonth, parseInstallmentMarker, type InstallmentMarker } from "./installments";
+import { monthRefToParam, shiftMonth, type MonthRef } from "./dates";
+import { invoiceCycle, invoiceRefForInstallment } from "./invoices";
 
 export type ResolvedImportDate = {
   date: Date;
+  fingerprintDate: Date;
   adjusted: boolean;
   marker: InstallmentMarker | null;
 };
@@ -33,16 +33,30 @@ export type ResolvedImportDate = {
 export function resolveImportDate(
   printedDate: Date,
   description: string,
-  opts: { isCard: boolean; invoiceRef?: MonthRef },
+  opts: { isCard: boolean; invoiceRef?: MonthRef; closingDay?: number | null; dueDay?: number | null },
 ): ResolvedImportDate {
   const marker = parseInstallmentMarker(description);
 
-  // Só parcela é reposicionada para o mês da fatura — compra à vista mantém
-  // a data real impressa no arquivo (ver comentário do arquivo).
-  if (opts.isCard && opts.invoiceRef && marker) {
-    const date = dateForMonth(opts.invoiceRef, printedDate.getUTCDate());
-    return { date, adjusted: date.getTime() !== printedDate.getTime(), marker };
+  if (!opts.isCard || !opts.invoiceRef || !marker) {
+    return { date: printedDate, fingerprintDate: printedDate, adjusted: false, marker };
   }
 
-  return { date: printedDate, adjusted: false, marker };
+  const { invoiceRef, closingDay, dueDay } = opts;
+  const day = printedDate.getUTCDate();
+  // Preserva a chave de deduplicação de arquivos que já foram importados.
+  const fingerprintDate = dateForMonth(invoiceRef, day);
+  let date = marker.number === 1 ? printedDate : fingerprintDate;
+  if (marker.number > 1 && closingDay && dueDay && closingDay <= 31 && dueDay <= 31 && closingDay > 0 && dueDay > 0) {
+    const selectedRef = monthRefToParam(invoiceRef);
+    const firstRef = invoiceCycle(printedDate, closingDay, dueDay).ref;
+    if (invoiceRefForInstallment(firstRef, marker.number) === selectedRef) {
+      date = addMonthsKeepingDay(printedDate, marker.number - 1);
+    } else {
+      // Um ciclo pode começar até dois meses antes do vencimento.
+      const months = [invoiceRef, shiftMonth(invoiceRef, -1), shiftMonth(invoiceRef, -2)];
+      date = months.map((month) => dateForMonth(month, day))
+        .find((candidate) => invoiceCycle(candidate, closingDay, dueDay).ref === selectedRef) ?? fingerprintDate;
+    }
+  }
+  return { date, fingerprintDate, adjusted: date.getTime() !== printedDate.getTime(), marker };
 }

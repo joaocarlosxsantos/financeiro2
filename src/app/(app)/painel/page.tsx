@@ -17,7 +17,7 @@ import {
   getTotalSavedCents,
   getUser,
 } from "@/server/queries";
-import { monthRefFromParam, monthLabel, currentMonthRef, getNowInSaoPaulo } from "@/lib/dates";
+import { monthRefFromParam, monthRefToParam, monthLabel, currentMonthRef, getNowInSaoPaulo } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
 import {
   balanceCents,
@@ -293,11 +293,11 @@ export default async function DashboardPage({
         <section className="mt-4" aria-label="Gastos no cartão de crédito">
           <Card className="min-w-0">
             <CardHeader
-              title={`Gastos no cartão em ${monthLabel(ref)}`}
+              title={`Faturas de cartão de ${monthLabel(ref)}`}
               subtitle="Demonstrativo de compras faturadas no cartão de crédito."
               action={
                 <Link
-                  href="/lancamentos?acc=CARD"
+                  href={`/lancamentos?acc=CARD&m=${monthRefToParam(ref)}`}
                   className="inline-flex min-h-11 items-center text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300"
                 >
                   Ver lançamentos do cartão

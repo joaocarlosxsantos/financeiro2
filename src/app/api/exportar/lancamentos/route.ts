@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
   const kind = sp.get("kind");
   const nature = sp.get("nature");
   const acc = sp.get("acc");
+  const accountId = sp.get("accountId") || (acc && acc !== "CARD" && acc !== "OTHER" ? acc : undefined);
   const q = sp.get("q");
 
   const transactions = await getTransactions(
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
       dateTo: customRange?.to,
       categoryId: cat && cat !== "NONE" ? cat : undefined,
       uncategorized: cat === "NONE",
+      accountId,
       accountKind: acc === "CARD" || acc === "OTHER" ? acc : undefined,
       kind: kind === "INCOME" || kind === "EXPENSE" ? kind : undefined,
       nature: nature === "FIXED" || nature === "VARIABLE" ? nature : undefined,
