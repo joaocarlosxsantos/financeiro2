@@ -10,7 +10,8 @@ describe("document security policy", () => {
     expect(policy).not.toMatch(/unsafe-eval|script-src[^;]*unsafe-inline/);
     expect(policy).toContain("font-src 'self'");
     expect(policy).toContain("img-src 'self' data: blob:");
-    expect(policy).toContain("connect-src 'self';");
+    expect(policy).toContain("connect-src 'self' https://api.pluggy.ai https://*.pluggy.ai");
+    expect(policy).toContain("frame-src 'self' https://connect.pluggy.ai https://*.pluggy.ai");
     expect(policy).toContain("frame-ancestors 'none'");
   });
   it("only development permits eval and HMR sockets", () => {

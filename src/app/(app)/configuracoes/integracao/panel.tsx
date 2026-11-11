@@ -123,23 +123,23 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       return Promise.resolve(window.PluggyConnect);
     }
     return new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[src*="pluggy-connect-sdk"]');
+      const existing = document.querySelector('script[src*="pluggy-connect"]');
       if (existing) {
         existing.addEventListener("load", () => {
           if (window.PluggyConnect) resolve(window.PluggyConnect);
           else reject(new Error("PluggyConnect não disponível após carregamento."));
         });
-        existing.addEventListener("error", reject);
+        existing.addEventListener("error", () => reject(new Error("Falha ao carregar o script do widget Pluggy Connect.")));
         return;
       }
       const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/pluggy-connect-sdk@latest/dist/index.umd.js";
+      script.src = "https://cdn.pluggy.ai/pluggy-connect/latest/pluggy-connect.js";
       script.async = true;
       script.onload = () => {
         if (window.PluggyConnect) resolve(window.PluggyConnect);
         else reject(new Error("PluggyConnect não disponível após carregamento."));
       };
-      script.onerror = () => reject(new Error("Falha ao carregar o widget do Pluggy Connect."));
+      script.onerror = () => reject(new Error("Falha ao carregar o widget do Pluggy Connect. Verifique sua conexão ou se algum bloqueador de scripts está ativo."));
       document.body.appendChild(script);
     });
   }
@@ -151,7 +151,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       const tokenRes = await getPluggyConnectToken();
       if (tokenRes.error || !tokenRes.connectToken) {
         setBusy(false);
-        return setMessage(tokenRes.error ?? "Não foi possível iniciar a conexão.");
+        return setMessage(tokenRes.error ?? "Não foi possível obter o token de conexão.");
       }
 
       const PluggyConnect = await loadPluggySdk();

@@ -288,6 +288,34 @@ describe("Open Finance F14: Credenciais Pluggy por usuário (TDD)", () => {
       const res = await getPluggyConnectToken();
       expect(res.error).toBeDefined();
     });
+
+    it("quando a Pluggy rejeita a autenticação com 401, retorna mensagem amigável de credenciais inválidas", async () => {
+      const encryptedClient = encryptSecret("invalid-client", "user-owner-1", "clientId");
+      const encryptedSecret = encryptSecret("invalid-secret", "user-owner-1", "clientSecret");
+
+      mocks.dbCredentials = [
+        {
+          userId: "user-owner-1",
+          clientIdEnvelope: encryptedClient,
+          clientSecretEnvelope: encryptedSecret,
+          updatedAt: new Date(),
+        },
+      ];
+
+      global.fetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes("/auth")) {
+          return {
+            ok: false,
+            status: 401,
+            json: async () => ({ message: "Invalid credentials", code: 401 }),
+          };
+        }
+        return { ok: false, status: 500, json: async () => ({}) };
+      });
+
+      const res = await getPluggyConnectToken();
+      expect(res.error).toContain("Credenciais da Pluggy inválidas ou expiradas");
+    });
   });
 
   describe("connectPluggyItem (Anti-IDOR com credenciais do usuário)", () => {

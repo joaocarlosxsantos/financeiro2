@@ -228,6 +228,15 @@ export async function getPluggyConnectToken() {
     });
     return { ok: true, connectToken };
   } catch (error) {
+    const errorType = error instanceof PluggyHttpError
+      ? `PluggyHttpError(${error.status}:${error.code})`
+      : error instanceof Error
+        ? `${error.name}: ${error.message.replace(/[\r\n]/g, " ").slice(0, 80)}`
+        : "UnknownError";
+    console.error("Open Finance connectToken generation failed", { errorType });
+    if (error instanceof PluggyHttpError && error.status === 401) {
+      return { error: "Credenciais da Pluggy inválidas ou expiradas. Atualize seu Client ID e Client Secret em Configurações > Integração." };
+    }
     return { error: safeError(error) };
   }
 }
