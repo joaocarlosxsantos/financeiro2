@@ -1,223 +1,255 @@
 # Mutano Contas
 
-Controle financeiro pessoal com foco em **clareza**: separar gasto fixo de variável,
-construir reserva de emergência com base no custo de vida real, acompanhar metas,
-projetar o futuro e importar extratos e faturas.
+Controle financeiro pessoal inteligente, didático e seguro, construído com **Next.js 16**, **React 19**, **Drizzle ORM** e **Tailwind CSS v4**.
 
-> Feito para ser didático: cada número da tela vem acompanhado da explicação do
-> porquê ele importa.
+O **Mutano Contas** foi concebido para entregar visibilidade real sobre suas finanças: separar custos fixos de variáveis, calcular a reserva de emergência ideal com base no custo de vida real, projetar o fechamento do mês no ritmo atual, gerenciar cartões de crédito e parcelamentos com centavos exatos, sincronizar extratos via Open Finance e oferecer alertas proativos no Telegram.
+
+Produção: [mutanocontas.vercel.app](https://mutanocontas.vercel.app)
 
 ---
 
-## O que já está pronto
+## Funcionalidades
 
-| Área | O que faz |
+### 1. Painel Inteligente & Visão Geral
+- **Balanço Mensal:** Entradas, saídas e saldo líquido do mês.
+- **Previsão de Fechamento:** Projeção do saldo de fim de mês baseada na taxa de consumo (*burn rate*) atual versus receitas e despesas restantes.
+- **Quanto Posso Gastar Hoje:** Indicador diário que calcula a quantia segura para gastar no dia sem fechar o mês no vermelho.
+- **Saúde Financeira:** Pontuação didática calculada a partir de 3 pilares (reserva de emergência, comprometimento da renda e equilíbrio 50/30/20).
+- **Evolução Patrimonial:** Gráficos históricos de 6 meses e ranking de gastos por categoria.
+
+### 2. Lançamentos & Gestão de Despesas
+- **Lançamentos Detalhados:** CRUD completo com filtros por tipo (receita, despesa, transferência), categoria, conta e busca textual.
+- **Parcelamentos Inteligentes:** Suporte a compras parceladas em até 60x com distribuição exata dos centavos na primeira parcela.
+- **Divisão de Despesas (Split):** Divisão de contas com outras pessoas (igual, proporcional ou valor exato) com geração de link de cobrança direta pelo WhatsApp.
+- **Transferências Seguras:** Transferências entre contas próprias e pagamento de fatura não inflam os relatórios de despesa/receita.
+
+### 3. Contas, Cartões & Faturas
+- **Contas Bancárias:** Gestão de contas correntes, poupanças e investimentos com cálculo de patrimônio líquido em tempo real.
+- **Cartões de Crédito:** Controle de limites, faturas abertas/fechadas, histórico de parcelas futuras e alertas de vencimento.
+
+### 4. Contas a Pagar & Grupos Compartilhados
+- **Contas a Vencer:** Acompanhamento de contas a pagar com datas de vencimento, status e baixa manual.
+- **Grupos de Despesas Compartilhadas:** Gestão de despesas divididas em grupo (ex.: moradia em conjunto ou viagens) com cálculo de acerto de contas e liquidação de saldos entre membros.
+
+### 5. Orçamentos, Metas & Reserva
+- **Orçamento por Categoria:** Tetos de gastos mensais com alertas visuais graduais (normal, 80% e 100%) e sugestão automática de orçamento com base na média dos meses anteriores.
+- **Metas Financeiras:** Objetivos de médio e longo prazo com acompanhamento de aportes, resgates e estimativa de conclusão.
+- **Reserva de Emergência:** Cálculo automático da meta de reserva ancorado no custo de vida real de despesas fixas.
+
+### 6. Recorrentes & Detecção de Aumento de Preço
+- **Assinaturas e Gastos Fixos:** Cadastro de despesas e receitas recorrentes com cálculo de comprometimento da renda fixa.
+- **Alerta de Reajustes:** Deteção automática de assinaturas com cobranças acima da média histórica habitual.
+
+### 7. Dívidas & Projeções
+- **Simulador de Quitação de Dívidas:** Comparação visual entre as estratégias **Bola de Neve** (menor saldo primeiro) e **Avalanche** (maior taxa de juros primeiro), detalhando economia de juros e tempo de quitação.
+- **Projeções de Longo Prazo:** Simulador de juros compostos com cenários conservador, moderado e agressivo para horizontes de 1 a 20 anos.
+
+### 8. Importação & Conciliação
+- **Assistente de Importação:** Suporte a arquivos de extrato bancário e fatura nos formatos **CSV** e **OFX**.
+- **Mapeamento e Anti-Duplicidade:** Detecção de colunas, categorização inteligente por palavras-chave e bloqueio de lançamentos duplicados por fingerprint criptográfico antes da gravação.
+
+### 9. Open Finance via Pluggy Connect
+- **Conexão Bancária Automatizada:** Integração com o widget oficial da [Pluggy](https://pluggy.ai) para sincronização de contas, saldos, cartões e transações reais.
+- **Credenciais Seguras por Usuário:** Cada usuário configura suas próprias chaves de API da Pluggy (`Client ID` e `Client Secret`), armazenadas no banco de dados com criptografia `AES-256-GCM` com AAD.
+
+### 10. Perfis de Uso Personalizados
+O aplicativo se molda ao estilo de controle do usuário:
+- **`integracao_total`:** Focado na automação via Open Finance, ocultando formulários manuais redundantes.
+- **`hibrido` (Padrão):** Permite automação bancária, conciliação manual e importação de extratos.
+- **`manual`:** Gestão estritamente manual e via arquivos, sem abas de Open Finance.
+
+### 11. Bot do Telegram Integrado
+- **Comandos Rápidos:** `/saldo`, `/cartao`, `/previsao`, `/hoje`, `/resumo`, `/pausar`, `/desvincular` e `/ajuda`.
+- **Alertas Proativos:** Notificações de faturas próximas de vencer (3d, 1d e hoje), contas a pagar vencendo, orçamentos atingindo 80%/100% e alerta preventivo de saldo negativo.
+- **Inteligência Artificial:** Respostas em linguagem natural para dúvidas financeiras com suporte a Google Gemini ou Claude (Anthropic).
+- **Sem Spam:** Janela de silêncio obrigatória (08h às 21h no horário de Brasília) e deduplicação atômica de envios.
+- Detalhes completos em [docs/bot-telegram.md](docs/bot-telegram.md).
+
+### 12. PWA (Progressive Web App) & Exportações
+- **Instalação Nativa:** Suporte a PWA para Android, iOS e Desktop com `manifest.webmanifest` e banner guiado de instalação.
+- **Modo Offline:** Service Worker (`public/sw.js`) com cache de ativos e página estática de contingência (`public/offline.html`).
+- **Exportação de Dados:** Backup completo da conta em JSON, exportação de transações em CSV/Excel e emissão de relatório consolidado em PDF.
+
+---
+
+## Stack Tecnológica
+
+| Camada | Tecnologias |
 |---|---|
-| **Painel** | Entrou / saiu / sobrou do mês, nota de saúde financeira aberta em 3 partes, evolução de 6 meses, ranking de categorias, fixo x variável, reserva e guia 50/30/20 |
-| **Lançamentos** | CRUD completo, filtros (tipo, natureza, categoria, busca), troca de categoria inline, agrupamento por dia, divisão com outras pessoas (igual, percentual ou valor), compras parceladas em até 60x com divisão exata dos centavos |
-| **Contas** | Saldo de cada conta a partir de um saldo inicial informado, quanto se deve em cada cartão e patrimônio líquido |
-| **Contas a pagar** | Contas avulsas ou recorrentes, divididas entre pessoas, rateio exato e mensagem de cobrança por link do WhatsApp |
-| **Recorrentes** | Regras de lançamento que se repetem todo mês (aluguel, assinaturas, salário), geradas com um clique — nunca automaticamente. Pausar, encerrar por data e ver quanto da renda já está comprometida |
-| **Orçamento** | Limite mensal por categoria, acompanhamento do quanto já foi consumido, alerta em três estados e projeção de fechamento no ritmo atual |
-| **Dívidas** | Saldo, taxa e custo mensal de juros de cada dívida; simulador que compara bola de neve x avalanche com prazo, juros totais e ordem de quitação |
-| **Metas e reserva** | Reserva de emergência calculada a partir do custo de vida real, metas com prazo, aportes e resgates, previsão de conclusão no ritmo atual |
-| **Projeções** | Juros compostos com 3 cenários (6% / 10% / 14% a.a.), horizonte de 1 a 20 anos, decomposição aporte x juros |
-| **Importar** | CSV e OFX de banco ou fatura, detecção automática de colunas, categorização por palavra-chave, bloqueio de duplicatas, conferência antes de gravar |
-| **Configurações** | Perfil financeiro, contas e cartões, categorias com palavras-chave |
-| **Conta** | Cadastro, login e sessão (Auth.js v5, senha com bcrypt), onboarding guiado |
+| **Core & Framework** | [Next.js 16](https://nextjs.org/) (App Router), [React 19](https://react.dev/), [TypeScript 5](https://www.typescriptlang.org/) |
+| **Estilização & UI** | [Tailwind CSS v4](https://tailwindcss.com/), [Lucide React](https://lucide.dev/), [Recharts](https://recharts.org/) |
+| **Banco de Dados** | PostgreSQL ([Neon](https://neon.tech/), Supabase ou Docker), [Drizzle ORM](https://orm.drizzle.team/) |
+| **Autenticação & Criptografia** | [Auth.js v5](https://authjs.dev/) (sessão JWT, `bcryptjs`), Cifra `AES-256-GCM` com AAD |
+| **Validação & Parsing** | [Zod 4](https://zod.dev/), [PapaParse](https://www.papaparse.com/), [Date-fns](https://date-fns.org/) |
+| **Relatórios & Arquivos** | [PDFKit](https://pdfkit.org/), [ExcelJS](https://github.com/exceljs/exceljs) |
+| **Testes de Unidade** | [Vitest](https://vitest.dev/) (mais de 590 testes cobrindo todas as regras de negócio) |
+
+Consulte o documento completo de arquitetura em [docs/arquitetura.md](docs/arquitetura.md).
 
 ---
 
-## Stack
+## Instalação e Execução Local
 
-- **Next.js 16** (App Router, Server Components e Server Actions) + **TypeScript**
-- **Tailwind CSS v4** — tema claro/escuro por classe, tokens em `globals.css`
-- **Drizzle ORM** + **PostgreSQL** (Neon, Supabase, Vercel Postgres — qualquer um)
-- **Auth.js v5** (next-auth) com provider de credenciais e sessão JWT
-- **Recharts** para gráficos, **Zod** para validação, **lucide-react** para ícones
+### Pré-requisitos
+- Node.js 22 ou superior
+- NPM
+- Docker (opcional, caso queira rodar o Postgres localmente)
 
-### Quatro decisões que valem conhecer
-
-1. **Dinheiro é `integer` em centavos.** Nada de `float` ou `Decimal`: acabam os erros
-   de arredondamento e o problema de serializar `Decimal` entre servidor e cliente.
-2. **Escrita via Server Actions, leitura via Server Components.** Não existe camada
-   de API REST intermediária — menos código e menos lugar para o dado divergir.
-3. **A compra no cartão é despesa no dia da compra**, não no dia em que a fatura é
-   paga. O pagamento da fatura é uma *transferência* entre contas suas: fica de fora
-   dos totais, senão o mesmo dinheiro apareceria duas vezes. Lançamentos marcados como
-   transferência continuam visíveis no histórico, mas somem dos gráficos e do orçamento.
-4. **Num arquivo `"use server"`, todo export vira um endpoint público.** Por isso as
-   funções puras e as que recebem `userId` moram fora deles: regras de parcelamento em
-   `src/lib/installments.ts` e a gravação em `src/server/installments.ts`.
-
----
-
-## Rodando localmente
-
+### 1. Clonar e Instalar Dependências
 ```bash
-# 1. dependências
+git clone https://github.com/seu-usuario/financeiro_2.git
+cd financeiro_2
 npm install
-
-# 2. variáveis de ambiente
-cp .env.example .env
-#    preencha DATABASE_URL / DIRECT_URL e gere o AUTH_SECRET:
-npx auth secret        # ou: openssl rand -base64 32
-
-# 3. criar as tabelas
-npm run db:push        # rápido, para desenvolvimento
-#    ou, com histórico de migrations:
-npm run db:generate && npm run db:migrate
-
-# 4. (opcional) dados de exemplo
-npm run db:seed        # demo@financeiro.app / demo12345
-
-# 5. subir
-npm run dev            # http://localhost:3000
 ```
 
-### Scripts
+### 2. Configurar Variáveis de Ambiente
+Copie o modelo de variáveis de ambiente:
+```bash
+cp .env.example .env
+```
 
-| Comando | O que faz |
-|---|---|
-| `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` / `npm start` | Build e execução de produção |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint |
-| `npm test` | Testes das regras de negócio (Vitest) |
-| `npm run test:watch` | Testes em modo observador |
-| `npm run db:push` | Aplica o schema direto no banco |
-| `npm run db:generate` | Gera o SQL da migration em `drizzle/` |
-| `npm run db:migrate` | Aplica as migrations pendentes |
-| `npm run db:studio` | Interface visual do banco |
-| `npm run db:seed` | Usuário e lançamentos de demonstração |
+Edite o arquivo `.env`. Nenhuma variável exige segredos pré-existentes para iniciar localmente além da conexão do banco de dados e do segredo de autenticação:
 
----
+| Variável | Obrigatória | Finalidade |
+|---|---|---|
+| `DATABASE_URL` | Sim | Conexão PostgreSQL (com pooler, em produção). |
+| `DIRECT_URL` | Sim | Conexão direta ao PostgreSQL (utilizada para rodar migrações Drizzle). |
+| `AUTH_SECRET` | Sim | Chave de 32 bytes para assinar tokens JWT (`openssl rand -base64 32`). |
+| `AUTH_URL` | Não (Local) | URL base da aplicação (em produção: `https://mutanocontas.vercel.app`). |
+| `APP_ENCRYPTION_KEY` | Não | Chave de 32 bytes (64 caracteres hex) para criptografia AES-256-GCM das credenciais Open Finance. |
+| `TELEGRAM_BOT_TOKEN` | Não | Token do bot criado no @BotFather do Telegram. |
+| `TELEGRAM_WEBHOOK_SECRET` | Não | Segredo arbitrário para validação do webhook do Telegram. |
+| `CRON_SECRET` | Não | Token Bearer para autenticação dos endpoints do Vercel Cron. |
+| `AI_PROVIDER` | Não | Provedor de IA para o bot (`gemini` ou `anthropic`). |
+| `GEMINI_API_KEY` | Não | Chave da API Google Gemini para perguntas em linguagem natural. |
+| `ANTHROPIC_API_KEY` | Não | Chave da API Anthropic Claude. |
 
-## Banco no Docker
-
-O `docker-compose.yml` sobe **só o Postgres**. A aplicação continua rodando no host
-com `npm run dev`, mantendo o hot reload.
-
+### 3. Banco de Dados Local (Docker)
+Para subir uma instância local do PostgreSQL:
 ```bash
 docker compose up -d
 ```
+O banco estará disponível em `localhost:5432` com usuário `postgres` e senha `financeiro`.
 
-No `.env`, aponte as duas URLs para o container:
+### 4. Executar Migrações do Banco de Dados
+> [!IMPORTANT]
+> O comando de build da Vercel (`next build`) **NÃO executa migrações** automaticamente. Em qualquer ambiente novo ou após atualizações de schema, aplique as migrações explicitamente:
 
+```bash
+npm run db:migrate
 ```
-DATABASE_URL="postgresql://postgres:financeiro@localhost:5432/financeiro"
-DIRECT_URL="postgresql://postgres:financeiro@localhost:5432/financeiro"
+
+*(Opcional) Para popular o banco com categorias e dados de demonstração:*
+```bash
+npm run db:seed
 ```
 
-Depois é o fluxo normal: `npm run db:push`, `npm run db:seed` (opcional) e `npm run dev`.
+### 5. Iniciar o Servidor de Desenvolvimento
+```bash
+npm run dev
+```
+Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
 
-### Comandos úteis
+---
 
-| Comando | O que faz |
+## Scripts Disponíveis
+
+| Comando | Descrição |
 |---|---|
-| `docker compose up -d` | Sobe o banco |
-| `docker compose ps` | Mostra se está de pé e saudável |
-| `docker compose logs -f db` | Acompanha os logs do Postgres |
-| `docker compose down` | Para o banco (os dados ficam no volume) |
-| `docker compose down -v` | Para o banco **e apaga os dados** |
-| `docker compose exec db psql -U postgres financeiro` | Abre o psql |
-
-### Variáveis (todas opcionais)
-
-Defina no `.env` só se quiser mudar os padrões:
-
-| Variável | Padrão |
-|---|---|
-| `POSTGRES_USER` | `postgres` |
-| `POSTGRES_PASSWORD` | `financeiro` |
-| `POSTGRES_DB` | `financeiro` |
-| `POSTGRES_PORT` | `5432` |
-
-> Se a porta 5432 já estiver ocupada na sua máquina, defina `POSTGRES_PORT=5433` no
-> `.env` e troque a porta nas URLs de conexão também.
-
-## Publicando na Vercel
-
-1. Suba o repositório no GitHub.
-2. Na Vercel, **Add New → Project** e importe o repositório.
-3. Crie um banco Postgres (Vercel Postgres, [Neon](https://neon.tech) ou
-   [Supabase](https://supabase.com) — todos têm plano gratuito).
-4. Defina as variáveis de ambiente do projeto:
-   - `DATABASE_URL` — string de conexão **com pooling**
-   - `DIRECT_URL` — conexão direta (usada só pelas migrations)
-   - `AUTH_SECRET` — `npx auth secret`
-   - `AUTH_URL` — `https://seu-projeto.vercel.app`
-5. Rode as migrations uma vez apontando para o banco de produção:
-   `DIRECT_URL="..." npm run db:migrate`
-6. Deploy.
-
-O projeto não usa nada específico da Vercel — roda igual em qualquer host Node.
+| `npm run dev` | Inicia o servidor de desenvolvimento do Next.js com Turbopack. |
+| `npm run build` | Compila a aplicação para produção (`next build`). |
+| `npm start` | Inicia o servidor de produção localmente. |
+| `npm run typecheck` | Executa a verificação de tipos com TypeScript (`tsc --noEmit`). |
+| `npm run lint` | Executa a verificação estática de código com ESLint. |
+| `npm test` | Executa todos os testes de unidade de regras de negócio com Vitest. |
+| `npm run test:watch` | Executa os testes no modo observador interativo. |
+| `npm run db:generate` | Gera novas migrações SQL na pasta `drizzle/` a partir de `schema.ts`. |
+| `npm run db:migrate` | Aplica as migrações SQL pendentes no banco configurado em `DIRECT_URL`. |
+| `npm run db:push` | Sincroniza o schema diretamente no banco sem criar arquivos de migração. |
+| `npm run db:studio` | Abre a interface visual do Drizzle Studio no navegador. |
+| `npm run verify` | Script unificado de checagem do projeto. |
 
 ---
 
-## Estrutura
+## Deploy em Produção
+
+O projeto está otimizado para deploy na **Vercel** com banco PostgreSQL gerenciado ([Neon](https://neon.tech)):
+
+1. Importe o repositório na Vercel.
+2. Defina as variáveis de ambiente de produção (`DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_URL`, `APP_ENCRYPTION_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET`).
+3. Execute as migrações no banco de produção a partir do seu terminal seguro:
+   ```bash
+   DIRECT_URL="sua-url-neon-direta" npm run db:migrate
+   ```
+4. Os cron jobs configurados em `vercel.json` serão agendados automaticamente pela Vercel:
+   - `/api/cron/insights` (08h, 14h, 20h horário de Brasília)
+   - `/api/cron/insights/monthly` (dia 1º às 08h)
+5. Para ativar o bot do Telegram em produção, registre o webhook na API do Telegram conforme orientado em [docs/bot-telegram.md](docs/bot-telegram.md).
+
+---
+
+## Segurança e Privacidade
+
+- **Criptografia Autenticada:** As credenciais Open Finance são salvas com `AES-256-GCM` usando `APP_ENCRYPTION_KEY` e o `userId` como AAD (Additional Authenticated Data).
+- **Sem Vazamento de Credenciais:** Tokens e segredos de API nunca são expostos em endpoints públicos, respostas HTTP ou logs da aplicação.
+- **Autorização Estrita:** Todas as consultas e mutações validam a identidade do usuário a partir da sessão ativa do Auth.js. Nenhuma operação aceita o identificador de usuário (`userId`) diretamente do cliente.
+- **Proteção de Rede e Headers:** Headers de segurança configurados para prevenir framing, clickjacking, MIME sniffing e injeção de scripts (veja [docs/csp.md](docs/csp.md)).
+
+---
+
+## Estrutura de Pastas
 
 ```
-src/
-  app/
-    (app)/                 área logada (painel, lançamentos, contas, contas a pagar,
-                           recorrentes, orçamento, dívidas, metas, projeções,
-                           importar, configurações)
-    login/  cadastro/  onboarding/
-    api/auth/[...nextauth]/
-  components/
-    charts/                gráficos + paleta validada para daltonismo
-    ui/                    card, botão, campo, dica, progresso, estado vazio
-  db/
-    schema.ts              tabelas, enums e relations (Drizzle)
-    index.ts               conexão
-  lib/
-    finance.ts             regras financeiras (reserva, 50/30/20, saúde, projeção)
-    money.ts               centavos ⇄ texto, formatação BRL
-    installments.ts        divisão de parcelas e datas de recorrência (funções puras)
-    debts.ts               simulação de quitação: bola de neve x avalanche
-    balances.ts            saldo de conta, dívida de cartão e patrimônio líquido
-    parsers/               leitura de CSV e OFX
-    categorize.ts          categorização automática e fingerprint anti-duplicata
-    dates.ts  auth.ts  cn.ts  id.ts
-  server/
-    queries.ts             leituras agregadas
-    actions/               mutações (Server Actions)
-drizzle/                   migrations SQL
-scripts/seed.mjs           dados de demonstração
+├── drizzle/                     # Migrações SQL versionadas (0000 a 0025)
+├── docs/                        # Documentação técnica e relatórios
+│   ├── arquitetura.md           # Decisões de arquitetura e modelo de dados
+│   ├── bot-telegram.md          # Especificação e configuração do bot Telegram
+│   ├── csp.md                   # Política de segurança de conteúdo
+│   └── ...                      # Relatórios de auditoria e QA
+├── public/                      # Ativos estáticos, Service Worker (sw.js) e manifest
+├── scripts/                     # Scripts de verificação e seed do banco
+├── src/
+│   ├── app/                     # Next.js App Router
+│   │   ├── (app)/               # Rotas autenticadas da área logada
+│   │   │   ├── painel/          # Dashboard principal com métricas e previsões
+│   │   │   ├── lancamentos/     # Gestão de transações e parcelamentos
+│   │   │   ├── contas/          # Contas bancárias e cartões de crédito
+│   │   │   ├── contas-a-pagar/  # Contas a pagar e grupos de rateio
+│   │   │   ├── orcamento/       # Tetos orçamentários por categoria
+│   │   │   ├── metas/           # Metas e reserva de emergência
+│   │   │   ├── recorrentes/     # Assinaturas e receitas/despesas fixas
+│   │   │   ├── dividas/         # Simulador bola de neve x avalanche
+│   │   │   ├── projecoes/       # Projeções de juros compostos
+│   │   │   ├── importar/        # Assistente de importação de CSV/OFX
+│   │   │   └── configuracoes/   # Preferências, Telegram e Open Finance
+│   │   ├── api/                 # Endpoints de API, Crons e Webhooks
+│   │   ├── login/               # Tela de autenticação
+│   │   └── cadastro/            # Tela de criação de conta
+│   ├── components/              # Componentes de interface e gráficos
+│   ├── db/                      # Schema do banco de dados (Drizzle) e conexão
+│   ├── lib/                     # Regras de negócio puras e utilitários
+│   │   ├── finance.ts           # Cálculos de reserva, 50/30/20 e saúde financeira
+│   │   ├── installments.ts      # Divisão de parcelas e datas de fatura
+│   │   ├── debts.ts             # Algoritmos de amortização de dívidas
+│   │   ├── usage-profile.ts     # Engine de perfis de uso
+│   │   ├── parsers/             # Leitores de arquivos CSV e OFX
+│   │   └── money.ts             # Manipulação e formatação de centavos
+│   └── server/                  # Camada de backend protegida
+│       ├── actions/             # Server Actions Next.js (mutações)
+│       ├── queries.ts           # Consultas agregadas de leitura
+│       ├── open-finance/        # Lógica de integração e criptografia Pluggy
+│       └── telegram/            # Webhook, comandos, alertas e IA do bot
 ```
 
-### Onde mexer primeiro
-
-- **Regras financeiras** → `src/lib/finance.ts`, `src/lib/debts.ts`
-  e `src/lib/installments.ts` — todas funções puras, cobertas por `npm test`
-- **Categorias padrão e palavras-chave** → `src/lib/default-categories.ts`
-- **Cores e tipografia** → `src/app/globals.css`
-- **Cores dos gráficos** → `src/components/charts/palette.ts`
-
 ---
 
-## Acessibilidade e cor
+## Roadmap
 
-Auditado com **axe-core** em 14 telas, nos dois temas: **zero violações** WCAG 2.1 AA.
-
-A paleta dos gráficos foi validada para as três formas de daltonismo (protanopia,
-deuteranopia, tritanopia). Verde e vermelho puros foram evitados justamente por serem
-o par mais problemático: "entrou" usa teal (`#0d9488`) e "saiu" usa rosa (`#f43f5e`).
-Todo gráfico tem legenda e rótulo de texto — identidade nunca depende só de cor.
-
-**Cor de marca ≠ cor de texto.** Barras e pontos precisam de 3:1; texto precisa de
-4.5:1. Por isso existem dois conjuntos de variáveis: `--color-money-in/out/variable`
-para preenchimentos e `--text-in/out/warn/brand` para quando a mesma informação vira
-texto. Se você trocar uma, troque o par.
-
-Também garantidos: foco visível em tudo que é interativo, link "pular para o conteúdo",
-`aria-label` em todas as barras de progresso e botões só com ícone, `aria-current` no
-item de menu ativo, e layout sem rolagem horizontal em zoom de 200%.
-
----
-
-## Próximos passos sugeridos
-
-- Publicar no GitHub e na Vercel
-- Exportação para CSV/Excel e relatório mensal em PDF
+- [x] Integração Open Finance via Pluggy Connect com credenciais por usuário e criptografia AES-256-GCM.
+- [x] Alertas proativos no Telegram com janela de silêncio e deduplicação atômica.
+- [x] Previsão de fim de mês e cálculo de "quanto posso gastar hoje".
+- [x] Detecção de reajustes de valor em assinaturas recorrentes.
+- [x] Gestão de grupos de contas compartilhadas e liquidação.
+- [x] Suporte offline contingencial e PWA instalável.
+- [ ] Conciliação automática de lançamentos duplicados entre importações e Open Finance.
+- [ ] Exportação de relatórios customizados por período anual e informe para Imposto de Renda.
