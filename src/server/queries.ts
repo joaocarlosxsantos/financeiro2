@@ -25,6 +25,7 @@ import type { MonthSummary } from "@/lib/finance";
 import { monthlyInterestCents } from "@/lib/debts";
 import { accountBalance, netWorth } from "@/lib/balances";
 import { detectSubscriptions } from "@/lib/subscriptions";
+import { calculateCategorySuggestion, getCategoryHistoryWindow } from "@/lib/budget-suggestions";
 import { transactionDateOrder, transactionsInInvoice } from "./transaction-dates";
 
 /**
@@ -718,6 +719,8 @@ export type BudgetRow = {
    * Só faz sentido no mês corrente â€” nos outros vem igual ao gasto real.
    */
   projectedCents: number;
+  suggestedLimitCents?: number | null;
+  suggestionLabel?: string | null;
 };
 
 export type BudgetOverview = {
@@ -766,8 +769,19 @@ function statusFor(limitCents: number | null, usedPct: number): BudgetStatus {
  */
 export async function getBudgetOverview(userId: string, ref: MonthRef): Promise<BudgetOverview> {
   const previous = shiftMonth(ref, -1);
+  const m2 = shiftMonth(ref, -2);
+  const m3 = shiftMonth(ref, -3);
 
-  const [budgetRows, spending, summary, previousBudgets, allCategories] = await Promise.all([
+  const [
+    budgetRows,
+    spending,
+    summary,
+    previousBudgets,
+    allCategories,
+    breakdownM1,
+    breakdownM2,
+    breakdownM3,
+  ] = await Promise.all([
     db
       .select({
         categoryId: budgetsTable.categoryId,
@@ -809,18 +823,27 @@ export async function getBudgetOverview(userId: string, ref: MonthRef): Promise<
           eq(categoriesTable.kind, "EXPENSE"),
         ),
       ),
+    getCategoryBreakdown(userId, previous),
+    getCategoryBreakdown(userId, m2),
+    getCategoryBreakdown(userId, m3),
   ]);
 
   const limitById = new Map(budgetRows.map((b) => [b.categoryId, b.limitCents]));
   const spentById = new Map(spending.map((s) => [s.id, s.totalCents]));
   const progress = monthProgressFor(ref);
 
-  // Todas as categorias de gasto aparecem â€” é aqui que o usuário define o teto,
+  // Todas as categorias de gasto aparecem — é aqui que o usuário define o teto,
   // inclusive das que ainda não tiveram movimento no mês.
   const rows: BudgetRow[] = allCategories.map((c) => {
     const limitCents = limitById.get(c.id) ?? null;
     const spentCents = spentById.get(c.id) ?? 0;
     const usedPct = limitCents ? Math.round((spentCents / limitCents) * 1000) / 10 : 0;
+
+    const historyM1 = breakdownM1.find((s) => s.id === c.id)?.totalCents ?? 0;
+    const historyM2 = breakdownM2.find((s) => s.id === c.id)?.totalCents ?? 0;
+    const historyM3 = breakdownM3.find((s) => s.id === c.id)?.totalCents ?? 0;
+    const window = getCategoryHistoryWindow([historyM1, historyM2, historyM3]);
+    const suggestion = calculateCategorySuggestion(window);
 
     return {
       categoryId: c.id,
@@ -833,6 +856,8 @@ export async function getBudgetOverview(userId: string, ref: MonthRef): Promise<
       usedPct,
       status: statusFor(limitCents, usedPct),
       projectedCents: progress > 0 ? Math.round(spentCents / progress) : spentCents,
+      suggestedLimitCents: suggestion.suggestedCents > 0 ? suggestion.suggestedCents : null,
+      suggestionLabel: suggestion.suggestedCents > 0 ? suggestion.label : null,
     };
   });
 
