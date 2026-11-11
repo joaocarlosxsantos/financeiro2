@@ -17,7 +17,7 @@ import {
   getTotalSavedCents,
   getUser,
 } from "@/server/queries";
-import { monthRefFromParam, monthRefToParam, monthLabel, currentMonthRef, getNowInSaoPaulo } from "@/lib/dates";
+import { monthRefFromParam, monthRefToParam, monthLabel } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
 import {
   balanceCents,
@@ -27,7 +27,8 @@ import {
   monthsOfRunway,
   savingsRate,
 } from "@/lib/finance";
-import { monthForecast } from "@/lib/forecast";
+import { forecastCalendar } from "@/lib/dashboard-forecast";
+import { getDashboardForecast } from "@/server/dashboard-forecast";
 import { calculateDailyBudget } from "@/lib/daily-budget";
 import { buildBudgetAlerts, buildGoalAlerts } from "@/lib/alerts";
 import { PageHeader } from "@/components/page-header";
@@ -116,21 +117,16 @@ export default async function DashboardPage({
 
   const hasData = summary.incomeCents > 0 || summary.expenseCents > 0 || cardBreakdown.length > 0;
 
-  const now = getNowInSaoPaulo();
-  const currentRef = currentMonthRef(now);
-  const isCurrentMonth = ref.year === currentRef.year && ref.month === currentRef.month;
-  const daysInMonth = new Date(ref.year, ref.month, 0).getDate();
-  const dayOfMonth = isCurrentMonth
-    ? now.getDate()
-    : ref.year < currentRef.year || (ref.year === currentRef.year && ref.month < currentRef.month)
-    ? daysInMonth
-    : 0;
+  const now = new Date();
+  const calendar = forecastCalendar(ref, now);
+  const isCurrentMonth = calendar.period === "current";
+  const daysInMonth = calendar.daysInMonth;
+  const dayOfMonth = calendar.elapsedDays;
 
-  const forecast = monthForecast({
-    incomeCents: user.monthlyIncomeCents || summary.incomeCents,
-    expenseSoFarCents: summary.expenseCents,
-    dayOfMonth,
-    daysInMonth,
+  const forecast = await getDashboardForecast(userId, ref, {
+    now,
+    expectedIncomeCents: user.monthlyIncomeCents,
+    pendingRules: canUseCapability(user.usageProfile, "manual-entry") ? recurring.pending : [],
   });
 
   const dailyBudget = calculateDailyBudget({
@@ -228,12 +224,10 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      {hasData && (
-        <section className="mt-4 space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0" aria-label="Ritmo e previsões">
-          {isCurrentMonth && <DailyBudgetCard dailyBudget={dailyBudget} />}
+        <section className={`mt-4 space-y-3 ${isCurrentMonth && hasData ? "lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0" : ""}`} aria-label="Ritmo e previsões">
+          {isCurrentMonth && hasData && <DailyBudgetCard dailyBudget={dailyBudget} />}
           <ForecastCard forecast={forecast} monthName={monthLabel(ref)} />
         </section>
-      )}
 
       {/* 2. Alerta/onboarding compacta logo abaixo */}
       <div className="mt-4 space-y-3">
