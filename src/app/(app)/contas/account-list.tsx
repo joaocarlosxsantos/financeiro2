@@ -50,7 +50,7 @@ export function AccountList({ accounts, allowManual = true, showIntegration = tr
     return <p className="muted px-5 py-8 text-center text-[0.8125rem]">Nada por aqui.</p>;
   }
   return (
-    <ul className="space-y-3 sm:space-y-0 sm:divide-y">
+    <ul className="space-y-3 sm:space-y-0 sm:divide-y 2xl:grid 2xl:grid-cols-2 2xl:gap-x-6 2xl:divide-y-0 2xl:[&>li]:border-b">
       {accounts.map((account) => (
         <Row key={account.id} account={account} allowManual={allowManual} showIntegration={showIntegration} />
       ))}

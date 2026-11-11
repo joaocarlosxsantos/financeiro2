@@ -94,7 +94,7 @@ export function BudgetList({ rows, monthRef }: { rows: BudgetRow[]; monthRef: Mo
         </div>
       ) : null}
 
-      <ul className="space-y-3 sm:space-y-0 sm:divide-y">
+      <ul className="space-y-3 sm:space-y-0 sm:divide-y 2xl:grid 2xl:grid-cols-2 2xl:gap-x-6 2xl:divide-y-0 2xl:[&>li]:border-b">
         {rows.map((row) => (
           <Row key={row.categoryId} row={row} monthRef={monthRef} />
         ))}

@@ -85,7 +85,7 @@ export default async function GoalsPage() {
             </div>
 
             {others.length ? (
-              <div className="space-y-3 sm:space-y-0 sm:divide-y">
+              <div className="space-y-3 sm:space-y-0 sm:divide-y 2xl:grid 2xl:grid-cols-2 2xl:gap-x-6 2xl:divide-y-0 2xl:[&>div]:border-b 2xl:[&>div:only-child]:col-span-2">
                 {others.map((goal) => (
                   <GoalCard
                     key={goal.id}

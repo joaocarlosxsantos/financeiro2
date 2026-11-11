@@ -38,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           accounts={accounts.filter((account) => account.financeMode === "manual").map(({ id, name }) => ({ id, name }))}
           categories={categories.map(({ id, name, kind, nature, color }) => ({ id, name, kind, nature, color }))} />
         <div className="min-w-0 flex-1">
-          <main id="conteudo" className="mx-auto min-w-0 max-w-[1120px] px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 lg:py-10 xl:px-8">
+          <main id="conteudo" className="mx-auto min-w-0 max-w-[1120px] px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 lg:max-w-none lg:py-10 xl:px-8">
             {children}
           </main>
         </div>

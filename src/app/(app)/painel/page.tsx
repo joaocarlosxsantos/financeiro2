@@ -151,7 +151,7 @@ export default async function DashboardPage({
 
       {/* 1. Hero mês: 'Sobrou' grande + linha Entrou/Saiu/Fixo menores */}
       <section
-        className="card min-w-0 p-4 sm:p-6"
+        className="card min-w-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:items-center lg:gap-8"
         aria-label="Resumo financeiro do mês"
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
@@ -175,7 +175,7 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 border-t border-[var(--border)] pt-3 sm:mt-5 sm:gap-0 sm:divide-x sm:divide-[var(--border)] sm:pt-4">
+        <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 border-t border-[var(--border)] pt-3 sm:mt-5 sm:gap-0 sm:divide-x sm:divide-[var(--border)] sm:pt-4 lg:mt-0 lg:border-t-0 lg:pt-0">
           <div className="min-w-0 sm:pr-4">
             <p className="text-[0.75rem] font-medium tracking-normal text-[var(--text-muted)]">
               Entrou
@@ -229,7 +229,7 @@ export default async function DashboardPage({
       </section>
 
       {hasData && (
-        <section className="mt-4 space-y-3" aria-label="Ritmo e previsões">
+        <section className="mt-4 space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0" aria-label="Ritmo e previsões">
           {isCurrentMonth && <DailyBudgetCard dailyBudget={dailyBudget} />}
           <ForecastCard forecast={forecast} monthName={monthLabel(ref)} />
         </section>
