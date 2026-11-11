@@ -49,7 +49,14 @@ export async function processMessage(updateId: number, message: TelegramMessage)
       // Telegram pode sortear outro update_id após uma semana sem updates.
       setWhere: sql`${telegramChatState.lastUpdateId} < ${updateId} or ${telegramChatState.windowStartedAt} < ${staleWatermark}::timestamptz`,
     }).returning({ count: telegramChatState.requestCount });
-    if (!state || state.count > CHAT_MAX_REQUESTS) return null;
+    if (!state || state.count > CHAT_MAX_REQUESTS) {
+      console.info("[telegram-webhook]", {
+        event: "update_ignored",
+        reason: state ? "rate_limit" : "deduplication",
+        count: 1,
+      });
+      return null;
+    }
 
     if (isFreeQuestion(message.text)) {
       const [link] = await tx.select({ userId: telegramLinks.userId }).from(telegramLinks).where(eq(telegramLinks.chatId, chatId)).limit(1);

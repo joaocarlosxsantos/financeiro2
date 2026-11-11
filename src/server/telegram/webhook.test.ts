@@ -42,12 +42,21 @@ describe("webhook Telegram", () => {
   it("deduplicação/limite retorna apenas ok", async () => {
     expect(await (await handleWebhook(request(), "secret", vi.fn().mockResolvedValue(null))).json()).toEqual({ ok: true });
   });
-  it("falha transitória retorna 503 com log seguro sem dados sensíveis", async () => {
+  it.each(["/resumo", "/saldo", "/ajuda"])("falha interna em %s responde no chat com log seguro sem dados sensíveis", async (text) => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const error = Object.assign(new Error("token balance chat_id user_id"), { code: "22003" });
-    const result = await handleWebhook(request(), "secret", vi.fn().mockRejectedValue(error));
-    expect(result.status).toBe(503);
-    expect(await result.json()).toEqual({ error: "temporarily_unavailable" });
+    const body = { ...payload, message: { ...payload.message, text } };
+    const result = await handleWebhook(request(body), "secret", vi.fn().mockRejectedValue(error));
+    expect(result.status).toBe(200);
+    expect(result.headers.get("cache-control")).toBe("no-store");
+    const reply = await result.json();
+    expect(reply).toEqual({
+      method: "sendMessage", chat_id: 123,
+      text: "Não foi possível consultar seus dados agora. Tente novamente em instantes.",
+      protect_content: true,
+    });
+    expect(reply.text.length).toBeLessThanOrEqual(4096);
+    expect(reply).not.toHaveProperty("parse_mode");
     expect(log).toHaveBeenCalledWith("[telegram-webhook]", { name: "Error", code: "22003" });
     const loggedStr = JSON.stringify(log.mock.calls);
     expect(loggedStr).not.toContain("token");
@@ -55,5 +64,13 @@ describe("webhook Telegram", () => {
     expect(loggedStr).not.toContain("chat_id");
     expect(loggedStr).not.toContain("user_id");
     log.mockRestore();
+  });
+  it("resumo no limite do formatador é devolvido integralmente sem parse_mode", async () => {
+    const text = "*Resumo* _com caracteres especiais_\n".padEnd(3800, "x");
+    const result = await handleWebhook(request({ ...payload, message: { ...payload.message, text: "/resumo" } }), "secret", vi.fn().mockResolvedValue(text));
+    const reply = await result.json();
+    expect(reply.text).toBe(text);
+    expect(reply.text.length).toBeLessThanOrEqual(4096);
+    expect(reply).not.toHaveProperty("parse_mode");
   });
 });

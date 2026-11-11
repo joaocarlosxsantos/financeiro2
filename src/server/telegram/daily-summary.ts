@@ -98,9 +98,6 @@ export function formatDailySummary(data: DailySummaryData): string {
   }
   sections.push(insightLines.join("\n"));
 
-  // Rodapé
-  sections.push("_/pausar para pausar avisos automáticos_");
-
   return sections.join("\n\n").slice(0, 3800);
 }
 

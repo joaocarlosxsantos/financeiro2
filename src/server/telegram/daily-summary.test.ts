@@ -82,8 +82,8 @@ describe("Daily Summary - formatDailySummary", () => {
     expect(text).toContain("Orçamento de Alimentação atingiu 85%");
     expect(text).toContain("Cota de hoje: você pode gastar até R$ 85,00");
 
-    // Rodapé
-    expect(text).toContain("/pausar");
+    // O mesmo formatador atende o cron e o comando /resumo, sem rodapé de pausa.
+    expect(text).not.toContain("/pausar");
   });
 
   it("trata ausência de movimentações no dia anterior", () => {

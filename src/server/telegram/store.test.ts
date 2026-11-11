@@ -89,6 +89,7 @@ describe("persistência Telegram", () => {
     }
   });
   it.each([{ rows: [] }, { rows: [{ count: 11 }] }])("não executa comando em replay ou limite excedido", async ({ rows }) => {
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
     mocks.results.push(rows);
     expect(await processMessage(10, message("/saldo"))).toBeNull();
     expect(mocks.balance).not.toHaveBeenCalled();
@@ -96,6 +97,14 @@ describe("persistência Telegram", () => {
     const upsert = mocks.events.find((e) => e.kind === "upsert")?.value as { setWhere: SQL; set: { requestCount: SQL } };
     expect(sqlQuery(upsert.setWhere).sql).toContain('"telegram_chat_state"."last_update_id" <');
     expect(sqlQuery(upsert.set.requestCount).sql).toContain("least(");
+    expect(log).toHaveBeenCalledExactlyOnceWith("[telegram-webhook]", {
+      event: "update_ignored", reason: rows.length ? "rate_limit" : "deduplication", count: 1,
+    });
+    const logged = JSON.stringify(log.mock.calls);
+    expect(logged).not.toContain("chatId");
+    expect(logged).not.toContain("updateId");
+    expect(logged).not.toContain("/saldo");
+    log.mockRestore();
   });
   it("consulta saldo usando vínculo filtrado por chat", async () => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);

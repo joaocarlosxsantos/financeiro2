@@ -55,6 +55,11 @@ export async function handleWebhook(
       code: err?.code ?? null,
     });
     // Não expor tokens, payload, chat, usuário, saldo ou mensagens do banco em logs.
-    return Response.json({ error: "temporarily_unavailable" }, { status: 503, headers });
+    // O update já autenticado precisa de resposta no chat, não de um 5xx sem mensagem.
+    return Response.json({
+      method: "sendMessage", chat_id: parsed.data.message.chat.id,
+      text: "Não foi possível consultar seus dados agora. Tente novamente em instantes.",
+      protect_content: true,
+    }, { headers });
   }
 }
