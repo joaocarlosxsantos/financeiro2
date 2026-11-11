@@ -11,7 +11,7 @@ const navigationSections: NavigationSection[] = [
     { href: "/insights", label: "Insights", icon: BarChart3 },
   ] },
   { id: "activity", label: "Movimentações", items: [
-    { href: "/lancamentos", label: "Extrato", icon: Receipt },
+    { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
     { href: "/contas", label: "Contas", icon: Wallet },
     { href: "/recorrentes", label: "Recorrentes", icon: Repeat },
     { href: "/importar", label: "Importar", icon: FileUp },

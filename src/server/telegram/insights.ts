@@ -73,7 +73,7 @@ export function buildInsight(data: InsightData, prefs: Preferences, window: Insi
     const unregistered = data.subscriptions.filter((s) => !s.isRegistered && !s.hasPriceIncrease);
     for (const sub of unregistered.slice(0, 2)) {
       lines.push(
-        `Assinatura detectada no extrato: ${label(sub.name)} (${money(sub.currentCents)}/mês). Registre em Recorrentes no app.`,
+        `Assinatura detectada nos lançamentos: ${label(sub.name)} (${money(sub.currentCents)}/mês). Registre em Recorrentes no app.`,
       );
     }
   }

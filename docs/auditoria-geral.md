@@ -83,7 +83,7 @@ No entanto, sob a ótica de usabilidade cotidiana, o aplicativo sofre de três d
 
 ---
 
-### 2.5. Lançamentos / Extrato (`src/app/(app)/lancamentos/*`)
+### 2.5. Lançamentos (`src/app/(app)/lancamentos/*`)
 - **Objetivo:** Consulta do histórico de transações com filtros, edição rápida, categorização e lançamento manual de receitas, despesas e transferências.
 - **O que confunde / sobra:**
   - **Composer pesado na lateral (Desktop):** O formulário de criação ocupa uma coluna estática inteira (`lg:grid-cols-[minmax(0,1fr)_380px]`). Em telas menores ou notebooks, espreme a tabela de lançamentos. Deveria ser acionado sob demanda (Sheet lateral ou modal focado).
@@ -254,7 +254,7 @@ No entanto, sob a ótica de usabilidade cotidiana, o aplicativo sofre de três d
 | **RET-01** | **P1** | **P** | `src/app/(app)/painel/onboarding-card.tsx` | **Card de onboarding persistente:** Remover a obrigatoriedade visual permanente ou incluir botão "Dispensar permanentemente". Ocupa espaço nobre do topo do painel para usuários recorrentes. |
 | **RET-02** | **P1** | **P** | `src/app/(app)/orcamento/page.tsx:60-66` | **Accordion `<details>` redundante:** Retirar o `<details>` aninhado com `<Hint>` que duplica o título "Por onde começar". Deixar apenas um Hint sucinto dispensável ou mover para tooltip. |
 | **RET-03** | **P2** | **P** | `src/app/(app)/contas-a-pagar/bills-tabs.tsx` | **Aba separada "Compartilhadas":** A divisão de abas esconde débitos pendentes e gera risco de inadimplência. Unificar em uma lista única com tag/badge visual "Compartilhada" e filtro rápido inline. |
-| **RET-04** | **P2** | **M** | `src/app/(app)/lancamentos/transaction-composer.tsx` | **Composer estático lateral no desktop:** Ocupa permanentemente 380px da tela de lançamentos. Retirar da grade fixa e transformar em Sheet lateral sob demanda ("+ Novo Lançamento"), liberando espaço para tabela de extrato completa. |
+| **RET-04** | **P2** | **M** | `src/app/(app)/lancamentos/transaction-composer.tsx` | **Composer estático lateral no desktop:** Ocupa permanentemente 380px da tela de lançamentos. Retirar da grade fixa e transformar em Sheet lateral sob demanda ("+ Novo Lançamento"), liberando espaço para tabela de lançamentos completa. |
 | **RET-05** | **P2** | **P** | `src/app/(app)/painel/page.tsx` (Card 50/30/20) | **Cálculo forçado de 50/30/20 com renda do perfil:** Retirar a exibição da regra para usuários que possuem renda zerada ou variável, evitando percentuais enganosos (>200% ou negativos). |
 | **RET-06** | **P3** | **P** | `src/app/page.tsx` (Landing) | **Bloco de texto teórico ("Didático de propósito"):** Substituir texto excessivo sobre jargões por foco em automação, segurança e praticidade. |
 | **RET-07** | **P3** | **P** | `src/components/ui/mobile-disclosure.tsx` | **Excesso de wrappers retráteis em mobile:** Formulários pequenos embrulhados em botões de "Preencher..." criam clique extra desnecessário quando poderiam abrir direto em modal/sheet limpo. |
@@ -267,7 +267,7 @@ No entanto, sob a ótica de usabilidade cotidiana, o aplicativo sofre de três d
 | :--- | :---: | :---: | :--- | :--- |
 | **MEL-01** | **P1** | **M** | `src/components/bottom-nav.tsx` & Mobile Shell | **Botão Central "+" (Lançamento Rápido no Polegar):** Inserir botão de ação rápida destacado no centro da barra inferior mobile, abrindo a Sheet de lançamento de qualquer tela. |
 | **MEL-02** | **P1** | **M** | `src/app/(app)/contas/page.tsx` & `account-list.tsx` | **Gerenciar Contas direto na tela de Saldos:** Adicionar botão "+ Nova Conta" e edição inline na página de Saldos, eliminando o atrito de mandar o usuário para Configurações. |
-| **MEL-03** | **P1** | **M** | `src/app/(app)/contas-a-pagar/bill-item.tsx` | **Fluxo "Pagar e Debitar" com 1 toque:** Ao marcar conta como paga, oferecer confirmação com a conta bancária de saída para gerar automaticamente a transação de despesa no extrato. |
+| **MEL-03** | **P1** | **M** | `src/app/(app)/contas-a-pagar/bill-item.tsx` | **Fluxo "Pagar e Debitar" com 1 toque:** Ao marcar conta como paga, oferecer confirmação com a conta bancária de saída para gerar automaticamente a transação de despesa nos lançamentos. |
 | **MEL-04** | **P1** | **P** | `src/app/login/login-form.tsx` & `register-form.tsx` | **Ver/Ocultar Senha:** Adicionar botão de alternar visibilidade (olho) nos inputs de senha para evitar erros no teclado de celulares. |
 | **MEL-05** | **P2** | **M** | `src/app/(app)/lancamentos/filters.tsx` | **Filtro de busca textual com debounce:** Busca instantânea por nome de estabelecimento, valor ou anotação sem refresh completo da página. |
 | **MEL-06** | **P2** | **P** | `src/components/month-switcher.tsx` | **Botão "Mês Atual / Hoje":** Atalho de 1 clique para voltar instantaneamente ao mês corrente após navegar em históricos passados. |

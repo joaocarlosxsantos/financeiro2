@@ -20,7 +20,7 @@ Ferramenta de QA: Automação e Inspeção com Maestri Portal Visual
 | **Comportamento: Híbrido (Padrão)** | **APROVADO** | Todas as funcionalidades ativas; restaurado e confirmado no banco ao final dos testes |
 | **Edição de Lançamento (Descrição e Valor)** | **APROVADO** | Modal "Detalhes do lançamento" agora inclui campos editáveis de descrição, valor e data; alteração de teste ("QA Almoco Executivo" - R$ 52,00) salva e refletida no painel |
 | **Criação de Conta** | **APROVADO** | Botão "Criar conta" disponível diretamente em `/contas`; modal abre e cria com sucesso ("QA Poupanca Teste") |
-| **Extrato por Conta** | **APROVADO** | Links diretos "Ver extrato de [Conta]" em `/contas` direcionam para `/lancamentos?accountId=...` filtrando corretamente |
+| **Lançamentos por Conta** | **APROVADO** | Links diretos "Ver lançamentos de [Conta]" em `/contas` direcionam para `/lancamentos?accountId=...` filtrando corretamente |
 | **Sair com Confirmação no Mobile** | **APROVADO** | Ao tocar em "Sair" na gaveta "Mais", abre o grupo "Confirmar saída" ("Cancelar" / "Sim, sair") evitando logout acidental |
 | **Segurança: Backup com Senha** | **APROVADO** | Botão "Baixar backup (JSON)" em `/configuracoes` abre diálogo solicitando confirmação de senha do usuário antes do download |
 | **Segurança: Proteção de Endpoints (Cron/Webhook)** | **APROVADO** | `/api/cron/insights` sem segredo retorna **401 Unauthorized**; `/api/telegram/webhook` sem segredo retorna **401 Unauthorized** |
@@ -74,10 +74,10 @@ Ferramenta de QA: Automação e Inspeção com Maestri Portal Visual
   - Tipo: `Poupança`
 - **Resultado**: Conta criada com sucesso, aparecendo na listagem de saldos consolidada.
 
-### 2.5. Extrato por Conta
+### 2.5. Lançamentos por Conta
 - **Tela**: `/contas`
-- **Fluxo**: Cada card de conta possui agora um link de navegação direta "Ver extrato de [Conta]".
-- **Validação**: Ao clicar em "Ver extrato de QA Poupanca Teste", a aplicação navega para `/lancamentos?accountId=...` exibindo os lançamentos filtrados para aquela conta específica.
+- **Fluxo**: Cada card de conta possui agora um link de navegação direta "Ver lançamentos de [Conta]".
+- **Validação**: Ao clicar em "Ver lançamentos de QA Poupanca Teste", a aplicação navega para `/lancamentos?accountId=...` exibindo os lançamentos filtrados para aquela conta específica.
 
 ### 2.6. Confirmação de Saída no Mobile
 - **Tela**: Mobile (390×844 e 360×640)

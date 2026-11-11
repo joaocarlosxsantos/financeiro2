@@ -110,7 +110,7 @@ export default async function RecurringPage({
           <SubscriptionsPanel subscriptions={detectedSubscriptions} />
 
           <Hint tone="tip" title="Geração sob controle">
-            Lançamentos recorrentes não entram no extrato automaticamente: confira e aprove na lista antes de lançar.
+            Lançamentos recorrentes não entram nos lançamentos automaticamente: confira e aprove na lista antes de lançar.
           </Hint>
         </div>
 

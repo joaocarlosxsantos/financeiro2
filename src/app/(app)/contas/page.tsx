@@ -58,7 +58,7 @@ export default async function AccountsPage() {
               <h2 className="text-[0.75rem] font-semibold tracking-normal text-[var(--text-muted)]">
                 Saldos
               </h2>
-              <p className="muted mt-0.5 text-xs">Saldo atualizado de cada conta e acesso ao extrato.</p>
+              <p className="muted mt-0.5 text-xs">Saldo atualizado de cada conta e acesso aos lançamentos.</p>
             </div>
             <AccountList
               allowManual={manualEntry}

@@ -17,7 +17,7 @@ Base: `4723840`. Escopo: os 31 achados altos e 27 médios de
 | 1.20–1.21 | Nome, natureza e palavras-chave com quebra, sem colar os rótulos; texto completo disponível. |
 | 1.23–1.24 | Onboarding separado visualmente em campos e blocos de estimativa sólidos no mobile; desktop mantém agrupamento. |
 | 1.31, 2.25–2.27 | Resumo do orçamento com Money responsivo, linhas flexíveis e ancestrais `min-w-0`. |
-| 2.1, 2.3–2.4, 2.8–2.10, 2.12–2.19, 2.21, 2.23 | Rótulo visual “Extrato”, `aria-label`/title “Lançamentos”; alvo de 48px e rótulo contido. |
+| 2.1, 2.3–2.4, 2.8–2.10, 2.12–2.19, 2.21, 2.23 | Rótulo visual “Lançamentos”, `aria-label`/title “Lançamentos”; alvo de 48px e rótulo contido. |
 | 2.2, 2.20, 2.22, 2.24 | EmptyState com padding móvel menor. As instâncias de login/cadastro/landing são o painel após redirecionamento. |
 | 2.5 | Metadados de conta com elipse e title completo, nome com title; saldo em linha própria no mobile. `scrollWidth` de texto truncado não significa vazamento visível. |
 | 2.6 | Contas como cartões por item no mobile, evitando um bloco único extenso. |
@@ -51,7 +51,7 @@ nem de textos visíveis sem truncamento deliberado.
 
 Em 360px: campos abertos de valor/data mediram 294×48px; nenhum botão visível
 dos componentes testados ficou abaixo de 44px. Bottom-nav: links de 61×48px,
-sem texto excedente (incluindo “Extrato”). Expansão dos formulários funcionou.
+sem texto excedente (incluindo “Lançamentos”). Expansão dos formulários funcionou.
 Console do portal sem erros/violações CSP observados.
 
 Limite: janela do Maestri minimizada impediu captura de imagem; medição por DOM

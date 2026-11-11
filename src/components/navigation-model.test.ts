@@ -32,4 +32,8 @@ describe("grouped navigation", () => {
     expect(isDestinationActive("/contas-a-pagar", "/contas")).toBe(false);
     expect(isDestinationActive("/contas/historico", "/contas")).toBe(true);
   });
+  it("uses 'Lançamentos' as unified label for /lancamentos destination", () => {
+    const item = primaryDestinations.find((d) => d.href === "/lancamentos");
+    expect(item?.label).toBe("Lançamentos");
+  });
 });

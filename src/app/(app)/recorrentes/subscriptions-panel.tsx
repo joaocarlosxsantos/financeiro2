@@ -16,7 +16,7 @@ export function SubscriptionsPanel({ subscriptions }: SubscriptionsPanelProps) {
   return (
     <Card className="min-w-0" aria-label="Assinaturas e recorrências detectadas">
       <CardHeader
-        title="Assinaturas detectadas no extrato"
+        title="Assinaturas detectadas nos lançamentos"
         subtitle="Identificamos cobranças mensais frequentes nos seus lançamentos recentes."
       />
 

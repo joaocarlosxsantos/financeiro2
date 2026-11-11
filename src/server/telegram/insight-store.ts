@@ -96,9 +96,9 @@ export async function manualSummary(userId: string, connection: Pick<typeof db, 
 /** Consulta de assinaturas detectadas e aumentos de preço para o bot */
 export async function manualSubscriptionsInsight(userId: string, connection: Pick<typeof db, "select"> = db): Promise<string> {
   const subs = await getDetectedSubscriptions(userId, connection);
-  if (!subs.length) return "Nenhuma assinatura recorrente identificada no extrato recente.";
+  if (!subs.length) return "Nenhuma assinatura recorrente identificada nos lançamentos recentes.";
 
-  const lines: string[] = ["Assinaturas identificadas no seu extrato:"];
+  const lines: string[] = ["Assinaturas identificadas nos seus lançamentos:"];
   for (const s of subs.slice(0, 6)) {
     const val = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(s.currentAmountCents / 100);
     const statusText = s.isRegistered ? "regra cadastrada" : "não cadastrado em regras";

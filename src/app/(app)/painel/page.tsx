@@ -256,7 +256,7 @@ export default async function DashboardPage({
               title={`Nenhum lançamento em ${monthLabel(ref)}`}
               description={canUseCapability(user.usageProfile, "manual-entry") ? "Use o botão + para lançar uma movimentação." : "Conecte suas contas para receber as movimentações."}
               action={canUseCapability(user.usageProfile, "manual-entry") ? (
-                <Link href="/lancamentos" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--acento)] px-4 text-sm font-medium text-[var(--on-acento)]">Ver extrato</Link>
+                <Link href="/lancamentos" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--acento)] px-4 text-sm font-medium text-[var(--on-acento)]">Ver lançamentos</Link>
               ) : <Link href="/configuracoes/integracao" className="inline-flex min-h-11 items-center rounded-xl bg-[var(--acento)] px-4 text-sm font-medium text-[var(--on-acento)]">Conectar e sincronizar</Link>}
             />
           </Card>

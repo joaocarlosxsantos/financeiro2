@@ -27,7 +27,7 @@ export function OnboardingCard({
       done: checklist.hasTransaction,
       title: manualEntry ? "Registre suas movimenta\u00e7\u00f5es" : "Sincronize suas movimenta\u00e7\u00f5es",
       href: manualEntry ? "/lancamentos" : "/configuracoes/integracao",
-      linkLabel: manualEntry ? "Ver extrato" : "Sincronizar",
+      linkLabel: manualEntry ? "Ver lançamentos" : "Sincronizar",
 
     },
   ];

@@ -77,7 +77,7 @@ function Row({ account, allowManual, showIntegration }: { account: Account; allo
         </span>
 
         <div className="min-w-0 flex-1">
-          <Link href={`/lancamentos?accountId=${encodeURIComponent(account.id)}`} title={`Ver extrato de ${account.name}`} className="inline-flex min-h-11 max-w-full items-center text-sm font-medium underline decoration-[var(--line-strong)] underline-offset-4">{account.name}</Link>
+          <Link href={`/lancamentos?accountId=${encodeURIComponent(account.id)}`} title={`Ver lançamentos de ${account.name}`} className="inline-flex min-h-11 max-w-full items-center text-sm font-medium underline decoration-[var(--line-strong)] underline-offset-4">{account.name}</Link>
           <p title={`${TYPE_LABEL[account.type] ?? account.type}${account.institution ? ` · ${account.institution}` : ""} · ${account.transactionCount} lançamento(s)`} className="muted truncate text-xs">
             {TYPE_LABEL[account.type] ?? account.type}
             {account.institution ? ` · ${account.institution}` : ""}

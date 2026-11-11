@@ -30,7 +30,7 @@ export function BottomNav({ onNew, userName }: { onNew: () => void; userName: st
     const active = isDestinationActive(pathname, item.href);
     return <Link key={item.href} href={item.href} aria-label={item.label} title={item.label} aria-current={active ? "page" : undefined}
       className={cn(itemClass, active ? "text-[var(--text)] before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-[var(--acento)]" : "text-[var(--text-subtle)]")}>
-      <item.icon aria-hidden="true" className="size-6" strokeWidth={1.5} /><span className="max-w-full truncate px-0.5">{item.href === "/lancamentos" ? "Extrato" : item.label}</span>
+      <item.icon aria-hidden="true" className="size-6" strokeWidth={1.5} /><span className="max-w-full truncate px-0.5">{item.label}</span>
     </Link>;
   }
   return <>

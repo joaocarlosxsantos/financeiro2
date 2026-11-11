@@ -36,7 +36,7 @@ A navegação agora é gerada pelo componente centralizado `NavigationSections` 
 
 ### 2.1. Perfil Híbrido (`hibrido`)
 - **Visão geral**: Painel, Insights
-- **Movimentações**: Extrato (`/lancamentos`), Contas (`/contas`), Recorrentes (`/recorrentes`), Importar (`/importar`)
+- **Movimentações**: Lançamentos (`/lancamentos`), Contas (`/contas`), Recorrentes (`/recorrentes`), Importar (`/importar`)
 - **Planejamento**: Contas a pagar, Orçamento, Metas, Dívidas, Projeções
 - **Integração**: Conexões (`/configuracoes/integracao`)
 - **Conta**: Configurações (`/configuracoes`)
@@ -44,7 +44,7 @@ A navegação agora é gerada pelo componente centralizado `NavigationSections` 
 
 ### 2.2. Perfil Integração Total (`integracao_total`)
 - **Visão geral**: Painel, Insights
-- **Movimentações**: Extrato, Contas (**"Recorrentes" e "Importar" suprimidos**)
+- **Movimentações**: Lançamentos, Contas (**"Recorrentes" e "Importar" suprimidos**)
 - **Planejamento**: Contas a pagar, Orçamento, Metas, Dívidas, Projeções
 - **Integração**: Conexões
 - **Conta**: Configurações
@@ -52,7 +52,7 @@ A navegação agora é gerada pelo componente centralizado `NavigationSections` 
 
 ### 2.3. Perfil Somente Manual (`manual`)
 - **Visão geral**: Painel, Insights
-- **Movimentações**: Extrato, Contas, Recorrentes, Importar
+- **Movimentações**: Lançamentos, Contas, Recorrentes, Importar
 - **Planejamento**: Contas a pagar, Orçamento, Metas, Dívidas, Projeções
 - **Integração**: **Seção inteira ocultada** (sem link para Conexões)
 - **Conta**: Configurações
