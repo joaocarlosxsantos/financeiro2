@@ -304,8 +304,8 @@ export async function loadDailySummaryData(
  */
 export async function renderDailySummary(
   userId: string,
-  now: Date = new Date(),
   connection: typeof db = db,
+  now: Date = new Date(),
 ): Promise<string> {
   const data = await loadDailySummaryData(userId, now, connection);
   return formatDailySummary(data);
@@ -376,7 +376,7 @@ export const dailySummaryDependencies: DailySummaryDependencies = {
       },
     }));
   },
-  render: renderDailySummary,
+  render: (userId: string, now: Date) => renderDailySummary(userId, db, now),
   async claim(userId: string, windowKey: string): Promise<boolean> {
     const [row] = await db
       .insert(telegramDeliveries)

@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { telegramChatState, telegramLinkCodes, telegramLinks, telegramPreferences, users } from "@/db/schema";
 import { getBalances } from "@/server/queries";
 import { loadMonthlyReport } from "./monthly-report";
-import { manualDailyBudget, manualForecast, manualSubscriptionsInsight, manualSummary } from "./insight-store";
+import { manualDailyBudget, manualForecast, manualSubscriptionsInsight } from "./insight-store";
+import { renderDailySummary } from "./daily-summary";
 import { loadCardSummary } from "./card-summary";
 import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
@@ -74,7 +75,7 @@ export async function processMessage(updateId: number, message: TelegramMessage)
       },
       // Usa a conexão já reservada; abrir outra aqui pode esgotar o pool.
       balance: (userId) => getBalances(userId, tx),
-      summary: (userId) => manualSummary(userId, tx),
+      summary: (userId) => renderDailySummary(userId, tx as unknown as typeof db),
       report: (userId) => loadMonthlyReport(userId, now, tx),
       forecast: (userId) => manualForecast(userId, tx),
       dailyBudget: (userId) => manualDailyBudget(userId, tx),

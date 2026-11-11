@@ -25,6 +25,9 @@ vi.mock("./insight-store", () => ({
 vi.mock("./card-summary", () => ({
   loadCardSummary: (...args: unknown[]) => mocks.cards(...args),
 }));
+vi.mock("./daily-summary", () => ({
+  renderDailySummary: (...args: unknown[]) => mocks.summary(...args),
+}));
 vi.mock("./ai-service", () => ({ answerQuestion: (...args: unknown[]) => mocks.ai(...args) }));
 
 import { disconnect, issueLink, processMessage } from "./store";
@@ -100,6 +103,13 @@ describe("persistência Telegram", () => {
     expect(await processMessage(11, message("/saldo"))).toContain("1,00");
     expect(mocks.balance).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
     expect(sqlQuery(mocks.events.find((e) => e.kind === "where")?.value).params).toEqual(["123"]);
+  });
+  it("processa /resumo chamando renderDailySummary com vínculo filtrado por chat", async () => {
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.summary.mockResolvedValue("CONTA\nSaldo total: R$ 500,00");
+    const reply = await processMessage(12, message("/resumo"));
+    expect(reply).toBe("CONTA\nSaldo total: R$ 500,00");
+    expect(mocks.summary).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
   });
   it("consome por DELETE RETURNING com validade e nunca sobrescreve vínculo existente", async () => {
     const token = newLinkCode();

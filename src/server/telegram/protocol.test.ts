@@ -71,11 +71,23 @@ describe("protocolo Telegram", () => {
     expect(await commandReply(message("/pausar"), d)).toContain("pausados");
     expect(d.pause).toHaveBeenCalledWith("linked-owner");
     expect(d.balance).not.toHaveBeenCalled();
+
+    // Sem vínculo
     vi.mocked(d.linkedUser).mockResolvedValue(null);
+    expect(await commandReply(message("/resumo"), d)).toBe("Vincule seu Telegram em Configurações no Mutano Contas antes de consultar o resumo.");
     await commandReply(message("/pausar"), d);
-    await commandReply(message("/resumo"), d);
     expect(d.pause).toHaveBeenCalledTimes(1);
     expect(d.summary).toHaveBeenCalledTimes(1);
+
+    // Serviço indisponível
+    vi.mocked(d.linkedUser).mockResolvedValue("linked-owner");
+    expect(await commandReply(message("/resumo"), { ...d, summary: undefined })).toBe("Resumo temporariamente indisponível.");
+  });
+  it("comando /resumo: rejeita argumentos extras e injeções de parâmetro", async () => {
+    const d = { ...deps(), summary: vi.fn().mockResolvedValue("CONTA\nSaldo total: R$ 1.000,00") };
+    const replyWithExtra = await commandReply(message("/resumo outro_usuario"), d);
+    expect(replyWithExtra).toBe(HELP);
+    expect(d.summary).not.toHaveBeenCalled();
   });
   it("/previsao, /hoje e /assinaturas consultam o dono vinculado", async () => {
     const d = {
