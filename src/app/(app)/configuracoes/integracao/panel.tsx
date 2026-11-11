@@ -5,8 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronRight,
   CreditCard,
+  ExternalLink,
+  Key,
+  Lock,
   Plus,
   ReceiptText,
   RefreshCw,
@@ -16,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/sheet";
 import { formatCents } from "@/lib/money";
-import { Select } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import {
   connectPluggyItem,
   deleteAllOpenFinanceData,
@@ -26,6 +30,7 @@ import {
   linkOpenFinanceAccount,
   removeOpenFinanceConnection,
   removeOpenFinanceCredentials,
+  saveOpenFinanceCredentials,
   syncOpenFinance,
 } from "@/server/actions/open-finance";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -48,7 +53,7 @@ type SyncAccountSummary = {
   error?: string;
 };
 
-type ActiveSheet = "accounts" | "sync_details" | "manage" | null;
+type ActiveSheet = "accounts" | "sync_details" | "manage" | "credentials" | null;
 
 interface PluggyConnectInstance {
   init: () => void;
@@ -97,6 +102,21 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
   }, [initial, connectionId]);
 
   const activeConnection = setup.connections.find((c) => c.id === connectionId) ?? setup.connections[0];
+
+  async function handleSaveCredentials(form: FormData) {
+    setBusy(true);
+    setMessage("");
+    const clientId = String(form.get("clientId") ?? "");
+    const clientSecret = String(form.get("clientSecret") ?? "");
+    const res = await saveOpenFinanceCredentials({ clientId, clientSecret });
+    setBusy(false);
+    if (res.error) {
+      return setMessage(res.error);
+    }
+    setActiveSheet(null);
+    setMessage("Credenciais da Pluggy salvas e validadas com sucesso!");
+    router.refresh();
+  }
 
   function loadPluggySdk(): Promise<PluggyConnectConstructor> {
     if (typeof window !== "undefined" && window.PluggyConnect) {
@@ -300,230 +320,417 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
         </div>
       ) : null}
 
-      {hasConnections && activeConnection ? (
-        <>
-          {/* 1. Status Principal & Ação Primária */}
-          <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 md:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1.5 min-w-0">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span
-                    className={`inline-block size-2.5 rounded-full ${
-                      activeConnection.status === "UPDATED"
-                        ? "bg-[var(--text-in)] shadow-[0_0_8px_rgba(79,214,160,0.4)]"
-                        : activeConnection.lastErrorMessage
-                        ? "bg-[var(--text-out)] shadow-[0_0_8px_rgba(255,122,107,0.4)]"
-                        : "bg-[var(--text-warn)]"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  <h2 className="text-heading font-semibold text-[var(--text)] truncate">
-                    {activeConnection.label || "Conexão sem nome"}
-                  </h2>
-                  <span className="rounded-md border border-[var(--line)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--text-muted)]">
-                    {activeConnection.status === "UPDATED" ? "Conectado" : activeConnection.status}
-                  </span>
-                </div>
-
+      {!setup.credentialConfigured ? (
+        /* Estado sem credenciais: Formulário para configurar Pluggy */
+        <section className="space-y-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 md:p-6">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                <Key className="size-4.5" />
+              </div>
+              <div>
+                <h2 className="text-heading font-semibold text-[var(--text)]">Configurar Pluggy Open Finance</h2>
                 <p className="text-xs text-[var(--text-muted)]">
-                  {activeConnection.lastSyncedAt
-                    ? `Última sincronização: ${new Date(activeConnection.lastSyncedAt).toLocaleString("pt-BR")}`
-                    : "Nenhuma sincronização concluída"}
+                  Uso pessoal e gratuito para até 5 contas conectadas.
                 </p>
-
-                {setup.connections.length > 1 ? (
-                  <div className="pt-2">
-                    <label htmlFor="conn-selector" className="sr-only">Trocar conexão</label>
-                    <Select
-                      id="conn-selector"
-                      value={activeConnection.id}
-                      onChange={(e) => {
-                        setConnectionId(e.target.value);
-                        setRemote([]);
-                        setRemoteSelection({});
-                      }}
-                      className="h-9 min-h-11 text-xs"
-                    >
-                      {setup.connections.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.label || "Sem nome"} ({c.status})
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                ) : null}
               </div>
-
-              {/* Ação Primária Única */}
-              <Button
-                type="button"
-                onClick={async () => {
-                  setBusy(true);
-                  setMessage("");
-                  setSyncSummary(null);
-                  const result = await syncOpenFinance(activeConnection.id);
-                  setBusy(false);
-                  setSyncSummary({
-                    status: result.status ?? (result.error ? "ERROR" : "UPDATED"),
-                    imported: result.imported ?? 0,
-                    error: result.error,
-                    accounts: result.accounts ?? [],
-                  });
-                  setMessage(result.error ?? `${result.imported} lançamento(s) atualizados.`);
-                  router.refresh();
-                }}
-                disabled={busy}
-                className="min-h-12 w-full sm:w-auto shrink-0 gap-2 font-medium"
-              >
-                <RefreshCw className={`size-4 ${busy ? "animate-spin" : ""}`} />
-                Sincronizar agora
-              </Button>
             </div>
-
-            {activeConnection.lastErrorMessage ? (
-              <div className="flex items-start gap-2.5 rounded-xl border border-[var(--line-strong)] bg-[var(--out-soft)] p-3 text-xs text-[var(--text-out)]">
-                <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="font-semibold">Erro na leitura:</strong>{" "}
-                  <span>{activeConnection.lastErrorMessage}</span>
-                </div>
-              </div>
-            ) : null}
-          </section>
-
-          {/* 2. Menu Secundário: Linhas de Navegação para Sheets */}
-          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-            <div className="divide-y divide-[var(--line)]">
-              {/* Contas Vinculadas */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveSheet("accounts");
-                  if (remote.length === 0) void loadAccounts();
-                }}
-                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
-                    <CreditCard className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)]">Contas vinculadas</p>
-                    <p className="text-xs text-[var(--text-muted)] truncate">
-                      {linkedAccountsCount > 0
-                        ? `${linkedAccountsCount} conta(s) em sincronização automática`
-                        : "Nenhuma conta local associada à Pluggy"}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
-              </button>
-
-              {/* Faturas e Resumo de Sincronização */}
-              <button
-                type="button"
-                onClick={() => setActiveSheet("sync_details")}
-                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
-                    <ReceiptText className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)]">Histórico e faturas</p>
-                    <p className="text-xs text-[var(--text-muted)] truncate">
-                      {setup.invoices.length > 0
-                        ? `${setup.invoices.length} fatura(s) detectada(s) · ver detalhes de importação`
-                        : "Detalhes e contadores da última leitura"}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
-              </button>
-
-              {/* Adicionar Nova Conexão */}
-              <button
-                type="button"
-                onClick={() => void handleOpenConnect()}
-                disabled={busy}
-                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
-                    <Plus className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)]">Adicionar nova conexão</p>
-                    <p className="text-xs text-[var(--text-muted)] truncate">
-                      {busy ? "Abrindo Pluggy Connect..." : "Conectar outro banco via Pluggy"}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
-              </button>
-
-              {/* Administração da Conexão */}
-              <button
-                type="button"
-                onClick={() => setActiveSheet("manage")}
-                className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text-muted)]">
-                    <SlidersHorizontal className="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)]">Gerenciar conexão</p>
-                    <p className="text-xs text-[var(--text-muted)] truncate">
-                      Limpar lançamentos importados, desvincular ou remover
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
-              </button>
-            </div>
-          </section>
-        </>
-      ) : !setup.isAvailable ? (
-        <section className="space-y-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 md:p-8 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text-muted)]">
-            <CreditCard className="size-6" />
           </div>
 
-          <div className="space-y-1.5 max-w-md mx-auto">
-            <h2 className="text-heading font-semibold text-[var(--text)]">Open Finance indisponível</h2>
-            <p className="text-xs leading-relaxed text-[var(--text-muted)]">
-              A integração direta via Open Finance não está configurada no servidor ou não está habilitada para o seu usuário.
-            </p>
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-xs text-[var(--text-muted)] space-y-2">
+            <p className="font-medium text-[var(--text)]">Como obter suas credenciais:</p>
+            <ol className="list-decimal list-inside space-y-1.5 pl-1">
+              <li>
+                Acesse ou crie sua conta pessoal em{" "}
+                <a
+                  href="https://meu.pluggy.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[var(--text)] underline inline-flex items-center gap-1 hover:text-[var(--text-muted)]"
+                >
+                  meu.pluggy.ai <ExternalLink className="size-3" />
+                </a>{" "}
+                ou no{" "}
+                <a
+                  href="https://dashboard.pluggy.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[var(--text)] underline inline-flex items-center gap-1 hover:text-[var(--text-muted)]"
+                >
+                  dashboard.pluggy.ai <ExternalLink className="size-3" />
+                </a>
+              </li>
+              <li>Gere ou copie seu <strong>Client ID</strong> e <strong>Client Secret</strong>.</li>
+              <li>Cole-os abaixo para habilitar a conexão automática de contas e cartões.</li>
+            </ol>
           </div>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await handleSaveCredentials(new FormData(e.currentTarget));
+            }}
+            className="space-y-4"
+          >
+            <Field label="Client ID" hint="Identificador único da sua aplicação Pluggy">
+              <Input
+                name="clientId"
+                required
+                placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
+                autoComplete="off"
+                disabled={busy}
+              />
+            </Field>
+
+            <Field label="Client Secret" hint="Chave secreta da sua aplicação (criptografada no servidor)">
+              <Input
+                name="clientSecret"
+                type="password"
+                required
+                placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
+                autoComplete="off"
+                disabled={busy}
+              />
+            </Field>
+
+            <div className="flex items-start gap-2 text-[0.6875rem] text-[var(--text-muted)]">
+              <Lock className="size-3.5 shrink-0 mt-0.5 text-[var(--text-muted)]" />
+              <span>
+                Criptografia AES-256-GCM com chave de ambiente. O Client Secret é validado na Pluggy e nunca é devolvido ao navegador nem exposto em logs.
+              </span>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={busy}
+              className="min-h-12 w-full sm:w-auto font-medium gap-2"
+            >
+              <Key className="size-4" />
+              {busy ? "Validando e salvando..." : "Salvar e validar credenciais"}
+            </Button>
+          </form>
         </section>
       ) : (
-        /* Estado Vazio: Nenhum banco conectado */
-        <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 md:p-8 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
-            <CreditCard className="size-6" />
-          </div>
+        <>
+          {/* Card compacto com status das credenciais */}
+          <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="size-4 text-[var(--text-in)] shrink-0" />
+              <div className="min-w-0">
+                <p className="font-medium text-[var(--text)]">Credenciais Pluggy ativas</p>
+                <p className="text-[var(--text-muted)] truncate">
+                  Client ID: <span className="font-mono text-[var(--text)]">{setup.clientIdMasked ?? "••••"}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveSheet("credentials")}
+                disabled={busy}
+                className="min-h-9 text-xs"
+              >
+                Trocar
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void removeCredentials()}
+                disabled={busy || setup.connections.length > 0}
+                title={
+                  setup.connections.length > 0
+                    ? "Remova todas as conexões antes de remover as credenciais"
+                    : undefined
+                }
+                className="min-h-9 text-xs text-[var(--text-out)] hover:bg-[var(--out-soft)] hover:text-[var(--text-out)]"
+              >
+                Remover
+              </Button>
+            </div>
+          </section>
 
-          <div className="space-y-1.5 max-w-md mx-auto">
-            <h2 className="text-heading font-semibold text-[var(--text)]">Conectar ao Open Finance</h2>
-            <p className="text-xs leading-relaxed text-[var(--text-muted)]">
-              Sincronize transações e saldos de suas contas bancárias e cartões diretamente pelo Pluggy Connect.
-            </p>
-          </div>
+          {hasConnections && activeConnection ? (
+            <>
+              {/* 1. Status Principal & Ação Primária */}
+              <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 md:p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span
+                        className={`inline-block size-2.5 rounded-full ${
+                          activeConnection.status === "UPDATED"
+                            ? "bg-[var(--text-in)] shadow-[0_0_8px_rgba(79,214,160,0.4)]"
+                            : activeConnection.lastErrorMessage
+                            ? "bg-[var(--text-out)] shadow-[0_0_8px_rgba(255,122,107,0.4)]"
+                            : "bg-[var(--text-warn)]"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <h2 className="text-heading font-semibold text-[var(--text)] truncate">
+                        {activeConnection.label || "Conexão sem nome"}
+                      </h2>
+                      <span className="rounded-md border border-[var(--line)] bg-[var(--surface-2)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--text-muted)]">
+                        {activeConnection.status === "UPDATED" ? "Conectado" : activeConnection.status}
+                      </span>
+                    </div>
 
-          <div className="pt-2">
-            <Button
-              type="button"
-              onClick={() => void handleOpenConnect()}
-              disabled={busy}
-              className="min-h-12 w-full sm:w-auto px-6 font-medium gap-2"
-            >
-              <Plus className="size-4" />
-              {busy ? "Abrindo Pluggy Connect..." : "Conectar conta"}
-            </Button>
-          </div>
-        </section>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {activeConnection.lastSyncedAt
+                        ? `Última sincronização: ${new Date(activeConnection.lastSyncedAt).toLocaleString("pt-BR")}`
+                        : "Nenhuma sincronização concluída"}
+                    </p>
+
+                    {setup.connections.length > 1 ? (
+                      <div className="pt-2">
+                        <label htmlFor="conn-selector" className="sr-only">Trocar conexão</label>
+                        <Select
+                          id="conn-selector"
+                          value={activeConnection.id}
+                          onChange={(e) => {
+                            setConnectionId(e.target.value);
+                            setRemote([]);
+                            setRemoteSelection({});
+                          }}
+                          className="h-9 min-h-11 text-xs"
+                        >
+                          {setup.connections.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.label || "Sem nome"} ({c.status})
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Ação Primária Única */}
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      setBusy(true);
+                      setMessage("");
+                      setSyncSummary(null);
+                      const result = await syncOpenFinance(activeConnection.id);
+                      setBusy(false);
+                      setSyncSummary({
+                        status: result.status ?? (result.error ? "ERROR" : "UPDATED"),
+                        imported: result.imported ?? 0,
+                        error: result.error,
+                        accounts: result.accounts ?? [],
+                      });
+                      setMessage(result.error ?? `${result.imported} lançamento(s) atualizados.`);
+                      router.refresh();
+                    }}
+                    disabled={busy}
+                    className="min-h-12 w-full sm:w-auto shrink-0 gap-2 font-medium"
+                  >
+                    <RefreshCw className={`size-4 ${busy ? "animate-spin" : ""}`} />
+                    Sincronizar agora
+                  </Button>
+                </div>
+
+                {activeConnection.lastErrorMessage ? (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-[var(--line-strong)] bg-[var(--out-soft)] p-3 text-xs text-[var(--text-out)]">
+                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-semibold">Erro na leitura:</strong>{" "}
+                      <span>{activeConnection.lastErrorMessage}</span>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+
+              {/* 2. Menu Secundário: Linhas de Navegação para Sheets */}
+              <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+                <div className="divide-y divide-[var(--line)]">
+                  {/* Contas Vinculadas */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSheet("accounts");
+                      if (remote.length === 0) void loadAccounts();
+                    }}
+                    className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                        <CreditCard className="size-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--text)]">Contas vinculadas</p>
+                        <p className="text-xs text-[var(--text-muted)] truncate">
+                          {linkedAccountsCount > 0
+                            ? `${linkedAccountsCount} conta(s) em sincronização automática`
+                            : "Nenhuma conta local associada à Pluggy"}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+                  </button>
+
+                  {/* Faturas e Resumo de Sincronização */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheet("sync_details")}
+                    className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                        <ReceiptText className="size-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--text)]">Histórico e faturas</p>
+                        <p className="text-xs text-[var(--text-muted)] truncate">
+                          {setup.invoices.length > 0
+                            ? `${setup.invoices.length} fatura(s) detectada(s) · ver detalhes de importação`
+                            : "Detalhes e contadores da última leitura"}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+                  </button>
+
+                  {/* Adicionar Nova Conexão */}
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenConnect()}
+                    disabled={busy}
+                    className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                        <Plus className="size-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--text)]">Adicionar nova conexão</p>
+                        <p className="text-xs text-[var(--text-muted)] truncate">
+                          {busy ? "Abrindo Pluggy Connect..." : "Conectar outro banco via Pluggy"}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+                  </button>
+
+                  {/* Administração da Conexão */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheet("manage")}
+                    className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text-muted)]">
+                        <SlidersHorizontal className="size-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[var(--text)]">Gerenciar conexão</p>
+                        <p className="text-xs text-[var(--text-muted)] truncate">
+                          Limpar lançamentos importados, desvincular ou remover
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-[var(--text-muted)]" />
+                  </button>
+                </div>
+              </section>
+            </>
+          ) : (
+            /* Estado Vazio com credenciais configuradas: Nenhum banco conectado */
+            <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 md:p-8 text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text)]">
+                <CreditCard className="size-6" />
+              </div>
+
+              <div className="space-y-1.5 max-w-md mx-auto">
+                <h2 className="text-heading font-semibold text-[var(--text)]">Conectar ao Open Finance</h2>
+                <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                  Suas credenciais estão configuradas. Conecte sua primeira conta ou cartão diretamente pelo Pluggy Connect.
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  onClick={() => void handleOpenConnect()}
+                  disabled={busy}
+                  className="min-h-12 w-full sm:w-auto px-6 font-medium gap-2"
+                >
+                  <Plus className="size-4" />
+                  {busy ? "Abrindo Pluggy Connect..." : "Conectar conta"}
+                </Button>
+              </div>
+            </section>
+          )}
+        </>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SHEET 1: Trocar Credenciais */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {activeSheet === "credentials" ? (
+        <Sheet title="Trocar credenciais Pluggy" onClose={() => setActiveSheet(null)}>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await handleSaveCredentials(new FormData(e.currentTarget));
+            }}
+            className="space-y-4"
+          >
+            <p className="text-xs text-[var(--text-muted)]">
+              Informe o novo par de Client ID e Client Secret. As credenciais anteriores serão substituídas após a validação.
+            </p>
+
+            <Field label="Novo Client ID" hint="Identificador único da aplicação na Pluggy">
+              <Input
+                name="clientId"
+                required
+                placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
+                autoComplete="off"
+                disabled={busy}
+              />
+            </Field>
+
+            <Field label="Novo Client Secret" hint="Chave secreta da aplicação (criptografada no servidor)">
+              <Input
+                name="clientSecret"
+                type="password"
+                required
+                placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
+                autoComplete="off"
+                disabled={busy}
+              />
+            </Field>
+
+            <div className="flex items-start gap-2 text-[0.6875rem] text-[var(--text-muted)]">
+              <Lock className="size-3.5 shrink-0 mt-0.5 text-[var(--text-muted)]" />
+              <span>
+                Criptografia AES-256-GCM. O Client Secret nunca é devolvido ao navegador nem exposto em logs.
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                type="submit"
+                disabled={busy}
+                className="min-h-11 w-full sm:w-auto font-medium"
+              >
+                {busy ? "Validando e salvando..." : "Salvar novas credenciais"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => setActiveSheet(null)}
+                className="min-h-11 w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Sheet>
+      ) : null}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* SHEET 2: Contas Vinculadas */}
@@ -789,14 +996,14 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                 <p className="text-xs text-[var(--text-muted)]">
                   {setup.connections.length > 0
                     ? "Remova todas as conexões ativas antes de apagar as credenciais salvas."
-                    : "Client ID e Client Secret cifrados salvos no banco."}
+                    : `ID salvo: ${setup.clientIdMasked ?? "configurado"}`}
                 </p>
               </div>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={busy || setup.connections.length > 0 || !setup.credentialSaved}
+                disabled={busy || setup.connections.length > 0 || !setup.credentialConfigured}
                 onClick={() => void removeCredentials()}
                 className="min-h-11 shrink-0"
               >

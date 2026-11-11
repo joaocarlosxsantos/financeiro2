@@ -16,7 +16,7 @@ import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { anchorPluggyCivilDate, isBeforeCutoff } from "@/server/open-finance/cutoff";
 import { categorizeBatch, disabledCategorizerProvider, type CategorizationCategory } from "@/server/categorization";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { isUserAllowedForOpenFinance } from "@/server/open-finance/access";
+import { maskClientId } from "@/server/open-finance/access";
 
 const OPEN_FINANCE_SETUP_LIMIT = 10;
 const OPEN_FINANCE_SETUP_WINDOW_MS = 60 * 60 * 1000;
@@ -49,16 +49,68 @@ function connectionErrorMessage(value: string | null): string | null {
 }
 
 async function resolvePluggyApiKey(userId: string): Promise<string> {
-  const envClientId = process.env.PLUGGY_CLIENT_ID?.trim();
-  const envClientSecret = process.env.PLUGGY_CLIENT_SECRET?.trim();
-  if (envClientId && envClientSecret) {
-    return authenticatePluggy(envClientId, envClientSecret);
+  const [credentials] = await db
+    .select({
+      clientIdEnvelope: openFinanceCredentials.clientIdEnvelope,
+      clientSecretEnvelope: openFinanceCredentials.clientSecretEnvelope,
+    })
+    .from(openFinanceCredentials)
+    .where(eq(openFinanceCredentials.userId, userId))
+    .limit(1);
+
+  if (!credentials) {
+    throw new Error("Credenciais Pluggy não configuradas para este usuário.");
   }
-  const [credentials] = await db.select().from(openFinanceCredentials).where(eq(openFinanceCredentials.userId, userId)).limit(1);
-  if (!credentials) throw new Error("Credenciais Pluggy não encontradas.");
+
   const clientId = decryptSecret(credentials.clientIdEnvelope, userId, "clientId");
   const clientSecret = decryptSecret(credentials.clientSecretEnvelope, userId, "clientSecret");
   return authenticatePluggy(clientId, clientSecret);
+}
+
+const saveOpenFinanceCredentialsSchema = z.object({
+  clientId: z.string().trim().min(5, "Informe um Client ID válido."),
+  clientSecret: z.string().trim().min(5, "Informe um Client Secret válido."),
+});
+
+export async function saveOpenFinanceCredentials(input: unknown) {
+  const userId = await requireUserId();
+  const restriction = await getProfileRestriction(userId, "integration");
+  if (restriction) return { error: restriction };
+
+  if (!checkRateLimit(`open-finance-creds:${userId}`, 10, Date.now(), 60 * 60 * 1000).allowed) {
+    return { error: "Muitas tentativas. Aguarde uma hora e tente novamente." };
+  }
+
+  const parsed = saveOpenFinanceCredentialsSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos informados." };
+  const { clientId, clientSecret } = parsed.data;
+
+  try {
+    // Valida as credenciais chamando a Pluggy antes de persistir
+    await authenticatePluggy(clientId, clientSecret);
+
+    await db
+      .insert(openFinanceCredentials)
+      .values({
+        userId,
+        clientIdEnvelope: encryptSecret(clientId, userId, "clientId"),
+        clientSecretEnvelope: encryptSecret(clientSecret, userId, "clientSecret"),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: openFinanceCredentials.userId,
+        set: {
+          clientIdEnvelope: encryptSecret(clientId, userId, "clientId"),
+          clientSecretEnvelope: encryptSecret(clientSecret, userId, "clientSecret"),
+          updatedAt: new Date(),
+        },
+      });
+  } catch (error) {
+    return { error: safeError(error) };
+  }
+
+  revalidatePath("/configuracoes/integracao");
+  return { ok: true };
 }
 
 export async function getOpenFinanceSetup() {
@@ -66,20 +118,75 @@ export async function getOpenFinanceSetup() {
   const restriction = await getProfileRestriction(userId, "integration");
   if (restriction) throw new Error(restriction);
 
-  const allowedCheck = isUserAllowedForOpenFinance(userId);
-  const isAvailable = allowedCheck.allowed;
-  const isAllowed = allowedCheck.allowed;
+  const [credential] = await db
+    .select({
+      clientIdEnvelope: openFinanceCredentials.clientIdEnvelope,
+      updatedAt: openFinanceCredentials.updatedAt,
+    })
+    .from(openFinanceCredentials)
+    .where(eq(openFinanceCredentials.userId, userId))
+    .limit(1);
 
-  const [credential] = await db.select({ updatedAt: openFinanceCredentials.updatedAt }).from(openFinanceCredentials).where(eq(openFinanceCredentials.userId, userId)).limit(1);
-  const storedConnections = (await db.select({ id: openFinanceConnections.id, label: openFinanceConnections.label, status: openFinanceConnections.status, lastErrorCode: openFinanceConnections.lastErrorCode, lastAttemptAt: openFinanceConnections.lastAttemptAt, lastSyncedAt: openFinanceConnections.lastSyncedAt, importFromDate: openFinanceConnections.importFromDate }).from(openFinanceConnections).where(eq(openFinanceConnections.userId, userId))) ?? [];
-  const connections = Array.isArray(storedConnections) ? storedConnections.map((connection) => ({ ...connection, lastErrorMessage: connectionErrorMessage(connection.lastErrorCode) })) : [];
-  const localAccounts = (await db.select({ id: accounts.id, name: accounts.name, type: accounts.type, financeMode: accounts.financeMode, externalAccountId: accounts.externalAccountId, bankBalanceCents: accounts.bankBalanceCents, bankBalanceAt: accounts.bankBalanceAt, creditLimitCents: accounts.creditLimitCents, availableCreditCents: accounts.availableCreditCents, creditSnapshotAt: accounts.creditSnapshotAt }).from(accounts).where(and(eq(accounts.userId, userId), eq(accounts.archived, false)))) ?? [];
-  const invoices = (await db.select({ accountId: openFinanceInvoices.accountId, invoiceRef: openFinanceInvoices.invoiceRef, dueDate: openFinanceInvoices.dueDate, totalAmountCents: openFinanceInvoices.totalAmountCents, minimumPaymentCents: openFinanceInvoices.minimumPaymentCents }).from(openFinanceInvoices).where(eq(openFinanceInvoices.userId, userId))) ?? [];
+  let clientIdMasked: string | null = null;
+  if (credential) {
+    try {
+      const rawClientId = decryptSecret(credential.clientIdEnvelope, userId, "clientId");
+      clientIdMasked = maskClientId(rawClientId);
+    } catch {
+      clientIdMasked = "••••";
+    }
+  }
+
+  const storedConnections = (await db
+    .select({
+      id: openFinanceConnections.id,
+      label: openFinanceConnections.label,
+      status: openFinanceConnections.status,
+      lastErrorCode: openFinanceConnections.lastErrorCode,
+      lastAttemptAt: openFinanceConnections.lastAttemptAt,
+      lastSyncedAt: openFinanceConnections.lastSyncedAt,
+      importFromDate: openFinanceConnections.importFromDate,
+    })
+    .from(openFinanceConnections)
+    .where(eq(openFinanceConnections.userId, userId))) ?? [];
+
+  const connections = Array.isArray(storedConnections)
+    ? storedConnections.map((connection) => ({
+        ...connection,
+        lastErrorMessage: connectionErrorMessage(connection.lastErrorCode),
+      }))
+    : [];
+
+  const localAccounts = (await db
+    .select({
+      id: accounts.id,
+      name: accounts.name,
+      type: accounts.type,
+      financeMode: accounts.financeMode,
+      externalAccountId: accounts.externalAccountId,
+      bankBalanceCents: accounts.bankBalanceCents,
+      bankBalanceAt: accounts.bankBalanceAt,
+      creditLimitCents: accounts.creditLimitCents,
+      availableCreditCents: accounts.availableCreditCents,
+      creditSnapshotAt: accounts.creditSnapshotAt,
+    })
+    .from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.archived, false)))) ?? [];
+
+  const invoices = (await db
+    .select({
+      accountId: openFinanceInvoices.accountId,
+      invoiceRef: openFinanceInvoices.invoiceRef,
+      dueDate: openFinanceInvoices.dueDate,
+      totalAmountCents: openFinanceInvoices.totalAmountCents,
+      minimumPaymentCents: openFinanceInvoices.minimumPaymentCents,
+    })
+    .from(openFinanceInvoices)
+    .where(eq(openFinanceInvoices.userId, userId))) ?? [];
 
   return {
-    isAvailable,
-    isAllowed,
-    credentialSaved: Boolean(credential),
+    credentialConfigured: Boolean(credential),
+    clientIdMasked,
     connections,
     accounts: localAccounts,
     invoices,
@@ -91,23 +198,30 @@ export async function getPluggyConnectToken() {
   const restriction = await getProfileRestriction(userId, "integration");
   if (restriction) return { error: restriction };
 
-  const allowedCheck = isUserAllowedForOpenFinance(userId);
-  if (!allowedCheck.allowed) {
-    if (allowedCheck.reason === "unavailable") {
-      return { error: "Open Finance indisponível.", unavailable: true };
-    }
-    return { error: "Acesso ao Open Finance não autorizado para este usuário.", forbidden: true };
+  const [credentials] = await db
+    .select({
+      clientIdEnvelope: openFinanceCredentials.clientIdEnvelope,
+      clientSecretEnvelope: openFinanceCredentials.clientSecretEnvelope,
+    })
+    .from(openFinanceCredentials)
+    .where(eq(openFinanceCredentials.userId, userId))
+    .limit(1);
+
+  if (!credentials) {
+    return {
+      error: "Configure suas credenciais da Pluggy antes de conectar.",
+      needsCredentials: true,
+    };
   }
 
-  if (!checkRateLimit(`open-finance-token:${userId}`, 5, Date.now(), 60 * 1000).allowed) {
+  if (!checkRateLimit(`open-finance-token:${userId}`, 10, Date.now(), 60 * 1000).allowed) {
     return { error: "Muitas tentativas. Aguarde um momento e tente novamente." };
   }
 
   try {
-    const apiKey = await authenticatePluggy(
-      process.env.PLUGGY_CLIENT_ID!.trim(),
-      process.env.PLUGGY_CLIENT_SECRET!.trim(),
-    );
+    const clientId = decryptSecret(credentials.clientIdEnvelope, userId, "clientId");
+    const clientSecret = decryptSecret(credentials.clientSecretEnvelope, userId, "clientSecret");
+    const apiKey = await authenticatePluggy(clientId, clientSecret);
     const connectToken = await createPluggyConnectToken(apiKey, {
       clientUserId: userId,
       avoidDuplicates: true,
@@ -128,11 +242,6 @@ export async function connectPluggyItem(input: unknown) {
   const restriction = await getProfileRestriction(userId, "integration");
   if (restriction) return { error: restriction };
 
-  const allowedCheck = isUserAllowedForOpenFinance(userId);
-  if (!allowedCheck.allowed) {
-    return { error: "Acesso ao Open Finance não autorizado para este usuário." };
-  }
-
   if (!checkRateLimit(`open-finance-connect:${userId}`, 10, Date.now(), 60 * 1000).allowed) {
     return { error: "Muitas tentativas de conexão. Aguarde um momento." };
   }
@@ -142,10 +251,7 @@ export async function connectPluggyItem(input: unknown) {
   const { itemId, label } = parsed.data;
 
   try {
-    const apiKey = await authenticatePluggy(
-      process.env.PLUGGY_CLIENT_ID!.trim(),
-      process.env.PLUGGY_CLIENT_SECRET!.trim(),
-    );
+    const apiKey = await resolvePluggyApiKey(userId);
 
     // Validação de Segurança Crucial (Anti-IDOR):
     const item = await getPluggyItem(apiKey, itemId);
@@ -157,20 +263,23 @@ export async function connectPluggyItem(input: unknown) {
     const importFromDate = new Date();
     importFromDate.setDate(1); // Primeiro dia do mês atual
 
-    await db.insert(openFinanceConnections).values({
-      userId,
-      itemIdEnvelope: encryptSecret(itemId, userId, "itemId"),
-      itemIdHash,
-      label: label?.trim().slice(0, 100) || "Conexão Pluggy",
-      importFromDate,
-      status: item.status ?? "UPDATING",
-    }).onConflictDoUpdate({
-      target: [openFinanceConnections.userId, openFinanceConnections.itemIdHash],
-      set: {
+    await db
+      .insert(openFinanceConnections)
+      .values({
+        userId,
+        itemIdEnvelope: encryptSecret(itemId, userId, "itemId"),
+        itemIdHash,
         label: label?.trim().slice(0, 100) || "Conexão Pluggy",
+        importFromDate,
         status: item.status ?? "UPDATING",
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [openFinanceConnections.userId, openFinanceConnections.itemIdHash],
+        set: {
+          label: label?.trim().slice(0, 100) || "Conexão Pluggy",
+          status: item.status ?? "UPDATING",
+        },
+      });
 
     const [connection] = await db
       .select({ id: openFinanceConnections.id })
@@ -179,7 +288,6 @@ export async function connectPluggyItem(input: unknown) {
       .limit(1);
 
     if (connection) {
-      // Dispara a sincronização de contas/dados se possível
       try {
         await syncOpenFinance({ connectionId: connection.id });
       } catch {
