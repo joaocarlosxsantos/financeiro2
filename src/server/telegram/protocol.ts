@@ -44,6 +44,11 @@ export function isFreeQuestion(text: string | undefined) {
   return value.length > 0 && !value.startsWith("/");
 }
 
+export function isFinancialCommand(text: string | undefined): boolean {
+  const value = text?.trim() ?? "";
+  return ["/saldo", "/resumo", "/previsao", "/hoje", "/assinaturas", "/relatorio", "/cartao"].includes(value) || value.startsWith("/cartao ");
+}
+
 export interface CommandDependencies {
   consumeCode(codeHash: string, chatId: string): Promise<boolean>;
   linkedUser(chatId: string): Promise<string | null>;
@@ -69,7 +74,7 @@ export async function commandReply(message: TelegramMessage, deps: CommandDepend
     return linked ? "Telegram vinculado ao Mutano Contas. Use /saldo ou /ajuda." : "Link inválido, expirado ou conta já vinculada. Desconecte no app e gere outro link.";
   }
   const isCardsCommand = text === "/cartao" || text.startsWith("/cartao ");
-  if (!isCardsCommand && !["/saldo", "/resumo", "/pausar", "/previsao", "/hoje", "/assinaturas", "/relatorio"].includes(text)) return HELP;
+  if (!isFinancialCommand(text) && text !== "/pausar") return HELP;
   const userId = await deps.linkedUser(chatId);
   if (!userId) {
     if (text === "/resumo") return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar o resumo.";

@@ -37,12 +37,13 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   return { code, message };
 }
 
-async function request(path: string, apiKey?: string, body?: unknown): Promise<unknown> {
+async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    signal?.throwIfAborted();
     try {
       const response = await fetch(`${BASE}${path}`, {
         method: body ? "POST" : "GET", redirect: "error", cache: "no-store",
-        signal: AbortSignal.timeout(12_000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000),
         headers: { "content-type": "application/json", ...(apiKey ? { "X-API-KEY": apiKey } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
@@ -58,6 +59,7 @@ async function request(path: string, apiKey?: string, body?: unknown): Promise<u
       console.error("Pluggy HTTP error", { status, code: safe.code, endpoint });
       throw new PluggyHttpError(status, safe.code, safe.message, endpoint);
     } catch (error) {
+      if (signal?.aborted) throw error;
       if (attempt === 0 && !(error instanceof Error && error.message.startsWith("PLUGGY_"))) {
         await new Promise((resolve) => setTimeout(resolve, 200));
         continue;
@@ -82,8 +84,8 @@ export function pluggyErrorForUser(error: PluggyHttpError): string {
   return PLUGGY_ERROR_MESSAGES[`${error.status}:${error.code}`] ?? PLUGGY_ERROR_MESSAGES[String(error.status)] ?? (error.status >= 500 ? PLUGGY_ERROR_MESSAGES["5xx"]! : PLUGGY_ERROR_MESSAGES.default!);
 }
 
-export async function authenticatePluggy(clientId: string, clientSecret: string): Promise<string> {
-  const result = z.object({ apiKey: z.string().min(1) }).parse(await request("/auth", undefined, { clientId, clientSecret }));
+export async function authenticatePluggy(clientId: string, clientSecret: string, signal?: AbortSignal): Promise<string> {
+  const result = z.object({ apiKey: z.string().min(1) }).parse(await request("/auth", undefined, { clientId, clientSecret }, signal));
   return result.apiKey;
 }
 
@@ -97,20 +99,20 @@ export async function createPluggyConnectToken(apiKey: string, options: { client
   return result.accessToken;
 }
 
-export async function getPluggyAccounts(apiKey: string, itemId: string) {
+export async function getPluggyAccounts(apiKey: string, itemId: string, signal?: AbortSignal) {
   // GET /accounts accepts itemId and optional type only; it returns all item accounts.
   const params = new URLSearchParams({ itemId });
-  const result = listSchema.parse(await request(`/accounts?${params}`, apiKey));
+  const result = listSchema.parse(await request(`/accounts?${params}`, apiKey, undefined, signal));
   return z.array(pluggyAccountSchema).parse(result.results);
 }
 
-export async function getPluggyItem(apiKey: string, itemId: string) {
+export async function getPluggyItem(apiKey: string, itemId: string, signal?: AbortSignal) {
   const item = z.object({
     id: z.string(),
     clientUserId: z.string().nullable().optional(),
     status: z.string().max(80),
     executionStatus: z.string().max(80).nullable().optional(),
-  }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey));
+  }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, undefined, signal));
   const known = new Set(["UPDATED", "UPDATING", "LOGIN_ERROR", "OUTDATED", "WAITING_USER_INPUT", "LOGIN_IN_PROGRESS"]);
   return {
     id: item.id,
@@ -120,16 +122,16 @@ export async function getPluggyItem(apiKey: string, itemId: string) {
   };
 }
 
-export async function getPluggyItemStatus(apiKey: string, itemId: string) {
-  const item = await getPluggyItem(apiKey, itemId);
+export async function getPluggyItemStatus(apiKey: string, itemId: string, signal?: AbortSignal) {
+  const item = await getPluggyItem(apiKey, itemId, signal);
   return { status: item.status, executionStatus: item.executionStatus };
 }
 
-async function collect(path: string, apiKey: string, pagination: "cursor" | "page") {
+async function collect(path: string, apiKey: string, pagination: "cursor" | "page", signal?: AbortSignal) {
   const rows: unknown[] = [];
   let nextPath: string | null = path;
   for (let page = 0; nextPath && page < PAGE_LIMIT; page++) {
-    const result = listSchema.parse(await request(nextPath, apiKey));
+    const result = listSchema.parse(await request(nextPath, apiKey, undefined, signal));
     rows.push(...result.results);
     if (rows.length > 50_000) throw new Error("PLUGGY_RESPONSE_LIMIT");
     if (pagination === "cursor") {
@@ -150,10 +152,10 @@ async function collect(path: string, apiKey: string, pagination: "cursor" | "pag
   return rows;
 }
 
-export async function getPluggyTransactions(apiKey: string, accountId: string, from: string) {
+export async function getPluggyTransactions(apiKey: string, accountId: string, from: string, signal?: AbortSignal) {
   // GET /v2/transactions uses a cursor and defaults to 500 results; it has no pageSize parameter.
   const params = new URLSearchParams({ accountId, dateFrom: from });
-  const rawRows = await collect(`/v2/transactions?${params}`, apiKey, "cursor");
+  const rawRows = await collect(`/v2/transactions?${params}`, apiKey, "cursor", signal);
   const transactions: z.infer<typeof pluggyTransactionSchema>[] = [];
   let invalid = 0;
   for (const rawRow of rawRows) {
@@ -164,8 +166,8 @@ export async function getPluggyTransactions(apiKey: string, accountId: string, f
   return { transactions, invalid };
 }
 
-export async function getPluggyBills(apiKey: string, accountId: string) {
+export async function getPluggyBills(apiKey: string, accountId: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ accountId, page: "1", pageSize: "500" });
-  const rows = await collect(`/bills?${params}`, apiKey, "page");
+  const rows = await collect(`/bills?${params}`, apiKey, "page", signal);
   return z.array(z.object({ id: z.string(), dueDate: z.string(), totalAmount: z.number().finite().nullable().optional(), totalAmountCurrencyCode: z.string(), minimumPaymentAmount: z.number().finite().nullable().optional() })).parse(rows);
 }

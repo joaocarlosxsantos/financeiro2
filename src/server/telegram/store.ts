@@ -6,8 +6,9 @@ import { loadMonthlyReport } from "./monthly-report";
 import { manualDailyBudget, manualForecast, manualSubscriptionsInsight } from "./insight-store";
 import { renderDailySummary } from "./daily-summary";
 import { loadCardSummary } from "./card-summary";
-import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
+import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFinancialCommand, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
+import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
 
 export async function issueLink(userId: string) {
   const token = newLinkCode();
@@ -27,6 +28,41 @@ export async function disconnect(userId: string) {
     await tx.delete(telegramLinks).where(eq(telegramLinks.userId, userId));
     await tx.insert(telegramPreferences).values({ userId, enabled: false })
       .onConflictDoUpdate({ target: telegramPreferences.userId, set: { enabled: false, updatedAt: new Date() } });
+  });
+}
+
+type TelegramTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function replyToCommand(message: TelegramMessage, tx: TelegramTransaction, now: Date, expectedUserId?: string | null) {
+  return commandReply(message, {
+    async consumeCode(codeHash, targetChatId) {
+      // DELETE RETURNING é atômico: concorrência/replay não reutiliza o código.
+      const [token] = await tx.delete(telegramLinkCodes).where(and(
+        eq(telegramLinkCodes.codeHash, codeHash), gt(telegramLinkCodes.expiresAt, sql`clock_timestamp()`),
+      )).returning({ userId: telegramLinkCodes.userId });
+      if (!token) return false;
+      const [link] = await tx.insert(telegramLinks).values({ userId: token.userId, chatId: targetChatId })
+        .onConflictDoNothing().returning({ userId: telegramLinks.userId });
+      return Boolean(link);
+    },
+    async linkedUser(targetChatId) {
+      if (expectedUserId === null) return null;
+      const [link] = await tx.select({ userId: telegramLinks.userId }).from(telegramLinks)
+        .where(eq(telegramLinks.chatId, targetChatId)).limit(1);
+      return expectedUserId && link?.userId !== expectedUserId ? null : link?.userId ?? null;
+    },
+    // Usa a conexão já reservada; abrir outra aqui pode esgotar o pool.
+    balance: (userId) => getBalances(userId, tx),
+    summary: (userId) => renderDailySummary(userId, tx as unknown as typeof db),
+    report: (userId) => loadMonthlyReport(userId, now, tx),
+    forecast: (userId) => manualForecast(userId, tx),
+    dailyBudget: (userId) => manualDailyBudget(userId, tx),
+    subscriptions: (userId) => manualSubscriptionsInsight(userId, tx),
+    cards: (userId) => loadCardSummary(userId, tx, now),
+    async pause(userId) {
+      await tx.insert(telegramPreferences).values({ userId, enabled: false })
+        .onConflictDoUpdate({ target: telegramPreferences.userId, set: { enabled: false, updatedAt: new Date() } });
+    },
   });
 }
 
@@ -61,40 +97,20 @@ export async function processMessage(updateId: number, message: TelegramMessage)
     if (isFreeQuestion(message.text)) {
       const [link] = await tx.select({ userId: telegramLinks.userId }).from(telegramLinks).where(eq(telegramLinks.chatId, chatId)).limit(1);
       if (!link) return "Vincule seu Telegram em Configurações no Mutano Contas antes de fazer perguntas.";
-      return { userId: link.userId, question: message.text!.trim() };
+      return { kind: "question" as const, userId: link.userId, question: message.text!.trim() };
     }
 
-    return commandReply(message, {
-      async consumeCode(codeHash, targetChatId) {
-        // DELETE RETURNING é atômico: concorrência/replay não reutiliza o código.
-        const [token] = await tx.delete(telegramLinkCodes).where(and(
-          eq(telegramLinkCodes.codeHash, codeHash), gt(telegramLinkCodes.expiresAt, sql`clock_timestamp()`),
-        )).returning({ userId: telegramLinkCodes.userId });
-        if (!token) return false;
-        const [link] = await tx.insert(telegramLinks).values({ userId: token.userId, chatId: targetChatId })
-          .onConflictDoNothing().returning({ userId: telegramLinks.userId });
-        return Boolean(link);
-      },
-      async linkedUser(targetChatId) {
-        const [link] = await tx.select({ userId: telegramLinks.userId }).from(telegramLinks)
-          .where(eq(telegramLinks.chatId, targetChatId)).limit(1);
-        return link?.userId ?? null;
-      },
-      // Usa a conexão já reservada; abrir outra aqui pode esgotar o pool.
-      balance: (userId) => getBalances(userId, tx),
-      summary: (userId) => renderDailySummary(userId, tx as unknown as typeof db),
-      report: (userId) => loadMonthlyReport(userId, now, tx),
-      forecast: (userId) => manualForecast(userId, tx),
-      dailyBudget: (userId) => manualDailyBudget(userId, tx),
-      subscriptions: (userId) => manualSubscriptionsInsight(userId, tx),
-      cards: (userId) => loadCardSummary(userId, tx, now),
-      async pause(userId) {
-        await tx.insert(telegramPreferences).values({ userId, enabled: false })
-          .onConflictDoUpdate({ target: telegramPreferences.userId, set: { enabled: false, updatedAt: new Date() } });
-      },
-    });
+    if (isFinancialCommand(message.text)) {
+      const [link] = await tx.select({ userId: telegramLinks.userId }).from(telegramLinks).where(eq(telegramLinks.chatId, chatId)).limit(1);
+      if (link) return { kind: "financial" as const, userId: link.userId, now };
+      return replyToCommand(message, tx, now, null);
+    }
+    return replyToCommand(message, tx, now);
   });
   // Não segurar conexão nem lock do chat enquanto o provedor externo responde.
-  if (result && typeof result === "object") return answerQuestion(result.userId, chatId, result.question);
+  if (result && typeof result === "object") {
+    if (result.kind === "question") return answerQuestion(result.userId, chatId, result.question);
+    return readWithOpenFinanceRefresh(result.userId, () => db.transaction(tx => replyToCommand(message, tx, result.now, result.userId)));
+  }
   return result;
 }

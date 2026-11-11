@@ -4,6 +4,18 @@ import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyItemSta
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Pluggy client", () => {
+  it("cancelamento do sync chega ao fetch e não dispara retry nem outras páginas", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
+      controller.abort();
+      expect(options.signal?.aborted).toBe(true);
+      options.signal?.throwIfAborted();
+      return new Response();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getPluggyTransactions("temporary-key", "account", "2026-11-01", controller.signal)).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it("uses only fixed user messages for provider failures", () => {
     const genericForbidden = pluggyErrorForUser(new PluggyHttpError(403, "OTHER_CODE", "private provider response", "/items/:id"));
     const unknownClientError = pluggyErrorForUser(new PluggyHttpError(422, "UNPROCESSABLE", "private provider response", "/accounts"));

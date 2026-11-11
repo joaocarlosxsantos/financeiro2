@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+const refreshMocks = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("@/server/open-finance/refresh", () => ({ readWithOpenFinanceRefresh: (...args: unknown[]) => refreshMocks.refresh(...args) }));
 
 vi.mock("@/db", () => ({
   db: {

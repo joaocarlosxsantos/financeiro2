@@ -44,6 +44,7 @@ O sistema executa rotinas automáticas via **Vercel Cron**:
   3. **INSIGHTS:** 2 a 3 avisos prioritários do dia (faturas e contas a pagar vencendo hoje/amanhã, alertas de 80%/100% de orçamento, risco de saldo negativo, reajustes de assinaturas e cota diária disponível).
 - **Sob demanda:** O mesmo resumo pode ser requisitado a qualquer momento com o comando `/resumo`.
 - **Preferências:** Respeita a opção `summary` (resumo diário) em `Configurações > Notificações Telegram`.
+- **Atualização antes do resumo:** Depois do claim de envio, tenta sincronizar as conexões integradas do usuário pelo mesmo núcleo do botão manual, com cooldown compartilhado de 60 segundos e teto total de 8 segundos por usuário. O cron processa no máximo três usuários em paralelo. Falha ou timeout usa os dados salvos e informa a hora disponível, sem impedir o envio ao usuário nem aos demais. A chave de envio `${dia}:ds`, de 13 caracteres, permanece igual.
 
 ### 3.2. Checagem Periódica de Insights (08:00, 14:00 e 20:00 BRT)
 A rota `/api/cron/insights` é agendada para 3 horários diários:
@@ -65,6 +66,19 @@ A rota `/api/cron/insights` é agendada para 3 horários diários:
 - **Preferências do Usuário:** Na aba `Configurações > Notificações Telegram`, o usuário pode ativar ou desativar individualmente cada categoria de alerta.
 
 ---
+
+### 3.5. Dados atuais nas consultas (F23)
+
+- Antes de `/saldo`, `/cartao`, `/previsao`, `/hoje`, `/assinaturas`, `/resumo` e `/relatorio`, o bot tenta atualizar os dados pela função `syncOpenFinanceForUser`, em `src/server/open-finance/sync.ts`. O botão `syncOpenFinance` e o auto-sync do painel delegam ao mesmo núcleo. A identidade vem exclusivamente do vínculo do chat, nunca do texto.
+- Perguntas livres sobre gastos e outras finanças atualizam antes da primeira chamada de `executeReadTool`, uma vez por pergunta. Uma pergunta sem ferramentas financeiras não dispara sync. A quota da IA continua sendo verificada antes do provedor e das ferramentas.
+- Bot e resumo automático usam o modo manual de **60s**, baseado no mesmo `open_finance_connections.lastAttemptAt` usado pelo botão. Não há relógio adicional nem coluna nova. O painel mantém a janela automática de 5min sobre esse mesmo estado. Tentativas malsucedidas também consomem a janela.
+- O `UPDATE` condicional que marca `SYNCING` continua sendo o claim atômico por conexão e usuário. Consultas simultâneas, botão e cron não iniciam outra importação enquanto a conexão estiver ocupada ou dentro da janela. O dedup e o rate limit do Telegram são verificados antes do sync; replay não dispara sync nem novo envio.
+- Dentro do cooldown, o bot consulta o banco e acrescenta **“Atualizado há X s/min/h”**, usando a última sincronização concluída. Em várias conexões, informa a mais antiga; isso não representa a hora de processamento do banco na Pluggy.
+- A tentativa completa tem teto de **8s por usuário**, incluindo todas as conexões, processadas em sequência. O cancelamento chega ao cliente HTTP Pluggy, às páginas e às verificações antes/dentro da transação de importação. Nenhuma nova chamada Pluggy começa após o cancelamento. A espera do bot não depende do tempo de limpeza do claim no banco.
+- Em falha ou timeout, a leitura continua com os dados já salvos e o aviso **“Não consegui atualizar agora; dados de HH:MM (DD/MM)”**, no fuso de São Paulo. Se nunca houve sincronização, informa que o horário não está disponível. Não inventa horário. A resposta permanece em uma única mensagem, sem `parse_mode`, com até 4096 caracteres.
+- `/ajuda`, `/start`, `/pausar`, comandos desconhecidos e usuários sem contas integradas não acionam sync. O bot não permite criar ou editar lançamentos pelo chat: apenas o importador bancário existente pode atualizar os registros da integração.
+- O webhook reserva `maxDuration = 60` segundos; a IA mantém seu teto de 18s, incluindo as ferramentas. O cron mantém 300s, com orçamento de lote de 240s e pool de três usuários. Autenticação do webhook, opt-out e idempotência de envio não mudaram.
+- A sincronização reutiliza a leitura já existente da Pluggy; não força um novo processamento bancário do item nem contorna limites do provedor. Testes usam mocks; nunca enviar IDs de teste ao banco de produção (B3b).
 
 ## 4. Configuração e Variáveis de Ambiente
 

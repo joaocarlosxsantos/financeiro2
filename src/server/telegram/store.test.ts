@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   subscriptions: vi.fn(),
   cards: vi.fn(),
   ai: vi.fn(),
+  refresh: vi.fn(),
 }));
 vi.mock("@/db", () => ({ db: { transaction: (...args: unknown[]) => mocks.transaction(...args) } }));
 vi.mock("@/server/queries", () => ({ getBalances: (...args: unknown[]) => mocks.balance(...args) }));
@@ -29,6 +30,7 @@ vi.mock("./daily-summary", () => ({
   renderDailySummary: (...args: unknown[]) => mocks.summary(...args),
 }));
 vi.mock("./ai-service", () => ({ answerQuestion: (...args: unknown[]) => mocks.ai(...args) }));
+vi.mock("@/server/open-finance/refresh", () => ({ readWithOpenFinanceRefresh: (...args: unknown[]) => mocks.refresh(...args) }));
 
 import { disconnect, issueLink, processMessage } from "./store";
 import { telegramLinkCodes, telegramLinks, telegramPreferences, users } from "@/db/schema";
@@ -39,6 +41,7 @@ const sqlQuery = (value: unknown) => new PgDialect().sqlToQuery(value as SQL);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.refresh.mockImplementation(async (_userId: string, read: () => Promise<string>) => read());
   mocks.results.length = mocks.events.length = 0;
   const query = (kind: string, table?: unknown) => {
     mocks.events.push({ kind, value: table });
@@ -64,6 +67,31 @@ beforeEach(() => {
 });
 
 describe("persistência Telegram", () => {
+  it("faz refresh fora do claim do chat e antes de ler os dados financeiros", async () => {
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
+    const callback = mocks.transaction.getMockImplementation()!;
+    let commits = 0;
+    mocks.transaction.mockImplementation(async (...args: unknown[]) => { const result = await callback(...args); commits++; return result; });
+    mocks.refresh.mockImplementation(async (userId: string, read: () => Promise<string>) => {
+      expect(userId).toBe("linked-owner"); expect(commits).toBe(1);
+      expect(mocks.balance).not.toHaveBeenCalled();
+      return `${await read()}\n\nAtualizado há 20 s.`;
+    });
+    mocks.balance.mockResolvedValue({ availableCents: 100, totalIncomplete: false });
+    expect(await processMessage(11, message("/saldo"))).toContain("Atualizado há 20 s.");
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+    expect(commits).toBe(2);
+  });
+  it.each(["/ajuda", "/pausar", "/start", "/desconhecido"])("não faz refresh em comando sem leitura financeira: %s", async text => {
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    await processMessage(12, message(text));
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+  it("vínculo removido ou trocado durante refresh não lê dados de outro dono", async () => {
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "different-owner" }]);
+    expect(await processMessage(13, message("/saldo"))).toContain("Vincule");
+    expect(mocks.balance).not.toHaveBeenCalled();
+  });
   it("esquema impede chat e usuário em múltiplos vínculos e remove vínculo ao excluir dono", () => {
     const config = getTableConfig(telegramLinks);
     expect(telegramLinks.userId.primary).toBe(true);
@@ -93,6 +121,7 @@ describe("persistência Telegram", () => {
     mocks.results.push(rows);
     expect(await processMessage(10, message("/saldo"))).toBeNull();
     expect(mocks.balance).not.toHaveBeenCalled();
+    expect(mocks.refresh).not.toHaveBeenCalled();
     expect(mocks.events.filter((e) => e.kind === "select")).toHaveLength(0);
     const upsert = mocks.events.find((e) => e.kind === "upsert")?.value as { setWhere: SQL; set: { requestCount: SQL } };
     expect(sqlQuery(upsert.setWhere).sql).toContain('"telegram_chat_state"."last_update_id" <');
@@ -107,14 +136,14 @@ describe("persistência Telegram", () => {
     log.mockRestore();
   });
   it("consulta saldo usando vínculo filtrado por chat", async () => {
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.balance.mockResolvedValue({ availableCents: 100, totalIncomplete: false });
     expect(await processMessage(11, message("/saldo"))).toContain("1,00");
     expect(mocks.balance).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
     expect(sqlQuery(mocks.events.find((e) => e.kind === "where")?.value).params).toEqual(["123"]);
   });
   it("processa /resumo chamando renderDailySummary com vínculo filtrado por chat", async () => {
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.summary.mockResolvedValue("CONTA\nSaldo total: R$ 500,00");
     const reply = await processMessage(12, message("/resumo"));
     expect(reply).toBe("CONTA\nSaldo total: R$ 500,00");
@@ -137,14 +166,14 @@ describe("persistência Telegram", () => {
     expect(mocks.events.filter((e) => e.kind === "insert").map((e) => e.value)).not.toContain(telegramLinks);
   });
   it("/pausar persiste opt-out somente no dono vinculado", async () => {
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     expect(await processMessage(14, message("/pausar"))).toContain("pausados");
     expect(mocks.events.find((e) => e.kind === "insert" && e.value === telegramPreferences)).toBeTruthy();
     expect(mocks.events.filter((e) => e.kind === "values").at(-1)?.value).toEqual({ userId: "linked-owner", enabled: false });
     expect(mocks.balance).not.toHaveBeenCalled();
   });
   it("/resumo mantém leituras na conexão da transação", async () => {
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.summary.mockResolvedValue("Resumo solicitado");
     expect(await processMessage(15, message("/resumo"))).toBe("Resumo solicitado");
     expect(mocks.summary).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
@@ -184,22 +213,22 @@ describe("persistência Telegram", () => {
     expect(setWindowQuery.sql).toContain("::timestamptz");
   });
   it("/previsao e /hoje mantêm leituras na conexão da transação", async () => {
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.forecast.mockResolvedValue("Previsão mock");
     expect(await processMessage(20, message("/previsao"))).toBe("Previsão mock");
     expect(mocks.forecast).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
 
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.dailyBudget.mockResolvedValue("Hoje mock");
     expect(await processMessage(21, message("/hoje"))).toBe("Hoje mock");
     expect(mocks.dailyBudget).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
 
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.subscriptions.mockResolvedValue("Assinaturas mock");
     expect(await processMessage(22, message("/assinaturas"))).toBe("Assinaturas mock");
     expect(mocks.subscriptions).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
 
-    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.cards.mockResolvedValue("Cartões mock");
     expect(await processMessage(23, message("/cartao"))).toBe("Cartões mock");
     expect(mocks.cards).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }), expect.any(Date));

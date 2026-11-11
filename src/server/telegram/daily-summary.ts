@@ -8,6 +8,7 @@ import { calculateDailyBudget } from "@/lib/daily-budget";
 import { loadCardSummariesData, sanitizeCardName, type CardSummaryData } from "./card-summary";
 import { enrichAndFilterProactiveAlerts } from "./alerts";
 import { loadInsightData } from "./insight-data";
+import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
 import { type InsightData, type InsightWindow, type Preferences } from "./insights";
 
 export interface YesterdayMovements {
@@ -373,7 +374,7 @@ export const dailySummaryDependencies: DailySummaryDependencies = {
       },
     }));
   },
-  render: (userId: string, now: Date) => renderDailySummary(userId, db, now),
+  render: (userId: string, now: Date) => readWithOpenFinanceRefresh(userId, () => renderDailySummary(userId, db, now)),
   async claim(userId: string, windowKey: string): Promise<boolean> {
     const [row] = await db
       .insert(telegramDeliveries)
@@ -424,11 +425,11 @@ export async function runDailySummaryBatch(
     const recipients = await deps.candidates(window.key, afterUserId);
     if (!recipients.length) break;
 
-    for (let offset = 0; offset < recipients.length; offset += 5) {
+    for (let offset = 0; offset < recipients.length; offset += 3) {
       if (Date.now() - started > 240_000) return { ...result, remaining: true };
 
       await Promise.all(
-        recipients.slice(offset, offset + 5).map(async (recipient) => {
+        recipients.slice(offset, offset + 3).map(async (recipient) => {
           let claimed = false;
           try {
             // Opt-out verificado
