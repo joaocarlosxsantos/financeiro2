@@ -25,12 +25,12 @@ export function BottomNav({ onNew, userName }: { onNew: () => void; userName: st
   const sections = getNavigationSections(profile, "more");
   const destinations = sections.flatMap((section) => section.items);
   const [moreOpen, setMoreOpen] = useState(false);
-  const itemClass = "relative flex min-h-12 min-w-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]";
+  const itemClass = "relative flex min-h-12 min-w-0 w-full flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] sm:text-xs font-medium tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]";
   function destination(item: typeof primaryDestinations[number]) {
     const active = isDestinationActive(pathname, item.href);
     return <Link key={item.href} href={item.href} aria-label={item.label} title={item.label} aria-current={active ? "page" : undefined}
       className={cn(itemClass, active ? "text-[var(--text)] before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:bg-[var(--acento)]" : "text-[var(--text-subtle)]")}>
-      <item.icon aria-hidden="true" className="size-6" strokeWidth={1.5} /><span className="max-w-full truncate px-0.5">{item.label}</span>
+      <item.icon aria-hidden="true" className="size-6" strokeWidth={1.5} /><span className="w-full min-w-0 truncate text-center px-0.5">{item.label}</span>
     </Link>;
   }
   return <>
@@ -81,7 +81,7 @@ function QuickEntryForm({ accounts, categories, onClose }: QuickEntryProps) {
   }, {});
   return <>
     {!accounts.length ? <p className="py-4 text-sm">Cadastre uma conta em <Link href="/contas" replace onClick={onClose} className="underline">Configurações</Link> antes de lançar.</p> :
-      <form action={action} className="space-y-4">
+      <form action={action} className="space-y-4 pb-2">
         <fieldset disabled={pending} className="grid grid-cols-3 gap-2">
           <legend className="sr-only">Tipo de lançamento</legend>
           {[["EXPENSE", "Saída"], ["INCOME", "Entrada"], ["TRANSFER", "Transferência"]].map(([value, label]) =>
@@ -101,7 +101,7 @@ function QuickEntryForm({ accounts, categories, onClose }: QuickEntryProps) {
             <Field label="Tipo de gasto"><Select name="nature"><option value="VARIABLE">Variável</option><option value="FIXED">Fixo</option></Select></Field>
           </>}
         {state.error && <p role="alert" className="text-sm text-[var(--text-out)]">{state.error}</p>}
-        <div className="sticky bottom-0 bg-[var(--surface)] py-3"><SubmitButton className="min-h-12 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]" pendingLabel="Salvando…">Salvar lançamento</SubmitButton></div>
+        <div className="sticky bottom-0 -mx-5 border-t border-[var(--line)] bg-[var(--surface)] px-5 py-3"><SubmitButton className="min-h-12 w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]" pendingLabel="Salvando…">Salvar lançamento</SubmitButton></div>
       </form>}
   </>;
 }

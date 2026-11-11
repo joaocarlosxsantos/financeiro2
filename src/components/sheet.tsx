@@ -90,6 +90,7 @@ export function Sheet({
       if (!viewport || window.matchMedia("(min-width: 768px)").matches) return;
       dialog.style.height = `${viewport.height}px`;
       dialog.style.top = `${viewport.offsetTop}px`;
+      dialog.style.bottom = "auto";
     }
     fitKeyboard();
     viewport?.addEventListener("resize", fitKeyboard);
@@ -169,6 +170,10 @@ export function Sheet({
       viewport?.removeEventListener("resize", fitKeyboard);
       viewport?.removeEventListener("scroll", fitKeyboard);
 
+      dialog.style.height = "";
+      dialog.style.top = "";
+      dialog.style.bottom = "";
+
       dialog.close();
 
       if (window.history.state?.sheet === marker) {
@@ -200,7 +205,7 @@ export function Sheet({
         }
       }}
       className={cn(
-        "fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-[var(--text)]",
+        "fixed inset-0 z-50 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-[var(--text)]",
         "backdrop:bg-black/60 backdrop:backdrop-blur-sm",
         // Mobile: alinha na base (bottom sheet)
         "open:flex open:items-end open:justify-center",
@@ -213,7 +218,7 @@ export function Sheet({
         data-sheet-panel
         style={{ backdropFilter: "blur(20px) saturate(140%)" }}
         className={cn(
-          "glass relative flex w-full flex-col overflow-hidden border border-[var(--border)]",
+          "glass relative flex w-full flex-col overflow-hidden border border-[var(--border)] bg-[var(--surface)]",
           maxWidthClasses[maxWidth] ?? "max-w-lg",
           // Mobile: bottom sheet com altura até 90% da viewport e cantos superiores arredondados
           "max-h-[90%] rounded-t-2xl pb-[max(12px,env(safe-area-inset-bottom))]",

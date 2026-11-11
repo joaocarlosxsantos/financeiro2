@@ -52,7 +52,8 @@ describe("Sheet modal/drawer component", () => {
         )
       );
 
-      // Dialog container: centralizado no desktop
+      // Dialog container: centralizado no desktop com stacking z-50 garantido
+      expect(html).toContain("z-50");
       expect(html).toContain("open:justify-center");
       expect(html).toContain("md:open:items-center");
       expect(html).toContain("md:px-6");

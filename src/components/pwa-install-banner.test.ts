@@ -8,7 +8,7 @@
  * - Resiliência a localStorage quebrado
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 
 // ---- helpers extraídos para teste direto (mesma lógica do componente) ----
 
