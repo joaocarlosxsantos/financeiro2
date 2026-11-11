@@ -95,11 +95,11 @@ export function formatCardSummary(cards: CardSummaryData[]): string {
   return blocks.join("\n\n").slice(0, 3800);
 }
 
-export async function loadCardSummary(
+export async function loadCardSummariesData(
   userId: string,
   connection: Pick<typeof db, "select"> = db,
   now: Date = new Date(),
-): Promise<string> {
+): Promise<CardSummaryData[]> {
   // Busca cartões de crédito não arquivados do usuário (máximo 5)
   const cardAccounts = await connection
     .select({
@@ -121,7 +121,7 @@ export async function loadCardSummary(
     .limit(5);
 
   if (cardAccounts.length === 0) {
-    return formatCardSummary([]);
+    return [];
   }
 
   const civilToday = getCivilToday(now);
@@ -250,5 +250,14 @@ export async function loadCardSummary(
     }),
   );
 
-  return formatCardSummary(cardSummaries);
+  return cardSummaries;
+}
+
+export async function loadCardSummary(
+  userId: string,
+  connection: Pick<typeof db, "select"> = db,
+  now: Date = new Date(),
+): Promise<string> {
+  const summaries = await loadCardSummariesData(userId, connection, now);
+  return formatCardSummary(summaries);
 }
