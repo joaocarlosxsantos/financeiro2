@@ -43,7 +43,10 @@ export async function loadInsightData(userId: string, window: InsightWindow, con
       if (!bill.dueDay) return [];
       const day = Math.min(bill.dueDay, new Date(Date.UTC(bill.year, bill.month, 0)).getUTCDate());
       const date = new Date(Date.UTC(bill.year, bill.month - 1, day));
-      return date.getTime() >= today.getTime() && date.getTime() < dueEnd ? [{ name: bill.name, totalCents: bill.totalCents, date: date.toISOString().slice(0, 10) }] : [];
+      const diffDays = Math.round((date.getTime() - today.getTime()) / 86_400_000);
+      return date.getTime() >= today.getTime() && date.getTime() < dueEnd
+        ? [{ name: bill.name, totalCents: bill.totalCents, date: date.toISOString().slice(0, 10), diffDays }]
+        : [];
     }).sort((a, b) => a.date.localeCompare(b.date)),
   };
 }

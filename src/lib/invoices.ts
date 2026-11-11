@@ -62,7 +62,7 @@ function createUtcCivilDate(year: number, monthIndex: number, day: number): Date
 /**
  * Normaliza qualquer Date para a data civil correspondente em UTC 12:00Z.
  */
-function toCivilUtcDate(d: Date): Date {
+export function toCivilUtcDate(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12, 0, 0));
 }
 

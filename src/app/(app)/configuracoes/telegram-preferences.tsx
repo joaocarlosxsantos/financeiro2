@@ -67,7 +67,14 @@ export function TelegramPreferencesPanel() {
       <fieldset disabled={pending} className="space-y-2">
         <legend className="text-sm font-medium">Tipos de aviso</legend>
         <div className="grid gap-x-5 gap-y-2 sm:grid-cols-2">
-          {([["summary", "Resumo do dia"], ["spending", "Gasto acima da média"], ["dueBills", "Contas a vencer"], ["budget", "Orçamento estourado"]] as const).map(([key, title]) => <label key={key} className="flex min-h-11 items-center gap-3 text-sm">
+          {([
+            ["summary", "Resumo do dia"],
+            ["spending", "Gasto acima da média"],
+            ["dueBills", "Contas a pagar a vencer"],
+            ["cardInvoice", "Faturas de cartão a vencer"],
+            ["budget", "Orçamento de categorias (80% e 100%)"],
+            ["negativeForecast", "Saldo previsto negativo"],
+          ] as const).map(([key, title]) => <label key={key} className="flex min-h-11 items-center gap-3 text-sm">
             <input type="checkbox" checked={prefs[key]} onChange={(e) => setPrefs({ ...prefs, [key]: e.target.checked })} />{title}
           </label>)}
         </div>

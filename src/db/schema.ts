@@ -108,6 +108,8 @@ export const telegramPreferences = pgTable("telegram_preferences", {
   spending: boolean("spending").notNull().default(true),
   dueBills: boolean("due_bills").notNull().default(true),
   budget: boolean("budget").notNull().default(true),
+  cardInvoice: boolean("card_invoice").notNull().default(true),
+  negativeForecast: boolean("negative_forecast").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [check("telegram_preferences_hours_chk", sql`cardinality(${t.hours}) between 1 and 3 and ${t.hours} <@ ARRAY[8,14,20]::integer[]`)]);
 

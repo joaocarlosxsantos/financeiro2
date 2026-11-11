@@ -2,23 +2,78 @@ import { and, eq, gt, gte, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { telegramDeliveries, telegramLinks, telegramPreferences, transactions, users } from "@/db/schema";
 import { loadInsightData } from "./insight-data";
-import { DEFAULT_PREFERENCES, type InsightWindow, type Preferences } from "./insights";
+import { DEFAULT_PREFERENCES, dayDate, type InsightWindow, type Preferences } from "./insights";
 import type { CronDependencies } from "./cron";
 import { currentMonthRef, getNowInSaoPaulo, monthLabel, monthRange, todayRef } from "@/lib/dates";
 import { buildInsight } from "./insights";
 import { formatForecastSummary, monthForecast } from "@/lib/forecast";
 import { calculateDailyBudget, formatDailyBudgetSummary } from "@/lib/daily-budget";
 import { getDetectedSubscriptions } from "@/server/queries";
+import { enrichAndFilterProactiveAlerts, loadCardInvoicesAlerts, loadForecastAlert } from "./alerts";
 
 export async function getTelegramPreferences(userId: string): Promise<Preferences> {
-  const [row] = await db.select().from(telegramPreferences).where(eq(telegramPreferences.userId, userId)).limit(1);
-  if (!row) return { ...DEFAULT_PREFERENCES, hours: [...DEFAULT_PREFERENCES.hours] };
-  return { enabled: row.enabled, hours: row.hours as Preferences["hours"], summary: row.summary, spending: row.spending, dueBills: row.dueBills, budget: row.budget };
+  try {
+    const [row] = await db.select().from(telegramPreferences).where(eq(telegramPreferences.userId, userId)).limit(1);
+    if (!row) return { ...DEFAULT_PREFERENCES, hours: [...DEFAULT_PREFERENCES.hours] };
+    return {
+      enabled: row.enabled,
+      hours: row.hours as Preferences["hours"],
+      summary: row.summary,
+      spending: row.spending,
+      dueBills: row.dueBills,
+      budget: row.budget,
+      cardInvoice: (row as { cardInvoice?: boolean }).cardInvoice ?? true,
+      negativeForecast: (row as { negativeForecast?: boolean }).negativeForecast ?? true,
+    };
+  } catch {
+    // Fallback se a migration 0025 ainda não tiver sido aplicada no banco
+    try {
+      const [fallbackRow] = await db
+        .select({
+          enabled: telegramPreferences.enabled,
+          hours: telegramPreferences.hours,
+          summary: telegramPreferences.summary,
+          spending: telegramPreferences.spending,
+          dueBills: telegramPreferences.dueBills,
+          budget: telegramPreferences.budget,
+        })
+        .from(telegramPreferences)
+        .where(eq(telegramPreferences.userId, userId))
+        .limit(1);
+      if (!fallbackRow) return { ...DEFAULT_PREFERENCES, hours: [...DEFAULT_PREFERENCES.hours] };
+      return {
+        enabled: fallbackRow.enabled,
+        hours: fallbackRow.hours as Preferences["hours"],
+        summary: fallbackRow.summary,
+        spending: fallbackRow.spending,
+        dueBills: fallbackRow.dueBills,
+        budget: fallbackRow.budget,
+        cardInvoice: true,
+        negativeForecast: true,
+      };
+    } catch {
+      return { ...DEFAULT_PREFERENCES, hours: [...DEFAULT_PREFERENCES.hours] };
+    }
+  }
 }
 
 export async function setTelegramPreferences(userId: string, prefs: Preferences) {
-  await db.insert(telegramPreferences).values({ userId, ...prefs })
-    .onConflictDoUpdate({ target: telegramPreferences.userId, set: { ...prefs, updatedAt: new Date() } });
+  try {
+    await db.insert(telegramPreferences).values({ userId, ...prefs })
+      .onConflictDoUpdate({ target: telegramPreferences.userId, set: { ...prefs, updatedAt: new Date() } });
+  } catch {
+    // Fallback se a coluna ainda não existir no Postgres antes do deploy
+    const legacyPrefs = {
+      enabled: prefs.enabled,
+      hours: prefs.hours,
+      summary: prefs.summary,
+      spending: prefs.spending,
+      dueBills: prefs.dueBills,
+      budget: prefs.budget,
+    };
+    await db.insert(telegramPreferences).values({ userId, ...legacyPrefs })
+      .onConflictDoUpdate({ target: telegramPreferences.userId, set: { ...legacyPrefs, updatedAt: new Date() } });
+  }
 }
 
 export const cronDependencies: CronDependencies = {
@@ -35,6 +90,11 @@ export const cronDependencies: CronDependencies = {
     return rows.map((row) => ({ ...row, prefs: { ...row.prefs, hours: row.prefs.hours as Preferences["hours"] } }));
   },
   data: loadInsightData,
+  async renderMessage(recipient, window) {
+    const rawData = await loadInsightData(recipient.userId, window);
+    const dedupedData = await enrichAndFilterProactiveAlerts(recipient.userId, rawData, window);
+    return buildInsight(dedupedData, recipient.prefs, window);
+  },
   async claim(userId, windowKey) {
     const [row] = await db.insert(telegramDeliveries).values({ userId, windowKey })
       .onConflictDoNothing().returning({ id: telegramDeliveries.id });
@@ -70,7 +130,14 @@ export const cronDependencies: CronDependencies = {
 export async function manualSummary(userId: string, connection: Pick<typeof db, "select"> = db, now = new Date()) {
   const day = todayRef(now);
   const window: InsightWindow = { key: `${day}:20`, day, hour: 20 };
-  const baseInsight = buildInsight(await loadInsightData(userId, window, connection), DEFAULT_PREFERENCES, window, true) ?? "Nenhum aviso para hoje.";
+  const baseData = await loadInsightData(userId, window, connection);
+  const today = dayDate(window.day);
+  const [cardInvoices, forecast] = await Promise.all([
+    loadCardInvoicesAlerts(userId, today, connection),
+    loadForecastAlert(userId, today, connection),
+  ]);
+  const enrichedData = { ...baseData, cardInvoices, forecast };
+  const baseInsight = buildInsight(enrichedData, DEFAULT_PREFERENCES, window, true) ?? "Nenhum aviso para hoje.";
 
   try {
     const subs = await getDetectedSubscriptions(userId, connection);

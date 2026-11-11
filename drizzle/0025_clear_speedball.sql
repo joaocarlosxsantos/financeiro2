@@ -1,0 +1,2 @@
+ALTER TABLE "telegram_preferences" ADD COLUMN "card_invoice" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "telegram_preferences" ADD COLUMN "negative_forecast" boolean DEFAULT true NOT NULL;
