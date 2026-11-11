@@ -244,6 +244,9 @@ function setupHandlers() {
 describe("Open Finance deletion actions", () => {
   beforeEach(() => {
     setupHandlers();
+    process.env.PLUGGY_CLIENT_ID = "test-client-id";
+    process.env.PLUGGY_CLIENT_SECRET = "test-client-secret";
+    process.env.OPEN_FINANCE_ALLOWED_USER_IDS = "user-a";
     mocks.state.userId = "user-a";
     mocks.checkRateLimit.mockReset();
     mocks.checkRateLimit.mockReturnValue({ allowed: true });

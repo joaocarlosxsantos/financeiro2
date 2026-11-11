@@ -15,7 +15,7 @@ export class PluggyHttpError extends Error {
 function safeEndpoint(path: string): string {
   const pathname = new URL(path, BASE).pathname;
   if (/^\/items\/[^/]+$/.test(pathname)) return "/items/:id";
-  if (pathname === "/auth" || pathname === "/accounts" || pathname === "/bills" || pathname === "/v2/transactions") return pathname;
+  if (pathname === "/auth" || pathname === "/connect_token" || pathname === "/accounts" || pathname === "/bills" || pathname === "/v2/transactions") return pathname;
   return "/unknown";
 }
 
@@ -87,6 +87,16 @@ export async function authenticatePluggy(clientId: string, clientSecret: string)
   return result.apiKey;
 }
 
+export async function createPluggyConnectToken(apiKey: string, options: { clientUserId: string; avoidDuplicates?: boolean }): Promise<string> {
+  const result = z.object({ accessToken: z.string().min(1) }).parse(
+    await request("/connect_token", apiKey, {
+      clientUserId: options.clientUserId,
+      avoidDuplicates: options.avoidDuplicates ?? true,
+    }),
+  );
+  return result.accessToken;
+}
+
 export async function getPluggyAccounts(apiKey: string, itemId: string) {
   // GET /accounts accepts itemId and optional type only; it returns all item accounts.
   const params = new URLSearchParams({ itemId });
@@ -94,10 +104,25 @@ export async function getPluggyAccounts(apiKey: string, itemId: string) {
   return z.array(pluggyAccountSchema).parse(result.results);
 }
 
-export async function getPluggyItemStatus(apiKey: string, itemId: string) {
-  const item = z.object({ status: z.string().max(80), executionStatus: z.string().max(80).nullable().optional() }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey));
+export async function getPluggyItem(apiKey: string, itemId: string) {
+  const item = z.object({
+    id: z.string(),
+    clientUserId: z.string().nullable().optional(),
+    status: z.string().max(80),
+    executionStatus: z.string().max(80).nullable().optional(),
+  }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey));
   const known = new Set(["UPDATED", "UPDATING", "LOGIN_ERROR", "OUTDATED", "WAITING_USER_INPUT", "LOGIN_IN_PROGRESS"]);
-  return { status: known.has(item.status) ? item.status : "UNKNOWN", executionStatus: item.executionStatus ?? null };
+  return {
+    id: item.id,
+    clientUserId: item.clientUserId ?? null,
+    status: known.has(item.status) ? item.status : "UNKNOWN",
+    executionStatus: item.executionStatus ?? null,
+  };
+}
+
+export async function getPluggyItemStatus(apiKey: string, itemId: string) {
+  const item = await getPluggyItem(apiKey, itemId);
+  return { status: item.status, executionStatus: item.executionStatus };
 }
 
 async function collect(path: string, apiKey: string, pagination: "cursor" | "page") {

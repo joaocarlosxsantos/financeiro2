@@ -13,18 +13,19 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { Button, SubmitButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/sheet";
 import { formatCents } from "@/lib/money";
-import { Field, Input, Select } from "@/components/ui/field";
+import { Select } from "@/components/ui/field";
 import {
+  connectPluggyItem,
   deleteAllOpenFinanceData,
   discoverOpenFinanceAccounts,
   getOpenFinanceDeletionCounts,
+  getPluggyConnectToken,
   linkOpenFinanceAccount,
   removeOpenFinanceConnection,
   removeOpenFinanceCredentials,
-  saveOpenFinanceSetup,
   syncOpenFinance,
 } from "@/server/actions/open-finance";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -47,7 +48,25 @@ type SyncAccountSummary = {
   error?: string;
 };
 
-type ActiveSheet = "new" | "accounts" | "sync_details" | "manage" | null;
+type ActiveSheet = "accounts" | "sync_details" | "manage" | null;
+
+interface PluggyConnectInstance {
+  init: () => void;
+}
+
+type PluggyConnectConstructor = new (options: {
+  connectToken: string;
+  includeSandbox?: boolean;
+  onSuccess?: (data: { item: { id: string } }) => void | Promise<void>;
+  onError?: (error: unknown) => void;
+  onClose?: () => void;
+}) => PluggyConnectInstance;
+
+declare global {
+  interface Window {
+    PluggyConnect?: PluggyConnectConstructor;
+  }
+}
 
 export function IntegrationPanel({ initial }: { initial: Setup }) {
   const manualEntry = canUseCapability(useUsageProfile(), "manual-entry");
@@ -67,7 +86,6 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
-  const [fromDate, setFromDate] = useState(() => `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Apply refreshed server setup props and repair a connection selection that no longer exists.
@@ -80,31 +98,71 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
 
   const activeConnection = setup.connections.find((c) => c.id === connectionId) ?? setup.connections[0];
 
-  async function save(form: FormData) {
+  function loadPluggySdk(): Promise<PluggyConnectConstructor> {
+    if (typeof window !== "undefined" && window.PluggyConnect) {
+      return Promise.resolve(window.PluggyConnect);
+    }
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[src*="pluggy-connect-sdk"]');
+      if (existing) {
+        existing.addEventListener("load", () => {
+          if (window.PluggyConnect) resolve(window.PluggyConnect);
+          else reject(new Error("PluggyConnect não disponível após carregamento."));
+        });
+        existing.addEventListener("error", reject);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/pluggy-connect-sdk@latest/dist/index.umd.js";
+      script.async = true;
+      script.onload = () => {
+        if (window.PluggyConnect) resolve(window.PluggyConnect);
+        else reject(new Error("PluggyConnect não disponível após carregamento."));
+      };
+      script.onerror = () => reject(new Error("Falha ao carregar o widget do Pluggy Connect."));
+      document.body.appendChild(script);
+    });
+  }
+
+  async function handleOpenConnect() {
     setBusy(true);
     setMessage("");
-    const result = await saveOpenFinanceSetup({
-      clientId: String(form.get("clientId") ?? ""),
-      clientSecret: String(form.get("clientSecret") ?? ""),
-      itemId: String(form.get("itemId") ?? ""),
-      label: String(form.get("label") ?? ""),
-      importFromDate: fromDate,
-    });
-    setBusy(false);
-    if (result.error) {
-      return setMessage(result.error);
+    try {
+      const tokenRes = await getPluggyConnectToken();
+      if (tokenRes.error || !tokenRes.connectToken) {
+        setBusy(false);
+        return setMessage(tokenRes.error ?? "Não foi possível iniciar a conexão.");
+      }
+
+      const PluggyConnect = await loadPluggySdk();
+      const pluggyConnect = new PluggyConnect({
+        connectToken: tokenRes.connectToken,
+        includeSandbox: false,
+        onSuccess: async (data: { item: { id: string } }) => {
+          setMessage("Conta conectada! Sincronizando dados...");
+          setBusy(true);
+          const connectRes = await connectPluggyItem({ itemId: data.item.id });
+          setBusy(false);
+          if (connectRes.error) {
+            setMessage(connectRes.error);
+          } else {
+            setMessage("Conexão concluída e sincronizada com sucesso!");
+            router.refresh();
+          }
+        },
+        onError: () => {
+          setMessage("Conexão cancelada ou não concluída no banco.");
+          setBusy(false);
+        },
+        onClose: () => {
+          setBusy(false);
+        },
+      });
+      pluggyConnect.init();
+    } catch (err) {
+      setBusy(false);
+      setMessage(err instanceof Error ? err.message : "Erro ao abrir o widget do Pluggy Connect.");
     }
-
-    const inputs = document.querySelectorAll<HTMLInputElement>(
-      'input[name="clientId"], input[name="clientSecret"], input[name="itemId"], input[name="label"]',
-    );
-    inputs.forEach((input) => {
-      input.value = "";
-    });
-
-    setActiveSheet(null);
-    setMessage("Conexão salva com sucesso. Os campos de credenciais foram limpos.");
-    router.refresh();
   }
 
   async function loadAccounts() {
@@ -386,7 +444,8 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
               {/* Adicionar Nova Conexão */}
               <button
                 type="button"
-                onClick={() => setActiveSheet("new")}
+                onClick={() => void handleOpenConnect()}
+                disabled={busy}
                 className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-[var(--surface-2)] min-h-14"
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -396,7 +455,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--text)]">Adicionar nova conexão</p>
                     <p className="text-xs text-[var(--text-muted)] truncate">
-                      Conectar outro banco ou conta Pluggy
+                      {busy ? "Abrindo Pluggy Connect..." : "Conectar outro banco via Pluggy"}
                     </p>
                   </div>
                 </div>
@@ -425,6 +484,19 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
             </div>
           </section>
         </>
+      ) : !setup.isAvailable ? (
+        <section className="space-y-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 md:p-8 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--text-muted)]">
+            <CreditCard className="size-6" />
+          </div>
+
+          <div className="space-y-1.5 max-w-md mx-auto">
+            <h2 className="text-heading font-semibold text-[var(--text)]">Open Finance indisponível</h2>
+            <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+              A integração direta via Open Finance não está configurada no servidor ou não está habilitada para o seu usuário.
+            </p>
+          </div>
+        </section>
       ) : (
         /* Estado Vazio: Nenhum banco conectado */
         <section className="space-y-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 md:p-8 text-center">
@@ -435,120 +507,23 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
           <div className="space-y-1.5 max-w-md mx-auto">
             <h2 className="text-heading font-semibold text-[var(--text)]">Conectar ao Open Finance</h2>
             <p className="text-xs leading-relaxed text-[var(--text-muted)]">
-              Sincronize transações e saldos de suas contas bancárias e cartões diretamente pelo Pluggy.
-              Suas credenciais são guardadas de forma cifrada no banco de dados.
+              Sincronize transações e saldos de suas contas bancárias e cartões diretamente pelo Pluggy Connect.
             </p>
           </div>
 
           <div className="pt-2">
             <Button
               type="button"
-              onClick={() => setActiveSheet("new")}
+              onClick={() => void handleOpenConnect()}
+              disabled={busy}
               className="min-h-12 w-full sm:w-auto px-6 font-medium gap-2"
             >
               <Plus className="size-4" />
-              Conectar conta
+              {busy ? "Abrindo Pluggy Connect..." : "Conectar conta"}
             </Button>
           </div>
-
-          {setup.credentialSaved ? (
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => void removeCredentials()}
-                disabled={busy}
-                className="text-xs text-[var(--text-muted)] underline hover:text-[var(--text)]"
-              >
-                Remover credenciais Pluggy salvas
-              </button>
-            </div>
-          ) : null}
         </section>
       )}
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SHEET 1: Nova Conexão */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {activeSheet === "new" ? (
-        <Sheet title="Nova conexão Open Finance" onClose={() => setActiveSheet(null)}>
-          <div className="space-y-4">
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              {setup.credentialSaved
-                ? "Suas credenciais gerais da Pluggy já estão salvas. Preencha apenas o Item ID e um nome (ou informe novas credenciais se desejar atualizá-las)."
-                : "Informe seu Client ID, Client Secret e o Item ID gerado pelo Pluggy Connect para iniciar a integração."}
-            </p>
-
-            <form action={save} className="space-y-3.5">
-              <Field label="Client ID">
-                <Input
-                  className="min-h-12 text-base!"
-                  name="clientId"
-                  placeholder={setup.credentialSaved ? "Salvo (deixe em branco para manter)" : "Informe seu Client ID"}
-                  autoComplete="off"
-                />
-              </Field>
-
-              <Field label="Client Secret">
-                <Input
-                  className="min-h-12 text-base!"
-                  name="clientSecret"
-                  type="password"
-                  placeholder={setup.credentialSaved ? "•••••••••••• (deixe em branco para manter)" : "Informe seu Client Secret"}
-                  autoComplete="new-password"
-                />
-              </Field>
-
-              <Field label="Item ID (Pluggy)">
-                <Input
-                  className="min-h-12 text-base!"
-                  name="itemId"
-                  placeholder="Identificador do item Pluggy"
-                  autoComplete="off"
-                  required
-                />
-              </Field>
-
-              <Field label="Nome desta conexão">
-                <Input
-                  className="min-h-12 text-base!"
-                  name="label"
-                  placeholder="Ex.: Nubank Principal, Itaú PJ..."
-                  maxLength={100}
-                />
-              </Field>
-
-              <Field label="Data inicial de importação">
-                <Input
-                  className="min-h-12 text-base!"
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  required
-                />
-              </Field>
-
-              <p className="text-xs text-[var(--text-muted)]">
-                Lançamentos manuais ou importações CSV/OFX existentes não serão apagados.
-              </p>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--line)]">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setActiveSheet(null)}
-                  disabled={busy}
-                  className="min-h-11"
-                >
-                  Cancelar
-                </Button>
-                <SubmitButton className="min-h-11" disabled={busy}>
-                  Salvar Conexão
-                </SubmitButton>
-              </div>
-            </form>
-          </div>
-        </Sheet>
-      ) : null}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
       {/* SHEET 2: Contas Vinculadas */}
