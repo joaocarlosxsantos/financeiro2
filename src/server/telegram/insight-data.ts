@@ -10,6 +10,8 @@ export async function loadInsightData(userId: string, window: InsightWindow, con
   const summaryStart = dayDate(window.day, window.hour === 8 ? -1 : 0);
   const summaryEnd = new Date(summaryStart.getTime() + 86_400_000);
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const todayIso = today.toISOString();
+  const monthStartIso = monthStart.toISOString();
   const historyStart = dayDate(window.day, -30);
   const common = and(eq(transactions.userId, userId), eq(transactions.isTransfer, false),
     eq(transactions.isCardPayment, false), or(isNull(transactions.externalStatus), eq(transactions.externalStatus, "POSTED")));
@@ -18,11 +20,11 @@ export async function loadInsightData(userId: string, window: InsightWindow, con
       .from(transactions).where(and(common, gte(transactions.date, summaryStart), lt(transactions.date, summaryEnd))).groupBy(transactions.kind),
     connection.select({
       id: transactions.categoryId, name: categories.name,
-      todayCents: sql<number>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.date} >= ${today}),0)`,
-      historyCents: sql<number>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.date} < ${today}),0)`,
-      historyCount: sql<number>`count(*) filter (where ${transactions.date} < ${today})`,
-      historyDays: sql<number>`count(distinct (${transactions.date} at time zone 'UTC')::date) filter (where ${transactions.date} < ${today})`,
-      monthCents: sql<number>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.date} >= ${monthStart}),0)`,
+      todayCents: sql<number>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.date} >= ${todayIso}::timestamptz),0)`,
+      historyCents: sql<number>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.date} < ${todayIso}::timestamptz),0)`,
+      historyCount: sql<number>`count(*) filter (where ${transactions.date} < ${todayIso}::timestamptz)`,
+      historyDays: sql<number>`count(distinct (${transactions.date} at time zone 'UTC')::date) filter (where ${transactions.date} < ${todayIso}::timestamptz)`,
+      monthCents: sql<number>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.date} >= ${monthStartIso}::timestamptz),0)`,
     }).from(transactions).leftJoin(categories, and(eq(categories.id, transactions.categoryId), eq(categories.userId, userId)))
       .where(and(common, eq(transactions.kind, "EXPENSE"), gte(transactions.date, historyStart < monthStart ? historyStart : monthStart), lt(transactions.date, tomorrow)))
       .groupBy(transactions.categoryId, categories.name),

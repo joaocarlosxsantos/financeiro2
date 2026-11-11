@@ -40,5 +40,16 @@ describe("consultas de insights", () => {
     }
     expect(compiled[3].sql).toContain('"bills"."paid" =');
     expect(compiled[3].params).toContain(false);
+
+    // O segundo select (spending) deve compilar os filtros de data como ISO strings (evita TypeError no driver postgres.js)
+    const calls = vi.mocked(select).mock.calls;
+    const spendingProjection = (calls[1] as unknown[])[0] as Record<string, SQL>;
+    for (const key of ["todayCents", "historyCents", "historyCount", "historyDays", "monthCents"]) {
+      const compiledExpr = new PgDialect().sqlToQuery(spendingProjection[key]);
+      for (const param of compiledExpr.params) {
+        expect(param instanceof Date).toBe(false);
+        expect(typeof param).toBe("string");
+      }
+    }
   });
 });
