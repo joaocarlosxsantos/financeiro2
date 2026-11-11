@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronRight,
   CreditCard,
-  ExternalLink,
   Key,
   Lock,
   Plus,
@@ -36,6 +35,7 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useUsageProfile } from "@/components/usage-profile";
 import { canUseCapability } from "@/lib/usage-profile";
+import { PluggyCredentialsGuide } from "./pluggy-guide";
 
 type Setup = Awaited<ReturnType<typeof import("@/server/actions/open-finance").getOpenFinanceSetup>>;
 type Remote = { id: string; name: string; type: "BANK" | "CREDIT"; currency: string };
@@ -337,33 +337,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-xs text-[var(--text-muted)] space-y-2">
-            <p className="font-medium text-[var(--text)]">Como obter suas credenciais:</p>
-            <ol className="list-decimal list-inside space-y-1.5 pl-1">
-              <li>
-                Acesse ou crie sua conta pessoal em{" "}
-                <a
-                  href="https://meu.pluggy.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-[var(--text)] underline inline-flex items-center gap-1 hover:text-[var(--text-muted)]"
-                >
-                  meu.pluggy.ai <ExternalLink className="size-3" />
-                </a>{" "}
-                ou no{" "}
-                <a
-                  href="https://dashboard.pluggy.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-[var(--text)] underline inline-flex items-center gap-1 hover:text-[var(--text-muted)]"
-                >
-                  dashboard.pluggy.ai <ExternalLink className="size-3" />
-                </a>
-              </li>
-              <li>Gere ou copie seu <strong>Client ID</strong> e <strong>Client Secret</strong>.</li>
-              <li>Cole-os abaixo para habilitar a conexão automática de contas e cartões.</li>
-            </ol>
-          </div>
+          <PluggyCredentialsGuide />
 
           <form
             onSubmit={async (e) => {
@@ -667,68 +641,84 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SHEET 1: Trocar Credenciais */}
+      {/* SHEET 1: Trocar / Configurar Credenciais */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeSheet === "credentials" ? (
-        <Sheet title="Trocar credenciais Pluggy" onClose={() => setActiveSheet(null)}>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              await handleSaveCredentials(new FormData(e.currentTarget));
-            }}
-            className="space-y-4"
-          >
-            <p className="text-xs text-[var(--text-muted)]">
-              Informe o novo par de Client ID e Client Secret. As credenciais anteriores serão substituídas após a validação.
-            </p>
+        <Sheet
+          title={setup.credentialConfigured ? "Trocar credenciais Pluggy" : "Adicionar credenciais Pluggy"}
+          maxWidth="xl"
+          onClose={() => setActiveSheet(null)}
+        >
+          <div className="space-y-4">
+            <PluggyCredentialsGuide />
 
-            <Field label="Novo Client ID" hint="Identificador único da aplicação na Pluggy">
-              <Input
-                name="clientId"
-                required
-                placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await handleSaveCredentials(new FormData(e.currentTarget));
+              }}
+              className="space-y-4"
+            >
+              <p className="text-xs text-[var(--text-muted)]">
+                {setup.credentialConfigured
+                  ? "Informe o novo par de Client ID e Client Secret. As credenciais anteriores serão substituídas após a validação."
+                  : "Cole abaixo as credenciais obtidas no Dashboard da Pluggy para habilitar o Open Finance."}
+              </p>
 
-            <Field label="Novo Client Secret" hint="Chave secreta da aplicação (criptografada no servidor)">
-              <Input
-                name="clientSecret"
-                type="password"
-                required
-                placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
-
-            <div className="flex items-start gap-2 text-[0.6875rem] text-[var(--text-muted)]">
-              <Lock className="size-3.5 shrink-0 mt-0.5 text-[var(--text-muted)]" />
-              <span>
-                Criptografia AES-256-GCM. O Client Secret nunca é devolvido ao navegador nem exposto em logs.
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button
-                type="submit"
-                disabled={busy}
-                className="min-h-11 w-full sm:w-auto font-medium"
+              <Field
+                label={setup.credentialConfigured ? "Novo Client ID" : "Client ID"}
+                hint="Identificador único da aplicação na Pluggy"
               >
-                {busy ? "Validando e salvando..." : "Salvar novas credenciais"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                onClick={() => setActiveSheet(null)}
-                className="min-h-11 w-full sm:w-auto"
+                <Input
+                  name="clientId"
+                  required
+                  placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
+
+              <Field
+                label={setup.credentialConfigured ? "Novo Client Secret" : "Client Secret"}
+                hint="Chave secreta da aplicação (criptografada no servidor)"
               >
-                Cancelar
-              </Button>
-            </div>
-          </form>
+                <Input
+                  name="clientSecret"
+                  type="password"
+                  required
+                  placeholder="Ex.: 00000000-0000-0000-0000-000000000000"
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
+
+              <div className="flex items-start gap-2 text-[0.6875rem] text-[var(--text-muted)]">
+                <Lock className="size-3.5 shrink-0 mt-0.5 text-[var(--text-muted)]" />
+                <span>
+                  Criptografia AES-256-GCM. O Client Secret nunca é devolvido ao navegador nem exposto em logs.
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="min-h-11 w-full sm:w-auto font-medium"
+                >
+                  {busy ? "Validando e salvando..." : "Salvar e validar credenciais"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setActiveSheet(null)}
+                  className="min-h-11 w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
         </Sheet>
       ) : null}
 
