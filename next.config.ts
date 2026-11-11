@@ -34,6 +34,26 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "default-src 'none'; base-uri 'none'; frame-ancestors 'none'" },
         ],
       },
+      // Service Worker: nunca cachear o próprio arquivo; CSP restritiva para SW.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+          // SW roda em contexto isolado; só precisa de self.
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+      // Página offline estática: pode ser cacheada pelo browser/SW mas não por CDNs.
+      {
+        source: "/offline.html",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+          // CSP estrita para a página offline (sem scripts ou frames).
+          { key: "Content-Security-Policy", value: "default-src 'self'; style-src 'unsafe-inline'; img-src 'self'" },
+        ],
+      },
     ];
   },
 };

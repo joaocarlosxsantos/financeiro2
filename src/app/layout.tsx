@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { headers } from "next/headers";
+import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import "./globals.css";
 
 const sans = Hanken_Grotesk({
@@ -25,6 +27,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://mutanocontas.vercel.app"),
   openGraph: { type: "website", locale: "pt_BR", siteName: "Mutano Contas", title: "Mutano Contas", description },
   twitter: { card: "summary_large_image", title: "Mutano Contas", description },
+  // PWA — apple-touch-icon para iOS e referência explícita ao manifesto.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Mutano Contas",
+  },
+  icons: {
+    apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -53,7 +64,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <ServiceWorkerRegistrar />
+        {children}
+        <PwaInstallBanner />
+      </body>
     </html>
   );
 }
