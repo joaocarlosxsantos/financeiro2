@@ -46,3 +46,7 @@ next-env.d.ts
 
 # Maestri (agentes locais)
 .maestri/
+
+# Understand-Anything knowledge graph
+.ua/
+.understand-anything/
