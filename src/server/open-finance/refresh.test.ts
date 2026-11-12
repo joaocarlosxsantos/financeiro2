@@ -15,7 +15,7 @@ beforeEach(() => vi.resetAllMocks());
 afterEach(() => vi.useRealTimers());
 
 describe("atualização compartilhada antes das leituras", () => {
-  it("adapter de produção delega ao mesmo núcleo com modo manual e AbortSignal", async () => {
+  it("adapter de produção delega ao mesmo núcleo com modo automático (cooldown 5 min) e AbortSignal", async () => {
     vi.useFakeTimers(); vi.setSystemTime(now);
     mocks.restriction.mockResolvedValue(null);
     const rows = [{ id: "connection", lastSyncedAt: new Date(now.getTime() - 30_000) }];
@@ -23,9 +23,9 @@ describe("atualização compartilhada antes das leituras", () => {
     mocks.select.mockReturnValue(query);
     mocks.sync.mockResolvedValue({ skipped: true });
     expect(await refreshFinancialData("owner")).toBe("Atualizado há 30 s.");
-    expect(mocks.sync).toHaveBeenCalledExactlyOnceWith("owner", "connection", "manual", { signal: expect.any(AbortSignal) });
+    expect(mocks.sync).toHaveBeenCalledExactlyOnceWith("owner", "connection", "auto", { signal: expect.any(AbortSignal) });
   });
-  it("sincroniza pelo núcleo manual antes de ler, usando identidade do servidor", async () => {
+  it("sincroniza antes de ler, usando a identidade do servidor", async () => {
     const deps = dependencies();
     vi.mocked(deps.sync).mockResolvedValue({ lastSyncedAt: now });
     const read = vi.fn(async () => { expect(deps.sync).toHaveBeenCalledWith("owner", "connection", expect.any(AbortSignal)); return "Saldo salvo"; });
@@ -41,7 +41,7 @@ describe("atualização compartilhada antes das leituras", () => {
     vi.mocked(deps.sync).mockRejectedValue(new Error("private token"));
     const result = await readWithOpenFinanceRefresh("owner", async () => "Saldo salvo", deps);
     expect(result).toContain("Saldo salvo");
-    expect(result).toContain("Não consegui atualizar agora; dados de 07:59 (12/11).");
+    expect(result).toContain("Não consegui atualizar agora; dados de 07:59 (12/11). Os dados podem estar desatualizados.");
     expect(result).not.toContain("private");
   });
   it("sem integração não dispara sync nem acrescenta aviso", async () => {

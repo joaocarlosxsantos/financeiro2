@@ -27,7 +27,8 @@ const dependencies: FinancialRefreshDependencies = {
     return rows;
   },
   // O mesmo núcleo do botão e painel possui o único cooldown/claim persistido.
-  sync: (userId, connectionId, signal) => syncOpenFinanceForUser(userId, connectionId, "manual", { signal }),
+  // Leituras automáticas usam o cooldown de 5 min e reaproveitam lastAttemptAt.
+  sync: (userId, connectionId, signal) => syncOpenFinanceForUser(userId, connectionId, "auto", { signal }),
   now: () => new Date(),
 };
 
@@ -40,7 +41,7 @@ function failureNotice(rows: Snapshot[]): string {
   const date = oldestSnapshot(rows);
   const when = date ? `dados de ${new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(date)} (${new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(date)})`
     : "dados salvos, sem horário de atualização disponível";
-  return `Não consegui atualizar agora; ${when}.`;
+  return `Não consegui atualizar agora; ${when}. Os dados podem estar desatualizados.`;
 }
 
 /** Teto global por usuário, incluindo todas as conexões, sem bloquear a leitura salva. */
