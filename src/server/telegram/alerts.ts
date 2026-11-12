@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, openFinanceInvoices, telegramDeliveries, transactions, users } from "@/db/schema";
-import { dayDate, type InsightData, type InsightWindow } from "./insights";
+import { type InsightData, type InsightWindow } from "./insights";
 import { getCivilToday, invoiceCycle, toCivilUtcDate } from "@/lib/invoices";
 import { sanitizeCardName } from "./card-summary";
 import { currentMonthRef, getNowInSaoPaulo, monthRange } from "@/lib/dates";

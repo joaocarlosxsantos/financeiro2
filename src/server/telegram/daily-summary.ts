@@ -9,8 +9,7 @@ import { loadCardSummariesData, sanitizeCardName, type CardSummaryData } from ".
 import { enrichAndFilterProactiveAlerts } from "./alerts";
 import { loadInsightData } from "./insight-data";
 import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
-import { DEFAULT_PREFERENCES, insightWindow, type InsightData, type InsightWindow, type Preferences } from "./insights";
-import { proactiveLines } from "./proactive-copy";
+import { type InsightData, type InsightWindow, type Preferences } from "./insights";
 
 export interface YesterdayMovements {
   incomeCents: number;

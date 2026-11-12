@@ -6,7 +6,7 @@ import {
   undoTransactionDraft,
   cancelTransactionDraft,
 } from "./draft-store";
-import { accounts, telegramLinks, telegramTransactionDrafts, transactions, users } from "@/db/schema";
+import { telegramTransactionDrafts, transactions } from "@/db/schema";
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),

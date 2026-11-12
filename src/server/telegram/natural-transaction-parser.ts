@@ -153,7 +153,7 @@ export function parseNaturalTransaction(
 
   // 4. Limpeza da descrição
   // Remover palavras de ligação e verbos comuns
-  let cleaned = workingText
+  const cleaned = workingText
     .replace(/[+]/g, " ")
     .replace(/\b(gastei|comprei|paguei|recebi|pix|de|do|da|dos|das|no|na|nos|nas|em|com|por|para|valor|custou)\b/gi, " ")
     .replace(/[\r\n\t\u0000-\u001f\u007f]/g, " ")

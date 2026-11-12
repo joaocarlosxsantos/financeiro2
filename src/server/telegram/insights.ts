@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getNowInSaoPaulo, todayRef } from "@/lib/dates";
-import { proactiveLines } from "./proactive-copy";
 
 export const preferenceSchema = z.object({
   enabled: z.boolean(),

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, telegramLinks, telegramTransactionDrafts, transactions, users, type TelegramTransactionDraft } from "@/db/schema";
 import { createId } from "@/lib/id";
