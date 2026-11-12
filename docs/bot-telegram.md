@@ -115,10 +115,24 @@ curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   }'
 ```
 
-No Windows, prefira `powershell -NoProfile -File scripts/telegram-webhook.ps1`
-para consultar `getWebhookInfo` com token digitado em entrada oculta. Para reparar
-o registro, execute `powershell -NoProfile -File scripts/telegram-webhook.ps1 -Register`
-e informe o mesmo segredo já configurado na Vercel. O script verifica a URL atual,
+No Windows, consulte com `powershell -NoProfile -File scripts/telegram-webhook.ps1`.
+Para reparar usando copiar/colar, execute na raiz do projeto:
+
+```powershell
+powershell -NoProfile -File scripts/telegram-webhook.ps1 -Register -FromClipboard
+```
+
+Copie o token e pressione apenas Enter no console; depois copie o mesmo segredo
+já configurado na Vercel e pressione apenas Enter novamente. Não cole os valores
+no console. Esse modo lê o clipboard e o limpa ao terminar, inclusive em caso de erro.
+
+Sem `-FromClipboard`, o script usa `TG_BOT_TOKEN` e `TG_WEBHOOK_SECRET` se já estiverem
+definidas no ambiente da sessão (herdadas pelo processo PowerShell); cada valor
+ausente é solicitado em entrada mascarada. Não digite atribuições com segredos
+literais no terminal, pois ficariam no histórico. `-FromClipboard` tem prioridade
+sobre as variáveis de sessão. Nenhum modo aceita segredos como argumentos.
+
+O script verifica a URL atual,
 habilita `message` e `callback_query`, preserva updates pendentes e confirma o resultado.
 Não imprime segredos nem os recebe como argumentos. Não use transcrição de terminal.
 

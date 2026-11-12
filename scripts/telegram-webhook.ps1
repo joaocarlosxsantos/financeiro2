@@ -1,12 +1,22 @@
-param([switch]$Register)
+[CmdletBinding(PositionalBinding = $false)]
+param([switch]$Register, [switch]$FromClipboard)
 
 # Secrets are entered masked, kept in memory, and never printed or passed as CLI args.
 $ErrorActionPreference = 'Stop'
 $webhookUrl = 'https://mutanocontas.vercel.app/api/telegram/webhook'
 $telegramToken = $null
 $webhookSecret = $null
+function Read-TelegramCredential([string]$EnvironmentName, [string]$Label) {
+    if ($FromClipboard) {
+        Read-Host "Copie $Label e tecle Enter (nao cole no console)" | Out-Null
+        return (Get-Clipboard -Raw).Trim()
+    }
+    $sessionValue = [System.Environment]::GetEnvironmentVariable($EnvironmentName, 'Process')
+    if (-not [string]::IsNullOrWhiteSpace($sessionValue)) { return $sessionValue.Trim() }
+    return [System.Net.NetworkCredential]::new('', (Read-Host "$Label (entrada oculta)" -AsSecureString)).Password
+}
 try {
-    $telegramToken = [System.Net.NetworkCredential]::new('', (Read-Host 'Token do bot (entrada oculta)' -AsSecureString)).Password
+    $telegramToken = Read-TelegramCredential 'TG_BOT_TOKEN' 'o token do bot'
     if ($telegramToken -notmatch '^\d+:[A-Za-z0-9_-]+$') { throw 'invalid_token' }
     $apiUrl = 'https://api.telegram.org/bot' + $telegramToken
     $before = Invoke-RestMethod -Method Get -Uri ($apiUrl + '/getWebhookInfo') -TimeoutSec 15
@@ -15,7 +25,7 @@ try {
 
     if ($Register) {
         if ($before.result.url -and $before.result.url -ne $webhookUrl) { throw 'unexpected_webhook_url' }
-        $webhookSecret = [System.Net.NetworkCredential]::new('', (Read-Host 'Mesmo TELEGRAM_WEBHOOK_SECRET ja configurado na Vercel (entrada oculta)' -AsSecureString)).Password
+        $webhookSecret = Read-TelegramCredential 'TG_WEBHOOK_SECRET' 'o mesmo segredo ja configurado na Vercel'
         if ($webhookSecret -notmatch '^[A-Za-z0-9_-]{1,256}$') { throw 'invalid_secret' }
         $payload = @{ url = $webhookUrl; secret_token = $webhookSecret; allowed_updates = @('message', 'callback_query'); max_connections = 1; drop_pending_updates = $false }
         $registered = Invoke-RestMethod -Method Post -Uri ($apiUrl + '/setWebhook') -ContentType 'application/json' -Body ($payload | ConvertTo-Json -Compress) -TimeoutSec 15
@@ -30,4 +40,11 @@ try {
     exit 1
 } finally {
     $telegramToken = $webhookSecret = $apiUrl = $payload = $null
+    if ($FromClipboard) {
+        try { Set-Clipboard $null -ErrorAction Stop }
+        catch {
+            Write-Output 'Nao foi possivel limpar o clipboard. Limpe-o manualmente antes de continuar.'
+            exit 1
+        }
+    }
 }
