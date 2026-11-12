@@ -109,9 +109,22 @@ curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://seu-dominio.vercel.app/api/telegram/webhook",
-    "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"
+    "secret_token": "<TELEGRAM_WEBHOOK_SECRET>",
+    "allowed_updates": ["message", "callback_query"],
+    "max_connections": 1
   }'
 ```
+
+No Windows, prefira `powershell -NoProfile -File scripts/telegram-webhook.ps1`
+para consultar `getWebhookInfo` com token digitado em entrada oculta. Para reparar
+o registro, execute `powershell -NoProfile -File scripts/telegram-webhook.ps1 -Register`
+e informe o mesmo segredo já configurado na Vercel. O script verifica a URL atual,
+habilita `message` e `callback_query`, preserva updates pendentes e confirma o resultado.
+Não imprime segredos nem os recebe como argumentos. Não use transcrição de terminal.
+
+Omitir `allowed_updates` mantém a configuração anterior no Telegram. Um registro
+antigo restrito a `["message"]` impede a chegada dos cliques, mesmo após novo deploy.
+Fonte: [Telegram Bot API — setWebhook](https://core.telegram.org/bots/api#setwebhook).
 
 ---
 
