@@ -8,7 +8,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Mutano Contas",
-    short_name: "Mutano",
+    short_name: "Mutano Contas",
     description:
       "Seu livro-caixa pessoal: gastos fixos e variáveis, reserva de emergência, metas e extratos.",
     start_url: "/painel",
