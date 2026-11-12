@@ -190,6 +190,13 @@
       "when": 1794505831306,
       "tag": "0026_telegram_transaction_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794521940038,
+      "tag": "0027_unified_notifications",
+      "breakpoints": true
     }
   ]
 }

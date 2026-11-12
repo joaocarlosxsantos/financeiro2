@@ -13,6 +13,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -996,3 +997,54 @@ export type Bill = typeof bills.$inferSelect;
 export type BillParticipant = typeof billParticipants.$inferSelect;
 export type TelegramTransactionDraft = typeof telegramTransactionDrafts.$inferSelect;
 export type NewTelegramTransactionDraft = typeof telegramTransactionDrafts.$inferInsert;
+
+
+// Unified notifications: additive storage, user-owned and channel-specific claims.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, t => [uniqueIndex("push_subscriptions_endpoint_key").on(t.endpoint), index("push_subscriptions_user_idx").on(t.userId)]);
+
+export const inAppNotifications = pgTable("in_app_notifications", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: varchar("category", { length: 32 }).notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 150 }).notNull().default("Mutano Contas"),
+  body: text("body").notNull(),
+  actionUrl: text("action_url").notNull().default("/notificacoes"),
+  dedupeKey: varchar("dedupe_key", { length: 200 }).notNull(),
+  critical: boolean("critical").notNull().default(false),
+  visible: boolean("visible").notNull().default(false),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  pushClaimedAt: timestamp("push_claimed_at", { withTimezone: true }),
+  telegramClaimedAt: timestamp("telegram_claimed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex("notifications_user_dedupe_key").on(t.userId, t.dedupeKey), index("notifications_user_unread_idx").on(t.userId, t.readAt, t.createdAt)]);
+
+export const userNotificationPreferences = pgTable("user_notification_preferences", {
+  userId: varchar("user_id", { length: 32 }).primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  channelInApp: boolean("channel_in_app").notNull().default(true),
+  channelPush: boolean("channel_push").notNull().default(true),
+  channelTelegram: boolean("channel_telegram").notNull().default(true),
+  dueBills: boolean("due_bills").notNull().default(true),
+  budget: boolean("budget").notNull().default(true),
+  cardInvoice: boolean("card_invoice").notNull().default(true),
+  negativeForecast: boolean("negative_forecast").notNull().default(true),
+  spending: boolean("spending").notNull().default(true),
+  summary: boolean("summary").notNull().default(true),
+  syncAlerts: boolean("sync_alerts").notNull().default(true),
+  goals: boolean("goals").notNull().default(true),
+  quietHoursEnabled: boolean("quiet_hours_enabled").notNull().default(true),
+  quietStartHour: integer("quiet_start_hour").notNull().default(22),
+  quietEndHour: integer("quiet_end_hour").notNull().default(8),
+  discretePushMode: boolean("discrete_push_mode").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [check("notification_quiet_hours_chk", sql`${t.quietStartHour} between 0 and 23 and ${t.quietEndHour} between 0 and 23`)]);
