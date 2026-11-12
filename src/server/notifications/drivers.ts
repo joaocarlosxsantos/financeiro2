@@ -4,11 +4,16 @@ import { db } from "@/db";
 import { inAppNotifications as notices, pushSubscriptions, telegramLinks, telegramPreferences, userNotificationPreferences } from "@/db/schema";
 import { DEFAULT_NOTIFICATION_PREFERENCES, preferencesSchema, pushPayload, validPushEndpoint } from "./policy";
 import type { NotificationDrivers } from "./dispatcher";
+import { getNowInSaoPaulo } from "@/lib/dates";
 
 export const notificationDrivers: NotificationDrivers = {
   async preferences(userId) {
     const [row] = await db.select().from(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId)).limit(1);
-    return row ? preferencesSchema.parse(Object.fromEntries(Object.keys(DEFAULT_NOTIFICATION_PREFERENCES).map(k => [k, row[k as keyof typeof row]]))) : { ...DEFAULT_NOTIFICATION_PREFERENCES };
+    if (row) return preferencesSchema.parse(Object.fromEntries(Object.keys(DEFAULT_NOTIFICATION_PREFERENCES).map(k => [k, row[k as keyof typeof row]])));
+    const [legacy] = await db.select({ summary: telegramPreferences.summary, spending: telegramPreferences.spending,
+      dueBills: telegramPreferences.dueBills, budget: telegramPreferences.budget, cardInvoice: telegramPreferences.cardInvoice,
+      negativeForecast: telegramPreferences.negativeForecast }).from(telegramPreferences).where(eq(telegramPreferences.userId, userId)).limit(1);
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...legacy };
   },
   async receipt(event) {
     const [created] = await db.insert(notices).values(event).onConflictDoNothing({ target: [notices.userId, notices.dedupeKey] }).returning({ id: notices.id });
@@ -18,7 +23,7 @@ export const notificationDrivers: NotificationDrivers = {
     return row.id;
   },
   async in_app(event, id) {
-    const rows = await db.update(notices).set({ visible: true }).where(and(eq(notices.userId, event.userId), eq(notices.id, id))).returning({ id: notices.id });
+    const rows = await db.update(notices).set({ visible: true }).where(and(eq(notices.userId, event.userId), eq(notices.id, id), eq(notices.visible, false))).returning({ id: notices.id });
     return rows.length;
   },
   async push(event, id, prefs) {
@@ -52,6 +57,8 @@ export const notificationDrivers: NotificationDrivers = {
       .innerJoin(telegramPreferences, eq(telegramPreferences.userId, telegramLinks.userId))
       .where(and(eq(telegramLinks.userId, event.userId), eq(telegramPreferences.enabled, true))).limit(1);
     if (!link || (event.category in link.prefs && link.prefs[event.category as keyof typeof link.prefs] === false)) return 0;
+    const hour = getNowInSaoPaulo().getHours(), slot = hour >= 20 ? 20 : hour >= 14 ? 14 : 8;
+    if (hour < 8 || hour > 21 || !link.prefs.hours.includes(slot)) return 0;
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) return 0;
     const [claim] = await db.update(notices).set({ telegramClaimedAt: new Date() }).where(and(eq(notices.userId, event.userId), eq(notices.id, id), isNull(notices.telegramClaimedAt))).returning({ id: notices.id });

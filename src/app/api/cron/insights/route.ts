@@ -1,9 +1,4 @@
-import { handleInsightsCron } from "@/server/telegram/cron";
-import { cronDependencies } from "@/server/telegram/insight-store";
-
+import { handleNotificationCron } from "@/server/notifications/cron";
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-export async function GET(request: Request) {
-  return handleInsightsCron(request, process.env.CRON_SECRET, cronDependencies);
-}
+export async function GET(request: Request) { return handleNotificationCron(request, "insights"); }
