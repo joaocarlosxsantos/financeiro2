@@ -8,7 +8,6 @@ import { renderDailySummary } from "./daily-summary";
 import { loadCardSummary } from "./card-summary";
 import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFinancialCommand, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
-import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
 import { parseNaturalTransaction } from "./natural-transaction-parser";
 import { createTransactionDraft, undoTransactionDraft } from "./draft-store";
 
@@ -186,7 +185,9 @@ export async function processMessage(updateId: number, message: TelegramMessage)
   // Não segurar conexão nem lock do chat enquanto o provedor externo responde.
   if (result && typeof result === "object") {
     if (result.kind === "question") return answerQuestion(result.userId, chatId, result.question);
-    return readWithOpenFinanceRefresh(result.userId, () => db.transaction(tx => replyToCommand(message, tx, result.now, result.userId)));
+    // Interactive bot reads use the saved snapshot. Provider refresh belongs to
+    // the integration's explicit sync or cron, never the webhook response path.
+    return db.transaction(tx => replyToCommand(message, tx, result.now, result.userId));
   }
   return result;
 }

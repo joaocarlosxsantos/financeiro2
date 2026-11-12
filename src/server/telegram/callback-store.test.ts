@@ -3,11 +3,16 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), select: vi.fn(), rows: [] as unknown[][], events: [] as { kind: string; table?: unknown; value?: unknown }[] }));
+const provider = vi.hoisted(() => ({ refresh: vi.fn(), sync: vi.fn() }));
+vi.mock("@/server/open-finance/refresh", () => ({ readWithOpenFinanceRefresh: provider.refresh, refreshFinancialData: provider.refresh }));
+vi.mock("@/server/open-finance/sync", () => ({ syncOpenFinanceForUser: provider.sync }));
 vi.mock("@/db", () => ({ db: { transaction: mocks.transaction, select: mocks.select } }));
 import { telegramChatState, telegramPreferences, users } from "@/db/schema";
 import { processInlineCallback, replyKeyboard } from "./callback-store";
 import { CALLBACK_TEXT, SILENCE_TYPES, signActionToken, type InlineAction } from "./inline-actions";
 import type { TelegramCallback, TelegramMessage } from "./protocol";
+import { handleWebhook } from "./webhook";
+import { sendCallbackDetails, sendCallbackResult } from "./callback-delivery";
 
 const now = new Date("2026-11-12T15:00:00Z");
 const linked = { userId: "owner", createdAt: new Date("2026-11-10T12:00:00Z") };
@@ -44,6 +49,44 @@ beforeEach(() => {
 });
 
 describe("callback owner / idempotência", () => {
+  it.each([true, false])("d2 real autoriza e envia detalhes sem sync; entrega ok=%s", async delivered => {
+    authorized();
+    provider.refresh.mockImplementation(() => { throw new Error("refresh forbidden in callback"); });
+    provider.sync.mockImplementation(() => { throw new Error("sync forbidden in callback"); });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const query = callback("d2");
+    const tasks: (() => Promise<void>)[] = [];
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(Response.json({ ok: delivered }, { status: delivered ? 200 : 500 }))
+      .mockResolvedValue(Response.json({ ok: true }));
+    const processMessage = vi.fn();
+    const response = await handleWebhook(new Request("https://app.test/api/telegram/webhook", {
+      method: "POST", headers: { "x-telegram-bot-api-secret-token": secret },
+      body: JSON.stringify({ update_id: 20, callback_query: query }),
+    }), secret, processMessage, undefined, {
+      callback: (id, cb) => processInlineCallback(id, cb, secret, now), keyboard: vi.fn(),
+      details: (cb, action) => sendCallbackDetails(cb, action, "test-token", fetcher),
+      background: {
+        schedule: task => { tasks.push(task); },
+        notify: (cb, text) => sendCallbackResult(cb, text, "test-token", fetcher),
+      },
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).method).toBe("answerCallbackQuery");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    await tasks[0]();
+    expect(fetcher).toHaveBeenCalledTimes(delivered ? 1 : 2);
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.telegram.org/bottest-token/sendMessage");
+    const body = JSON.parse(fetcher.mock.calls[0][1].body);
+    expect(body).toMatchObject({ chat_id: 123, text: "Veja os detalhes no app.", protect_content: true });
+    expect(new URL(body.reply_markup.inline_keyboard[0][0].url).pathname).toBe("/painel");
+    if (!delivered) expect(JSON.parse(fetcher.mock.calls[1][1].body).text).toBe(CALLBACK_TEXT.detailsFailed);
+    expect(processMessage).not.toHaveBeenCalled();
+    expect(provider.refresh).not.toHaveBeenCalled();
+    expect(provider.sync).not.toHaveBeenCalled();
+    expect(mocks.events.filter(e => e.kind === "insert").map(e => e.table)).toEqual([telegramChatState]);
+    log.mockRestore();
+  });
   it("pausa somente o dono, com locks/claim na ordem correta e sem toggles", async () => {
     authorized();
     expect(await processInlineCallback(20, callback(), secret, now)).toEqual({ text: CALLBACK_TEXT.paused });

@@ -56,17 +56,25 @@ export async function handleWebhook(
   }
   const parsed = updateSchema.safeParse(raw);
   // Groups, inaccessible/inline messages, mixed updates and forged senders are ignored.
-  if (!parsed.success) return Response.json({ ok: true }, { headers });
+  if (!parsed.success) {
+    console.info("[telegram-webhook]", { event: "update_ignored", reason: "invalid_update" });
+    return Response.json({ ok: true }, { headers });
+  }
   const callback = parsed.data.callback_query;
   if (callback) {
+    console.info("[telegram-callback]", { event: "received" });
     if (inline?.background) {
       const { background } = inline;
       background.schedule(async () => {
+        console.info("[telegram-callback]", { event: "processing" });
         let text: string;
         try {
           const result = await inline.callback(parsed.data.update_id, callback);
           if (result.details) {
-            if (await inline.details(callback, result.details)) return;
+            if (await inline.details(callback, result.details)) {
+              console.info("[telegram-callback]", { event: "details_sent" });
+              return;
+            }
             console.error("[telegram-callback]", { stage: "details", status: "failed" });
             text = CALLBACK_TEXT.detailsFailed;
           } else text = result.text;
@@ -77,6 +85,7 @@ export async function handleWebhook(
         }
         try {
           if (!await background.notify(callback, text)) console.error("[telegram-callback]", { stage: "notify", status: "failed" });
+          else console.info("[telegram-callback]", { event: "result_sent" });
         } catch {
           console.error("[telegram-callback]", { stage: "notify", status: "failed" });
         }
@@ -96,6 +105,7 @@ export async function handleWebhook(
     return Response.json({ method: "answerCallbackQuery", callback_query_id: callback.id, text, show_alert: true, cache_time: 0 }, { headers });
   }
   if (!parsed.data.message?.text) return Response.json({ ok: true }, { headers });
+  console.info("[telegram-webhook]", { event: "message_received" });
   try {
     const reply = await processMessage(parsed.data.update_id, parsed.data.message);
     if (registerMenu && isWelcomeReply(reply)) {
@@ -106,6 +116,7 @@ export async function handleWebhook(
     if (inline && reply) {
       try { keyboard = await inline.keyboard(parsed.data.message, reply); } catch { /* Preserve the original reply if optional buttons fail. */ }
     }
+    console.info("[telegram-webhook]", { event: "message_completed", replied: Boolean(reply) });
     return Response.json(reply ? {
       method: "sendMessage", chat_id: parsed.data.message.chat.id, text: reply, protect_content: true,
       ...(keyboard ? { reply_markup: keyboard } : {}),
