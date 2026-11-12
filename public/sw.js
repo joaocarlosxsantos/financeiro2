@@ -122,3 +122,56 @@ self.addEventListener("fetch", (event) => {
   // Tudo mais (API, dados financeiros, etc.) vai direto para a rede.
   // Sem fallback: se falhar, o app trata o erro normalmente.
 });
+
+// ----- Notificações Push Web (PWA) -----
+
+self.addEventListener("push", (event) => {
+  let data = {
+    title: "Mutano Contas",
+    body: "Notificação de teste recebida!",
+    icon: "/icon.svg",
+    badge: "/icon.svg",
+    url: "/configuracoes/teste-push",
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
+    } catch {
+      data.body = event.data.text() || data.body;
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    data: { url: data.url },
+    tag: "mutano-test-push",
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/configuracoes/teste-push";
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url && client.url.includes(targetUrl) && "focus" in client) {
+            return client.focus();
+          }
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      })
+  );
+});
+
