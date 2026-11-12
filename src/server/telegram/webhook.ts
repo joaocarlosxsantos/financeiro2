@@ -1,4 +1,5 @@
 import { MAX_BODY_BYTES, updateSchema, validWebhookSecret, type TelegramMessage } from "./protocol";
+import { isWelcomeReply } from "./commands";
 
 /** Limite real sobre o stream: Content-Length pode estar ausente ou mentir. */
 async function boundedBody(request: Request) {
@@ -28,6 +29,7 @@ export async function handleWebhook(
   request: Request,
   secret: string | undefined,
   processMessage: (updateId: number, message: TelegramMessage) => Promise<string | null>,
+  registerMenu?: (chatId: string) => Promise<unknown>,
 ) {
   const headers = { "Cache-Control": "no-store" };
   if (!secret) return Response.json({ error: "unavailable" }, { status: 503, headers });
@@ -45,6 +47,10 @@ export async function handleWebhook(
   if (!parsed.success || !parsed.data.message?.text) return Response.json({ ok: true }, { headers });
   try {
     const reply = await processMessage(parsed.data.update_id, parsed.data.message);
+    if (registerMenu && isWelcomeReply(reply)) {
+      // No registration for unlinked chats, denied contexts, replay or errors.
+      try { await registerMenu(String(parsed.data.message.chat.id)); } catch { /* A menu failure must not suppress the welcome. */ }
+    }
     return Response.json(reply ? {
       method: "sendMessage", chat_id: parsed.data.message.chat.id, text: reply, protect_content: true,
     } : { ok: true }, { headers });
