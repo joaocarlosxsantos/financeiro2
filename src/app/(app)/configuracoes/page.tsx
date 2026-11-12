@@ -10,6 +10,7 @@ import { CategoriesPanel } from "./categories-panel";
 import { TelegramPanel } from "./telegram-panel";
 import { BackupButton } from "./backup-button";
 import Link from "next/link";
+import { Bell, ArrowRight } from "lucide-react";
 
 export const metadata = { title: "Configurações" };
 
@@ -29,6 +30,23 @@ export default async function SettingsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 border-[var(--acento)]/30 lg:col-span-2">
+          <CardHeader
+            title="Teste de notificação (push)"
+            subtitle="Validação temporária de notificações nativas no iPhone (PWA) e Android."
+          />
+          <div className="p-4 pt-0">
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--acento)] px-4 py-2 text-sm font-semibold text-[var(--on-acento)] transition hover:opacity-90"
+              href="/configuracoes/teste-push"
+            >
+              <Bell className="size-4" />
+              Abrir teste de notificação (push)
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </Card>
+
         <Card className="min-w-0 lg:col-span-2 xl:col-span-1">
           <CardHeader title="Telegram" subtitle="Vincule seu chat privado ao Mutano Contas." />
           <TelegramPanel />
