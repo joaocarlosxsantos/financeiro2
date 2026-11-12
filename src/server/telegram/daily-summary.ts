@@ -9,7 +9,8 @@ import { loadCardSummariesData, sanitizeCardName, type CardSummaryData } from ".
 import { enrichAndFilterProactiveAlerts } from "./alerts";
 import { loadInsightData } from "./insight-data";
 import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
-import { type InsightData, type InsightWindow, type Preferences } from "./insights";
+import { DEFAULT_PREFERENCES, insightWindow, type InsightData, type InsightWindow, type Preferences } from "./insights";
+import { proactiveLines } from "./proactive-copy";
 
 export interface YesterdayMovements {
   incomeCents: number;
@@ -44,11 +45,11 @@ function sanitizeLabel(name: string): string {
  * (2) CARTÃO: fatura, limite usado/disponível, vencimento
  * (3) INSIGHTS: 2-3 insights relevantes do dia
  */
-export function formatDailySummary(data: DailySummaryData): string {
+export function formatDailySummary(data: DailySummaryData, isWeekly = false): string {
   const sections: string[] = [];
 
   // Cabeçalho
-  sections.push(`🌅 *Mutano Contas — Resumo do Dia (${data.dayLabel})*`);
+  sections.push(isWeekly ? `🌅 *Mutano Contas — Resumo Semanal (${data.dayLabel})*` : `🌅 *Mutano Contas — Resumo do Dia (${data.dayLabel})*`);
 
   // (1) CONTA
   const accountLines: string[] = ["💰 *CONTA*"];
@@ -60,9 +61,9 @@ export function formatDailySummary(data: DailySummaryData): string {
   if (data.yesterdayMovements.hasMovements) {
     const inc = formatCurrency(data.yesterdayMovements.incomeCents);
     const exp = formatCurrency(data.yesterdayMovements.expenseCents);
-    accountLines.push(`• Ontem: entradas ${inc} · saídas ${exp}`);
+    accountLines.push(isWeekly ? `• Últimos 7 dias: entradas ${inc} · saídas ${exp}` : `• Ontem: entradas ${inc} · saídas ${exp}`);
   } else {
-    accountLines.push("• Ontem: sem movimentações registradas");
+    accountLines.push(isWeekly ? "• Últimos 7 dias: sem movimentações registradas" : "• Ontem: sem movimentações registradas");
   }
   sections.push(accountLines.join("\n"));
 
@@ -104,6 +105,47 @@ export function formatDailySummary(data: DailySummaryData): string {
   sections.push(insightLines.join("\n"));
 
   return sections.join("\n\n").slice(0, 3800);
+}
+
+export async function loadPeriodMovements(
+  userId: string,
+  now: Date,
+  days: number,
+  connection: Pick<typeof db, "select"> = db,
+): Promise<YesterdayMovements> {
+  const spNow = getNowInSaoPaulo(now);
+  const startDay = new Date(spNow.getFullYear(), spNow.getMonth(), spNow.getDate() - days);
+  const endDay = new Date(spNow.getFullYear(), spNow.getMonth(), spNow.getDate());
+
+  const start = new Date(Date.UTC(startDay.getFullYear(), startDay.getMonth(), startDay.getDate(), 3, 0, 0));
+  const end = new Date(Date.UTC(endDay.getFullYear(), endDay.getMonth(), endDay.getDate(), 3, 0, 0));
+
+  const rows = await connection
+    .select({
+      kind: transactions.kind,
+      total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)::int`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        eq(transactions.isTransfer, false),
+        eq(transactions.isCardPayment, false),
+        or(isNull(transactions.externalStatus), eq(transactions.externalStatus, "POSTED")),
+        gte(transactions.date, start),
+        lt(transactions.date, end),
+      ),
+    )
+    .groupBy(transactions.kind);
+
+  const incomeCents = Number(rows.find((r) => r.kind === "INCOME")?.total ?? 0);
+  const expenseCents = Number(rows.find((r) => r.kind === "EXPENSE")?.total ?? 0);
+
+  return {
+    incomeCents,
+    expenseCents,
+    hasMovements: incomeCents > 0 || expenseCents > 0,
+  };
 }
 
 /**
@@ -243,6 +285,7 @@ export async function loadDailySummaryData(
   userId: string,
   now: Date = new Date(),
   connection: typeof db = db,
+  period: "daily" | "weekly" = "daily",
 ): Promise<DailySummaryData> {
   const spNow = getNowInSaoPaulo(now);
   const day = String(spNow.getDate()).padStart(2, "0");
@@ -256,10 +299,10 @@ export async function loadDailySummaryData(
     hour: 8,
   };
 
-  // 1. Balanço das contas e movimentações de ontem
+  // 1. Balanço das contas e movimentações de ontem ou da semana
   const [balances, yesterdayMovements, cards, rawInsightData, [user]] = await Promise.all([
     getBalances(userId, connection),
-    loadYesterdayMovements(userId, now, connection),
+    period === "weekly" ? loadPeriodMovements(userId, now, 7, connection) : loadYesterdayMovements(userId, now, connection),
     loadCardSummariesData(userId, connection, now),
     loadInsightData(userId, window, connection),
     connection.select({ monthlyIncomeCents: users.monthlyIncomeCents }).from(users).where(eq(users.id, userId)).limit(1),
@@ -304,15 +347,16 @@ export async function loadDailySummaryData(
 }
 
 /**
- * Renderiza o texto final do resumo diário para o usuário
+ * Renderiza o texto final do resumo diário ou semanal para o usuário
  */
 export async function renderDailySummary(
   userId: string,
   connection: typeof db = db,
   now: Date = new Date(),
+  period: "daily" | "weekly" = "daily",
 ): Promise<string> {
-  const data = await loadDailySummaryData(userId, now, connection);
-  return formatDailySummary(data);
+  const data = await loadDailySummaryData(userId, now, connection, period);
+  return formatDailySummary(data, period === "weekly");
 }
 
 /**

@@ -28,6 +28,7 @@ beforeEach(() => {
     const chain = {
       from: (table: unknown) => { mocks.events.push({ kind: "from", table }); return chain; },
       where: (value: unknown) => { mocks.events.push({ kind: "where", value }); return chain; },
+      orderBy: () => chain,
       for: (value: unknown) => { mocks.events.push({ kind: "lock", value }); return chain; },
       values: (value: unknown) => { mocks.events.push({ kind: "values", table, value }); return chain; },
       onConflictDoUpdate: (value: unknown) => { mocks.events.push({ kind: "upsert", table, value }); return chain; },
@@ -110,5 +111,12 @@ describe("callback owner / idempotência", () => {
     expect(await replyKeyboard({ ...message, text: "oi" }, "Bem-vindo", secret, now)).toBeUndefined();
     expect(await replyKeyboard(message, null, secret, now)).toBeUndefined();
     expect(mocks.select).not.toHaveBeenCalled();
+  });
+  it("anexa botões de confirmação para mensagens de rascunho de lançamento", async () => {
+    mocks.rows.push([linked], [{ id: "dr_test123" }]);
+    const draftPrompt = "Confirmar despesa?\n• Mercado: R$ 35,00\n• Conta: Nubank";
+    const kb = await replyKeyboard({ ...message, text: "mercado 35" }, draftPrompt, secret, now);
+    expect(kb).toHaveProperty("inline_keyboard");
+    expect(kb?.inline_keyboard[0].map(b => b.text)).toEqual(["✅ Confirmar", "❌ Cancelar"]);
   });
 });

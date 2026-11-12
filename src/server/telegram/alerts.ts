@@ -8,6 +8,7 @@ import { sanitizeCardName } from "./card-summary";
 import { currentMonthRef, getNowInSaoPaulo, monthRange } from "@/lib/dates";
 import { monthForecast } from "@/lib/forecast";
 import { calculateDailyBudget } from "@/lib/daily-budget";
+import { loadProactiveContext } from "./proactive-context";
 
 /**
  * Gera chave determinista de deduplicação com no máximo 13 caracteres,
@@ -36,8 +37,8 @@ export async function claimAlertDedupe(
       .returning({ id: telegramDeliveries.id });
     return Boolean(row);
   } catch {
-    // Se falhar a persistência da deduplicação, não bloqueia o envio
-    return true;
+    // Fail closed: uncertain delivery history must not produce repeat alerts.
+    return false;
   }
 }
 
@@ -257,12 +258,24 @@ export async function filterProactiveAlerts(
     if (!claimed) dedupedForecast = undefined;
   }
 
+  const cardClosings = [];
+  for (const card of data.cardClosings ?? []) {
+    if (await claimAlertDedupe(userId, `close:${card.id}:${card.closingDate}:${card.diffDays}`, connection)) cardClosings.push(card);
+  }
+  const syncProblem = data.syncProblem && await claimAlertDedupe(userId, `sync:${window.day}`, connection);
+  const cashBalanceCents = data.cashBalanceCents !== undefined && data.cashBalanceCents <= 0
+    ? await claimAlertDedupe(userId, `cashlow:${window.day}`, connection) ? data.cashBalanceCents : undefined
+    : data.cashBalanceCents;
+
   return {
     ...data,
     due: dedupedDue,
     cardInvoices: dedupedInvoices,
     budgets: dedupedBudgets,
     forecast: dedupedForecast,
+    cardClosings,
+    syncProblem,
+    cashBalanceCents,
   };
 }
 
@@ -275,16 +288,18 @@ export async function enrichAndFilterProactiveAlerts(
   window: InsightWindow,
   connection: typeof db = db,
 ): Promise<InsightData> {
-  const today = dayDate(window.day);
-  const [cardInvoices, forecast] = await Promise.all([
+  const today = new Date(`${window.day}T12:00:00.000Z`);
+  const [cardInvoices, forecast, context] = await Promise.all([
     loadCardInvoicesAlerts(userId, today, connection),
     loadForecastAlert(userId, today, connection),
+    loadProactiveContext(userId, window.day, connection),
   ]);
 
   const enriched: InsightData = {
     ...baseData,
     cardInvoices,
     forecast,
+    ...context,
   };
 
   return filterProactiveAlerts(userId, enriched, window, connection);

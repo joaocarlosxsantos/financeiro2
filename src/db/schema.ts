@@ -9,6 +9,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   foreignKey,
   index,
   integer,
@@ -133,6 +134,75 @@ export const telegramDeliveries = pgTable("telegram_deliveries", {
   uniqueIndex("telegram_deliveries_user_window_key").on(t.userId, t.windowKey),
   check("telegram_deliveries_status_chk", sql`${t.status} in ('CLAIMED', 'SENT', 'FAILED', 'CANCELLED')`),
 ]);
+
+/** Rascunhos de transações recebidas pelo bot no Telegram (Etapa 4: lançamento natural). */
+export const telegramTransactionDrafts = pgTable(
+  "telegram_transaction_drafts",
+  {
+    id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+    userId: varchar("user_id", { length: 32 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chatId: text("chat_id").notNull(),
+    linkCreatedAt: timestamp("link_created_at", { withTimezone: true }).notNull(),
+    sourceUpdateId: integer("source_update_id").notNull(),
+    accountId: varchar("account_id", { length: 32 }).references(() => accounts.id, { onDelete: "set null" }),
+    categoryId: varchar("category_id", { length: 32 }).references(() => categories.id, { onDelete: "set null" }),
+    description: varchar("description", { length: 255 }).notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    transactionDate: date("transaction_date").notNull(),
+    kind: categoryKind("kind").default("EXPENSE").notNull(),
+    nature: expenseNature("nature").default("VARIABLE").notNull(),
+    status: text("status").default("PENDING").notNull(),
+    transactionId: varchar("transaction_id", { length: 32 }),
+    confirmedPayloadHash: varchar("confirmed_payload_hash", { length: 64 }),
+    expiresAt: timestamp("expires_at", { withTimezone: true })
+      .default(sql`(now() + interval '10 minutes')`)
+      .notNull(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    undoUntil: timestamp("undo_until", { withTimezone: true }),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique("telegram_drafts_source_key").on(t.userId, t.chatId, t.linkCreatedAt, t.sourceUpdateId),
+    index("telegram_drafts_owner_status_expiry_idx").on(t.userId, t.status, t.expiresAt),
+    uniqueIndex("telegram_drafts_transaction_key")
+      .on(t.userId, t.transactionId)
+      .where(sql`${t.transactionId} is not null`),
+    check("telegram_drafts_amount_chk", sql`${t.amountCents} between 1 and 2000000000`),
+    check(
+      "telegram_drafts_description_chk",
+      sql`char_length(btrim(${t.description})) between 2 and 255 and ${t.description} !~ '[[:cntrl:]]'`
+    ),
+    check("telegram_drafts_chat_chk", sql`${t.chatId} ~ '^[1-9][0-9]{0,15}$'`),
+    check("telegram_drafts_update_chk", sql`${t.sourceUpdateId} between 0 and 2147483647`),
+    check("telegram_drafts_expiry_chk", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "telegram_drafts_hash_chk",
+      sql`${t.confirmedPayloadHash} is null or ${t.confirmedPayloadHash} ~ '^[a-f0-9]{64}$'`
+    ),
+    check(
+      "telegram_drafts_state_chk",
+      sql`
+      (${t.status} in ('PENDING', 'CANCELLED', 'EXPIRED')
+        and ${t.transactionId} is null and ${t.confirmedPayloadHash} is null
+        and ${t.confirmedAt} is null and ${t.undoUntil} is null and ${t.undoneAt} is null)
+      or
+      (${t.status} = 'CONFIRMED'
+        and ${t.transactionId} is not null and ${t.confirmedPayloadHash} is not null
+        and ${t.confirmedAt} is not null and ${t.undoUntil} is not null and ${t.undoUntil} > ${t.confirmedAt}
+        and ${t.undoneAt} is null)
+      or
+      (${t.status} = 'UNDONE'
+        and ${t.transactionId} is not null and ${t.confirmedPayloadHash} is not null
+        and ${t.confirmedAt} is not null and ${t.undoUntil} is not null and ${t.undoUntil} > ${t.confirmedAt}
+        and ${t.undoneAt} is not null and ${t.undoneAt} >= ${t.confirmedAt})
+    `
+    ),
+  ]
+);
 
 export const accounts = pgTable(
   "accounts",
@@ -924,3 +994,5 @@ export type BillRule = typeof billRules.$inferSelect;
 export type BillRuleParticipant = typeof billRuleParticipants.$inferSelect;
 export type Bill = typeof bills.$inferSelect;
 export type BillParticipant = typeof billParticipants.$inferSelect;
+export type TelegramTransactionDraft = typeof telegramTransactionDrafts.$inferSelect;
+export type NewTelegramTransactionDraft = typeof telegramTransactionDrafts.$inferInsert;

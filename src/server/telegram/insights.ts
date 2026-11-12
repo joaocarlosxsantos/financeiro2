@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getNowInSaoPaulo, todayRef } from "@/lib/dates";
+import { proactiveLines } from "./proactive-copy";
 
 export const preferenceSchema = z.object({
   enabled: z.boolean(),
@@ -48,6 +49,9 @@ export type InsightData = {
   due: { id?: string; name: string; date: string; totalCents: number; diffDays?: number }[];
   budgets: { id?: string; name: string; spentCents: number; limitCents: number; pct?: number }[];
   cardInvoices?: { id: string; cardName: string; invoiceCents: number; dueDate: string; diffDays: number }[];
+  cardClosings?: { id: string; cardName: string; closingDate: string; diffDays: number }[];
+  cashBalanceCents?: number;
+  syncProblem?: boolean;
   forecast?: {
     balanceCents: number;
     projectedExpenseCents?: number;

@@ -9,6 +9,8 @@ import { loadCardSummary } from "./card-summary";
 import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFinancialCommand, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
 import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
+import { parseNaturalTransaction } from "./natural-transaction-parser";
+import { createTransactionDraft, undoTransactionDraft } from "./draft-store";
 
 export async function issueLink(userId: string) {
   const token = newLinkCode();
@@ -45,6 +47,7 @@ export async function loadTelegramBalance(userId: string, connection: Pick<typeo
 }
 
 async function replyToCommand(message: TelegramMessage, tx: TelegramTransaction, now: Date, expectedUserId?: string | null) {
+  const chatId = String(message.chat.id);
   return commandReply(message, {
     async consumeCode(codeHash, targetChatId) {
       // DELETE RETURNING é atômico: concorrência/replay não reutiliza o código.
@@ -64,7 +67,7 @@ async function replyToCommand(message: TelegramMessage, tx: TelegramTransaction,
     },
     // Usa a conexão já reservada; abrir outra aqui pode esgotar o pool.
     balance: (userId) => loadTelegramBalance(userId, tx),
-    summary: (userId) => renderDailySummary(userId, tx as unknown as typeof db),
+    summary: (userId, period) => period === "weekly" ? renderDailySummary(userId, tx as unknown as typeof db, now, "weekly") : renderDailySummary(userId, tx as unknown as typeof db),
     report: (userId) => loadMonthlyReport(userId, now, tx),
     forecast: (userId) => manualForecast(userId, tx),
     dailyBudget: (userId) => manualDailyBudget(userId, tx),
@@ -73,6 +76,32 @@ async function replyToCommand(message: TelegramMessage, tx: TelegramTransaction,
     async pause(userId) {
       await tx.insert(telegramPreferences).values({ userId, enabled: false })
         .onConflictDoUpdate({ target: telegramPreferences.userId, set: { enabled: false, updatedAt: new Date() } });
+    },
+    notifications: async (userId) => {
+      const [prefs] = await tx.select().from(telegramPreferences).where(eq(telegramPreferences.userId, userId)).limit(1);
+      const enabled = prefs?.enabled ?? false;
+      const hours = (prefs?.hours ?? [8, 14, 20]).map((h) => `${h}h`).join(", ");
+      const check = (val: boolean | undefined) => (val !== false ? "✅" : "⏸️");
+      return [
+        `🔔 Avisos Automáticos: ${enabled ? "Ativos" : "Pausados"}`,
+        `⏰ Horários: ${hours}`,
+        "",
+        "Tipos de avisos:",
+        `• Resumo diário: ${check(prefs?.summary)}`,
+        `• Gastos acima da média: ${check(prefs?.spending)}`,
+        `• Contas a pagar: ${check(prefs?.dueBills)}`,
+        `• Limites de orçamento: ${check(prefs?.budget)}`,
+        `• Faturas de cartão: ${check(prefs?.cardInvoice)}`,
+        `• Previsão de saldo: ${check(prefs?.negativeForecast)}`,
+        "",
+        "Use /pausar para pausar todos os avisos ou ajuste horários em Configurações no app.",
+      ].join("\n");
+    },
+    undo: async () => {
+      const undoRes = await undoTransactionDraft({ chatId, connection: tx as unknown as typeof db, now });
+      if (!undoRes.ok) return undoRes.message ?? "Não foi possível desfazer o lançamento.";
+      const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((undoRes.amountCents ?? 0) / 100);
+      return `Lançamento desfeito com sucesso!\n• ${undoRes.description}: ${money} foi removido.`;
     },
   });
 }
@@ -116,6 +145,42 @@ export async function processMessage(updateId: number, message: TelegramMessage)
       if (link) return { kind: "financial" as const, userId: link.userId, now };
       return replyToCommand(message, tx, now, null);
     }
+
+    const parsed = parseNaturalTransaction(message.text, now);
+    if (parsed) {
+      const [link] = await tx
+        .select({ userId: telegramLinks.userId, createdAt: telegramLinks.createdAt })
+        .from(telegramLinks)
+        .where(eq(telegramLinks.chatId, chatId))
+        .limit(1);
+
+      if (!link) {
+        return "Vincule seu Telegram em Configurações no Mutano Contas antes de registrar lançamentos.";
+      }
+
+      const draftRes = await createTransactionDraft({
+        userId: link.userId,
+        chatId,
+        linkCreatedAt: link.createdAt,
+        updateId,
+        parsed,
+        connection: tx as unknown as typeof db,
+        now,
+      });
+
+      if (!draftRes.ok) {
+        return draftRes.error ?? "Não foi possível registrar o lançamento.";
+      }
+
+      const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+        .format(parsed.amountCents / 100)
+        .replace(/\u00A0/g, " ");
+      const dateParts = parsed.date.split("-");
+      const dateStr = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+      const kindLabel = parsed.kind === "INCOME" ? "receita" : "despesa";
+      return `Confirmar ${kindLabel}?\n• ${parsed.description}: ${money}\n• Data: ${dateStr}\n• Conta: ${draftRes.accountName}`;
+    }
+
     return replyToCommand(message, tx, now);
   });
   // Não segurar conexão nem lock do chat enquanto o provedor externo responde.

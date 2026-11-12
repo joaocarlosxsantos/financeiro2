@@ -12,7 +12,8 @@ export const SILENCE_TYPES = {
 const DETAILS = { d0: "/contas", d1: "/contas", d2: "/painel", d3: "/orcamento", d4: "/recorrentes", d5: "/insights", d6: "/contas-a-pagar" } as const;
 export type DetailAction = keyof typeof DETAILS;
 export type SilenceAction = keyof typeof SILENCE_TYPES;
-export type InlineAction = "p" | DetailAction | SilenceAction;
+export type DraftAction = `tc:${string}` | `tu:${string}` | `tx:${string}`;
+export type InlineAction = "p" | DetailAction | SilenceAction | DraftAction;
 export type InlineKeyboard = { inline_keyboard: { text: string; callback_data: string }[][] };
 const COMMAND_ACTIONS: Record<string, { details: DetailAction; silence?: SilenceAction }> = {
   "/saldo": { details: "d0", silence: "s5" },
@@ -41,7 +42,7 @@ export function signActionToken(action: InlineAction, chatId: string, owner: str
 
 export function readActionToken(data: string, chatId: string, owner: string, secret: string | undefined, now = new Date()):
   { action: InlineAction } | { error: "invalid" | "expired" } {
-  const parts = /^v1:(p|d[0-6]|s[0-5]):([a-z0-9]{1,8}):([A-Za-z0-9_-]{8}):([A-Za-z0-9_-]{22})$/.exec(data);
+  const parts = /^v1:(p|d[0-6]|s[0-5]|t[cux]:[a-zA-Z0-9_-]{6,16}):([a-z0-9]{1,8}):([A-Za-z0-9_-]{8}):([A-Za-z0-9_-]{22})$/.exec(data);
   if (!parts || !secret || Buffer.byteLength(data) > 64) return { error: "invalid" };
   const payload = data.slice(0, data.lastIndexOf(":"));
   const actual = Buffer.from(parts[4]);
@@ -49,6 +50,36 @@ export function readActionToken(data: string, chatId: string, owner: string, sec
   if (!timingSafeEqual(actual, expected)) return { error: "invalid" };
   if (parseInt(parts[2], 36) <= Math.floor(now.getTime() / 1000)) return { error: "expired" };
   return { action: parts[1] as InlineAction };
+}
+
+export function createDraftConfirmKeyboard(
+  draftId: string,
+  chatId: string,
+  owner: string,
+  secret: string,
+  now = new Date(),
+): InlineKeyboard {
+  const button = (text: string, action: InlineAction) => ({ text, callback_data: signActionToken(action, chatId, owner, secret, now) });
+  return {
+    inline_keyboard: [
+      [button("✅ Confirmar", `tc:${draftId}`), button("❌ Cancelar", `tx:${draftId}`)],
+    ],
+  };
+}
+
+export function createDraftUndoKeyboard(
+  draftId: string,
+  chatId: string,
+  owner: string,
+  secret: string,
+  now = new Date(),
+): InlineKeyboard {
+  const button = (text: string, action: InlineAction) => ({ text, callback_data: signActionToken(action, chatId, owner, secret, now) });
+  return {
+    inline_keyboard: [
+      [button("↩️ Desfazer", `tu:${draftId}`)],
+    ],
+  };
 }
 
 export function createActionKeyboard(command: string, chatId: string, owner: string, secret: string, now = new Date()): InlineKeyboard {

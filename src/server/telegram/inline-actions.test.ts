@@ -41,4 +41,18 @@ describe("ações inline assinadas", () => {
     expect(appDetailsUrl("d0", "javascript:alert(1)")).toBe("https://mutanocontas.vercel.app/contas");
     expect(appDetailsUrl("d0", "https://name:secret@app.test")).toBe("https://mutanocontas.vercel.app/contas");
   });
+  it("assina e decodifica ações de rascunho (confirmar, desfazer, cancelar) abaixo de 64 bytes", () => {
+    const draftId = "dr_abc123def";
+    const tokenConfirm = signActionToken(`tc:${draftId}`, "123", owner, secret, now);
+    expect(Buffer.byteLength(tokenConfirm)).toBeLessThanOrEqual(64);
+    expect(readActionToken(tokenConfirm, "123", owner, secret, now)).toEqual({ action: `tc:${draftId}` });
+
+    const tokenUndo = signActionToken(`tu:${draftId}`, "123", owner, secret, now);
+    expect(Buffer.byteLength(tokenUndo)).toBeLessThanOrEqual(64);
+    expect(readActionToken(tokenUndo, "123", owner, secret, now)).toEqual({ action: `tu:${draftId}` });
+
+    const tokenCancel = signActionToken(`tx:${draftId}`, "123", owner, secret, now);
+    expect(Buffer.byteLength(tokenCancel)).toBeLessThanOrEqual(64);
+    expect(readActionToken(tokenCancel, "123", owner, secret, now)).toEqual({ action: `tx:${draftId}` });
+  });
 });

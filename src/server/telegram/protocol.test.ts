@@ -113,6 +113,22 @@ describe("protocolo Telegram", () => {
     expect(d.dailyBudget).toHaveBeenCalledTimes(1);
     expect(d.subscriptions).toHaveBeenCalledTimes(1);
   });
+  it("/avisos e /desfazer consultam o dono vinculado e rejeitam chat não vinculado", async () => {
+    const d = {
+      ...deps(),
+      notifications: vi.fn().mockResolvedValue("Avisos ativos"),
+      undo: vi.fn().mockResolvedValue("Lançamento desfeito"),
+    };
+    expect(await commandReply(message("/avisos"), d)).toBe("Avisos ativos");
+    expect(d.notifications).toHaveBeenCalledWith("linked-owner");
+
+    expect(await commandReply(message("/desfazer"), d)).toBe("Lançamento desfeito");
+    expect(d.undo).toHaveBeenCalledWith("linked-owner");
+
+    vi.mocked(d.linkedUser).mockResolvedValue(null);
+    expect(await commandReply(message("/avisos"), d)).toContain("Vincule seu Telegram");
+    expect(await commandReply(message("/desfazer"), d)).toContain("Vincule seu Telegram");
+  });
   it("/cartao consulta o dono vinculado e ignora argumentos adicionais", async () => {
     const d = {
       ...deps(),

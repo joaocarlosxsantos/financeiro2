@@ -239,4 +239,35 @@ describe("persistência Telegram", () => {
     expect(await processMessage(23, message("/cartao"))).toBe("Cartões mock");
     expect(mocks.cards).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }), expect.any(Date));
   });
+  it("processa lançamento natural gerando rascunho de confirmação", async () => {
+    // 1. state count
+    // 2. telegramLinks select
+    // 3. users select (usageProfile)
+    // 4. accounts select
+    // 5. insert telegramTransactionDrafts returning
+    mocks.results.push(
+      [{ count: 1 }],
+      [{ userId: "linked-owner", createdAt: new Date("2026-11-10T12:00:00Z") }],
+      [{ id: "linked-owner", usageProfile: "hibrido" }],
+      [{ id: "acc_1", name: "Nubank", type: "CHECKING" }],
+      [{ id: "dr_test", status: "PENDING", description: "Mercado", amountCents: 3500 }],
+    );
+
+    const reply = await processMessage(24, message("mercado 35"));
+    expect(reply).toContain("Confirmar despesa?");
+    expect(reply).toContain("Mercado: R$ 35,00");
+    expect(reply).toContain("Conta: Nubank");
+  });
+  it("processa /avisos mostrando status dos alertas", async () => {
+    mocks.results.push(
+      [{ count: 1 }],
+      [{ userId: "linked-owner" }],
+      [{ enabled: true, hours: [8, 14, 20], summary: true, budget: true, cardInvoice: true }],
+    );
+
+    const reply = await processMessage(25, message("/avisos"));
+    expect(reply).toContain("Avisos Automáticos: Ativos");
+    expect(reply).toContain("Horários: 8h, 14h, 20h");
+    expect(reply).toContain("Resumo diário: ✅");
+  });
 });

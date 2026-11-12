@@ -74,20 +74,25 @@ export function isFreeQuestion(text: string | undefined) {
 
 export function isFinancialCommand(text: string | undefined): boolean {
   const value = commandText(text);
-  return ["/saldo", "/resumo", "/previsao", "/hoje", "/assinaturas", "/relatorio", "/cartao"].includes(value) || value.startsWith("/cartao ");
+  return ["/saldo", "/resumo", "/previsao", "/hoje", "/assinaturas", "/relatorio", "/cartao"].includes(value)
+    || value.startsWith("/cartao ")
+    || value === "/resumo semana"
+    || value === "/resumo semanal";
 }
 
 export interface CommandDependencies {
   consumeCode(codeHash: string, chatId: string): Promise<boolean>;
   linkedUser(chatId: string): Promise<string | null>;
   balance(userId: string): Promise<{ availableCents: number; investedCents?: number; netWorthCents?: number; totalIncomplete: boolean; needsOpeningBalance: boolean }>;
-  summary?(userId: string): Promise<string>;
+  summary?(userId: string, period?: "daily" | "weekly"): Promise<string>;
   report?(userId: string): Promise<string>;
   forecast?(userId: string): Promise<string>;
   dailyBudget?(userId: string): Promise<string>;
   subscriptions?(userId: string): Promise<string>;
   cards?(userId: string): Promise<string>;
   pause?(userId: string): Promise<void>;
+  notifications?(userId: string): Promise<string>;
+  undo?(userId: string): Promise<string>;
 }
 
 export async function commandReply(message: TelegramMessage, deps: CommandDependencies): Promise<string> {
@@ -100,7 +105,7 @@ export async function commandReply(message: TelegramMessage, deps: CommandDepend
     return linked ? LINKED_WELCOME : "Link inválido, expirado ou conta já vinculada. Desconecte no app e gere outro link.";
   }
   const isCardsCommand = text === "/cartao" || text.startsWith("/cartao ");
-  if (!isFinancialCommand(text) && text !== "/pausar") {
+  if (!isFinancialCommand(text) && text !== "/pausar" && text !== "/avisos" && text !== "/desfazer") {
     const owner = await deps.linkedUser(chatId);
     return owner ? HELP : "Vincule seu Telegram em Configurações no Mutano Contas para usar o bot. Gere o link de vínculo no app.";
   }
@@ -112,7 +117,15 @@ export async function commandReply(message: TelegramMessage, deps: CommandDepend
     if (text === "/previsao") return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar a previsão.";
     if (text === "/hoje") return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar o cálculo diário.";
     if (text === "/assinaturas") return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar assinaturas.";
+    if (text === "/avisos") return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar avisos.";
+    if (text === "/desfazer") return "Vincule seu Telegram em Configurações no Mutano Contas antes de desfazer lançamentos.";
     return "Vincule seu Telegram em Configurações no Mutano Contas antes de consultar o saldo.";
+  }
+  if (text === "/avisos") {
+    return deps.notifications ? deps.notifications(userId) : "Configurações de avisos temporariamente indisponíveis.";
+  }
+  if (text === "/desfazer") {
+    return deps.undo ? deps.undo(userId) : "Nenhum lançamento recente encontrado para desfazer.";
   }
   if (text === "/relatorio") {
     return deps.report ? deps.report(userId) : "Relatório temporariamente indisponível.";
@@ -121,7 +134,12 @@ export async function commandReply(message: TelegramMessage, deps: CommandDepend
   if (text === "/previsao") return deps.forecast ? deps.forecast(userId) : "Previsão temporariamente indisponível.";
   if (text === "/hoje") return deps.dailyBudget ? deps.dailyBudget(userId) : "Cálculo diário temporariamente indisponível.";
   if (text === "/assinaturas") return deps.subscriptions ? deps.subscriptions(userId) : "Assinaturas temporariamente indisponíveis.";
-  if (text === "/resumo") return deps.summary ? deps.summary(userId) : "Resumo temporariamente indisponível.";
+  if (text === "/resumo") {
+    return deps.summary ? deps.summary(userId) : "Resumo temporariamente indisponível.";
+  }
+  if (text === "/resumo semana" || text === "/resumo semanal") {
+    return deps.summary ? deps.summary(userId, "weekly") : "Resumo temporariamente indisponível.";
+  }
   if (text === "/pausar") {
     if (!deps.pause) return "Não foi possível pausar agora. Tente no app.";
     await deps.pause(userId);

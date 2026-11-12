@@ -183,6 +183,13 @@
       "when": 1794362333760,
       "tag": "0025_clear_speedball",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794505831306,
+      "tag": "0026_telegram_transaction_drafts",
+      "breakpoints": true
     }
   ]
 }
