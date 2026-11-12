@@ -4,7 +4,7 @@ import { accounts, categories, categoryRules, openFinanceConnections, openFinanc
 import { getProfileRestriction } from "@/server/usage-profile";
 import { amountToCents, isCompatiblePluggyAccount, openFinanceConnectionIdSchema, shouldImportPluggyTransaction, transactionKind } from "./schemas";
 import { decryptSecret } from "./crypto";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
 import { createId } from "@/lib/id";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { anchorPluggyCivilDate, isBeforeCutoff } from "./cutoff";
@@ -104,13 +104,18 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
     upstreamStatus = item.status;
     if (item.status !== "UPDATED" || item.executionStatus !== "SUCCESS") throw new Error(`PLUGGY_ITEM_${item.status}_${item.executionStatus ?? "UNKNOWN"}`);
     const remoteAccounts = await getPluggyAccounts(apiKey, itemId, signal);
+    const invId = investmentRemoteId(connection.id);
+    const investment = linked.some((row) => row.type === "INVESTMENT" && row.externalAccountId === invId)
+      ? await getPluggyInvestmentSnapshot(apiKey, itemId, invId, signal) : null;
+    // Conta virtual "BANK": reaproveita o fluxo de saldo + lançamentos.
+    if (investment) remoteAccounts.push({ id: invId, itemId, type: "BANK", name: "Investimentos", currencyCode: "BRL", balance: investment.balance });
     const cutoff = connection.importFromDate.toISOString().slice(0, 10);
     const prepared: Array<{ local: typeof linked[number]; remote: typeof remoteAccounts[number]; summary: Summary; snapshot: number | null; snapshotAt: Date; bills: Awaited<ReturnType<typeof getPluggyBills>>; transactions: Awaited<ReturnType<typeof getPluggyTransactions>> }> = [];
     for (const local of linked) {
       signal?.throwIfAborted();
       const summary = summariesByAccountId.get(local.id)!;
       const remote = remoteAccounts.find((item) => item.id === local.externalAccountId);
-      if (!remote || !isCompatiblePluggyAccount(local.type, remote.type)) {
+      if (!remote || !isCompatiblePluggyAccount(local.type, remote.type) || (local.type === "INVESTMENT") !== (remote.id === invId)) {
         summary.status = "ERROR";
         summary.error = "Conta externa não encontrada ou incompatível com o tipo da conta local.";
         continue;
@@ -123,7 +128,7 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
       const snapshot = amountToCents(remote.balance);
       const snapshotAt = remote.updatedAt ? new Date(remote.updatedAt) : new Date();
       const bills = remote.type === "CREDIT" ? await getPluggyBills(apiKey, remote.id, signal) : [];
-      const remoteTx = await getPluggyTransactions(apiKey, remote.id, cutoff, signal);
+      const remoteTx = investment && remote.id === invId ? investment.transactions : await getPluggyTransactions(apiKey, remote.id, cutoff, signal);
       summary.read = remoteTx.transactions.length + remoteTx.invalid;
       summary.invalid += remoteTx.invalid;
       prepared.push({ local, remote, summary, snapshot, snapshotAt, bills, transactions: remoteTx });
@@ -179,7 +184,7 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
         if (validRows.length) {
           const upsertRows = validRows.map((candidate, index) => {
             const category = categorized.results[index]!;
-            return { id: createId(), userId, accountId: batch.local.id, date: candidate.date, description: candidate.row.description, amountCents: candidate.amountCents, kind: candidate.kind, nature: category.nature ?? "VARIABLE", categoryId: category.categoryId, isTransfer: category.isTransfer, origin: "PLUGGY" as const, externalId: candidate.row.id, externalStatus: candidate.row.status, invoiceRef: candidate.invoiceRef, installmentNumber: candidate.installmentNumber, installmentTotal: candidate.installmentTotal };
+            return { id: createId(), userId, accountId: batch.local.id, date: candidate.date, description: candidate.row.description, amountCents: candidate.amountCents, kind: candidate.kind, nature: category.nature ?? "VARIABLE", categoryId: category.categoryId, isTransfer: candidate.row.operationType === "INVESTMENT_TRANSFER" || category.isTransfer, origin: "PLUGGY" as const, externalId: candidate.row.id, externalStatus: candidate.row.status, invoiceRef: candidate.invoiceRef, installmentNumber: candidate.installmentNumber, installmentTotal: candidate.installmentTotal };
           });
           await tx.insert(transactions).values(upsertRows).onConflictDoUpdate({
             target: [transactions.userId, transactions.accountId, transactions.externalId],
@@ -189,7 +194,7 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
               amountCents: sql`excluded.amount_cents`, kind: sql`excluded.kind`,
               categoryId: sql`COALESCE(${transactions.categoryId}, excluded.category_id)`,
               nature: sql`CASE WHEN ${transactions.categoryId} IS NULL THEN excluded.nature ELSE ${transactions.nature} END`,
-              isTransfer: sql`CASE WHEN ${transactions.categoryId} IS NULL THEN excluded.is_transfer ELSE ${transactions.isTransfer} END`,
+              isTransfer: sql`CASE WHEN ${batch.local.type === "INVESTMENT"} AND excluded.is_transfer THEN true WHEN ${transactions.categoryId} IS NULL THEN excluded.is_transfer ELSE ${transactions.isTransfer} END`,
               externalStatus: sql`excluded.external_status`, invoiceRef: sql`excluded.invoice_ref`,
               installmentNumber: sql`COALESCE(excluded.installment_number, ${transactions.installmentNumber})`,
               installmentTotal: sql`COALESCE(excluded.installment_total, ${transactions.installmentTotal})`,

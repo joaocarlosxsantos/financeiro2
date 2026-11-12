@@ -1098,6 +1098,8 @@ export type BalancesOverview = {
   /** Só contas comuns â€” cartão de crédito é só demonstrativo, sem saldo aqui. */
   accounts: AccountBalance[];
   availableCents: number;
+  /** Soma das contas de investimento (fora de availableCents, dentro do patrimônio). */
+  investedCents: number;
   savedInGoalsCents: number;
   debtBalanceCents: number;
   netWorthCents: number;
@@ -1119,6 +1121,7 @@ export async function getBalances(userId: string, connection: Pick<typeof db, "s
     return {
       accounts: [],
       availableCents: 0,
+      investedCents: 0,
       savedInGoalsCents: 0,
       debtBalanceCents: 0,
       netWorthCents: 0,
@@ -1188,16 +1191,19 @@ export async function getBalances(userId: string, connection: Pick<typeof db, "s
   });
 
   const totalIncomplete = accounts.some((a) => a.financeMode === "integracao" && a.bankBalanceCents === null);
-  const availableCents = accounts.reduce((acc, a) => acc + (a.financeMode === "integracao" ? (a.bankBalanceCents ?? 0) : a.balanceCents), 0);
+  const sumOf = (rows: AccountBalance[]) => rows.reduce((acc, a) => acc + (a.financeMode === "integracao" ? (a.bankBalanceCents ?? 0) : a.balanceCents), 0);
+  const availableCents = sumOf(accounts.filter((a) => a.type !== "INVESTMENT"));
+  const investedCents = sumOf(accounts.filter((a) => a.type === "INVESTMENT"));
   const debtBalanceCents = Number(debtRows[0]?.total ?? 0);
 
   return {
     accounts,
     availableCents,
+    investedCents,
     savedInGoalsCents: savedInGoals,
     debtBalanceCents,
     netWorthCents: netWorth({
-      availableCents,
+      availableCents: availableCents + investedCents,
       savedInGoalsCents: savedInGoals,
       debtBalanceCents,
     }),

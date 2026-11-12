@@ -38,7 +38,7 @@ import { canUseCapability } from "@/lib/usage-profile";
 import { PluggyCredentialsGuide } from "./pluggy-guide";
 
 type Setup = Awaited<ReturnType<typeof import("@/server/actions/open-finance").getOpenFinanceSetup>>;
-type Remote = { id: string; name: string; type: "BANK" | "CREDIT"; currency: string };
+type Remote = { id: string; name: string; type: "BANK" | "CREDIT" | "INVESTMENT"; currency: string };
 type SyncAccountSummary = {
   accountName: string;
   accountType: string;
@@ -766,7 +766,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     <label htmlFor={`remote-${a.id}`} className="text-sm font-medium text-[var(--text)]">
                       {a.name}
                       <span className="block text-xs font-normal text-[var(--text-muted)] mt-0.5">
-                        {a.type === "CREDIT_CARD" ? "Cartão de Crédito" : "Conta Bancária"} · modo{" "}
+                        {a.type === "CREDIT_CARD" ? "Cartão de Crédito" : a.type === "INVESTMENT" ? "Investimentos" : "Conta Bancária"} · modo{" "}
                         <strong className={a.financeMode === "integracao" ? "text-[var(--text-in)] font-medium" : "text-[var(--text-muted)] font-normal"}>
                           {a.financeMode === "integracao" ? "automático (Pluggy)" : "manual"}
                         </strong>
@@ -784,7 +784,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     >
                       <option value="" disabled={!manualEntry}>{manualEntry ? "Sem vínculo (modo manual)" : "Selecione uma conta bancária"}</option>
                       {remote
-                        .filter((r) => (r.type === "CREDIT") === (a.type === "CREDIT_CARD"))
+                        .filter((r) => (r.type === "INVESTMENT") === (a.type === "INVESTMENT") && (r.type === "CREDIT") === (a.type === "CREDIT_CARD"))
                         .map((r) => (
                           <option key={r.id} value={r.id}>
                             {r.name} ({r.currency})

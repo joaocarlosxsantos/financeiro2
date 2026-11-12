@@ -10,7 +10,7 @@ import { getProfileRestriction } from "@/server/usage-profile";
 import { deleteAllOpenFinanceSchema, deletePluggyTransactionSchema, isCompatiblePluggyAccount, linkOpenFinanceAccountSchema, openFinanceConnectionIdSchema, removeOpenFinanceConnectionSchema, removeOpenFinanceCredentialsSchema, saveOpenFinanceSetupSchema } from "@/server/open-finance/schemas";
 import { canDeletePluggyTransaction, planConnectionDataDeletion } from "@/server/open-finance/deletion-policy";
 import { decryptSecret, encryptSecret, secretFingerprint } from "@/server/open-finance/crypto";
-import { authenticatePluggy, createPluggyConnectToken, getPluggyAccounts, getPluggyItem, PluggyHttpError, pluggyErrorForUser } from "@/server/open-finance/client";
+import { authenticatePluggy, createPluggyConnectToken, getPluggyAccounts, getPluggyItem, investmentRemoteId, PluggyHttpError, pluggyErrorForUser } from "@/server/open-finance/client";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolvePluggyApiKey, safeError, syncOpenFinanceForUser } from "@/server/open-finance/sync";
 import { maskClientId } from "@/server/open-finance/access";
@@ -320,7 +320,9 @@ export async function discoverOpenFinanceAccounts(input: unknown) {
   try {
     const key = await resolvePluggyApiKey(userId);
     const rows = await getPluggyAccounts(key, decryptSecret(connection.itemIdEnvelope, userId, "itemId"));
-    return { accounts: rows.map((a) => ({ id: a.id, name: a.name ?? a.subtype ?? a.type, type: a.type, currency: a.currencyCode })) };
+    const accountsOut: Array<{ id: string; name: string; type: "BANK" | "CREDIT" | "INVESTMENT"; currency: string }> = rows.map((a) => ({ id: a.id, name: a.name ?? a.subtype ?? a.type, type: a.type, currency: a.currencyCode }));
+    accountsOut.push({ id: investmentRemoteId(connection.id), name: "Investimentos da conexão", type: "INVESTMENT", currency: "BRL" });
+    return { accounts: accountsOut };
   } catch (error) { return { error: safeError(error) }; }
 }
 
@@ -341,7 +343,10 @@ export async function linkOpenFinanceAccount(input: { accountId: string; connect
   if (!connection) return { error: "Conexão não encontrada." };
   if (data.mode === "integracao") {
     if (!data.externalAccountId) return { error: "Escolha uma conta Pluggy válida." };
-    try {
+    if (data.externalAccountId.startsWith("investments:")) {
+      if (data.externalAccountId !== investmentRemoteId(connection.id) || account.type !== "INVESTMENT") return { error: "Investimentos só podem ser vinculados a uma conta do tipo Investimento desta conexão." };
+    } else if (account.type === "INVESTMENT") return { error: "Conta de investimento deve usar a opção Investimentos da conexão." };
+    else try {
       const key = await resolvePluggyApiKey(userId);
       const remote = (await getPluggyAccounts(key, decryptSecret(connection.itemIdEnvelope, userId, "itemId"))).find((item) => item.id === data.externalAccountId);
       if (!remote || !isCompatiblePluggyAccount(account.type, remote.type)) return { error: "A conta externa não pertence a essa conexão ou tem tipo incompatível." };

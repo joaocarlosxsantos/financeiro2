@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { pluggyAccountSchema, pluggyTransactionSchema } from "./schemas";
 
@@ -15,6 +16,8 @@ export class PluggyHttpError extends Error {
 function safeEndpoint(path: string): string {
   const pathname = new URL(path, BASE).pathname;
   if (/^\/items\/[^/]+$/.test(pathname)) return "/items/:id";
+  if (pathname === "/investments") return pathname;
+  if (/^\/investments\/[^/]+\/transactions$/.test(pathname)) return "/investments/:id/transactions";
   if (pathname === "/auth" || pathname === "/connect_token" || pathname === "/accounts" || pathname === "/bills" || pathname === "/v2/transactions") return pathname;
   return "/unknown";
 }
@@ -27,6 +30,8 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   const url = new URL(path, BASE);
   const privateValues = [apiKey, ...[...url.searchParams.entries()].filter(([key]) => /item.?id|account.?id/i.test(key)).map(([, value]) => value)];
   if (/^\/items\/[^/]+$/.test(url.pathname)) privateValues.push(decodeURIComponent(url.pathname.slice("/items/".length)));
+  const investmentPath = url.pathname.match(/^\/investments\/([^/]+)\/transactions$/);
+  if (investmentPath) privateValues.push(decodeURIComponent(investmentPath[1]!));
   for (const source of [record, requestBody && typeof requestBody === "object" ? requestBody as Record<string, unknown> : {}]) {
     for (const [key, value] of Object.entries(source)) if (/client.?id|client.?secret|api.?key|access.?token/i.test(key) && typeof value === "string") privateValues.push(value);
   }
@@ -170,4 +175,44 @@ export async function getPluggyBills(apiKey: string, accountId: string, signal?:
   const params = new URLSearchParams({ accountId, page: "1", pageSize: "500" });
   const rows = await collect(`/bills?${params}`, apiKey, "page", signal);
   return z.array(z.object({ id: z.string(), dueDate: z.string(), totalAmount: z.number().finite().nullable().optional(), totalAmountCurrencyCode: z.string(), minimumPaymentAmount: z.number().finite().nullable().optional() })).parse(rows);
+}
+
+export const investmentRemoteId = (connectionId: string) => `investments:${connectionId}`;
+
+const investmentSchema = z.object({ id: z.string().min(1).max(200), name: z.string().max(300).nullish(), balance: z.number().finite().nullish(), currencyCode: z.string().length(3).nullish() });
+const investmentTxSchema = z.object({
+  id: z.string().min(1).max(200), type: z.string().max(40), amount: z.number().finite().nullish(), value: z.number().finite().nullish(),
+  tradeDate: z.string().nullish(), date: z.string().nullish(), description: z.string().max(300).nullish(), movementType: z.string().nullish(),
+});
+
+/** Investimentos são por item (não por conta): soma BRL vira o saldo e BUY/SELL/TAX viram lançamentos no formato de transação Pluggy. */
+export async function getPluggyInvestmentSnapshot(apiKey: string, itemId: string, remoteId: string, signal?: AbortSignal) {
+  const investments = z.array(investmentSchema).parse(await collect(`/investments?${new URLSearchParams({ itemId, pageSize: "500", page: "1" })}`, apiKey, "page", signal));
+  if (investments.length > 100) throw new Error("PLUGGY_RESPONSE_LIMIT");
+  const brl = investments.filter((row) => (row.currencyCode ?? "BRL") === "BRL");
+  const balance = brl.reduce((sum, row) => sum + (row.balance ?? 0), 0);
+  const transactions: z.infer<typeof pluggyTransactionSchema>[] = [];
+  let invalid = 0;
+  for (const inv of brl) {
+    const rows = await collect(`/investments/${encodeURIComponent(inv.id)}/transactions?${new URLSearchParams({ pageSize: "500", page: "1" })}`, apiKey, "page", signal);
+    for (const raw of rows) {
+      const parsed = investmentTxSchema.safeParse(raw);
+      const row = parsed.success ? parsed.data : null;
+      const day = row ? (row.tradeDate ?? row.date) : null;
+      const amount = row ? Math.abs(row.amount ?? row.value ?? 0) : 0;
+      const when = day ? new Date(day) : null;
+      if (!row || !when || Number.isNaN(when.getTime()) || !amount) { invalid++; continue; }
+      const label = { BUY: "Aplicação", SELL: "Resgate", TAX: "Imposto", TRANSFER: "Transferência" }[row.type] ?? row.type;
+      const into = row.type === "BUY" || (row.type === "TRANSFER" && row.movementType === "CREDIT");
+      const externalId = `inv-${inv.id}-${row.id}`;
+      const mapped = pluggyTransactionSchema.safeParse({
+        id: externalId.length <= 200 ? externalId : `inv-sha256-${createHash("sha256").update(JSON.stringify([inv.id, row.id])).digest("hex")}`, accountId: remoteId, description: `${label} · ${inv.name ?? "Investimento"}`.slice(0, 500),
+        date: when.toISOString(), amount, currencyCode: "BRL", type: into ? "CREDIT" : "DEBIT", status: "POSTED",
+        // BUY/SELL são movimentação entre contas, não receita/despesa.
+        operationType: row.type === "BUY" || row.type === "SELL" ? "INVESTMENT_TRANSFER" : null,
+      });
+      if (mapped.success) transactions.push(mapped.data); else invalid++;
+    }
+  }
+  return { balance, transactions: { transactions, invalid } };
 }

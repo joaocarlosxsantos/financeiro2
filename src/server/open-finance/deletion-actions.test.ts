@@ -9,7 +9,7 @@ const VALID_TX_ID = "t0000000000000000000000001";
 const VALID_INV_ID = "i0000000000000000000000001";
 
 type MockConnection = { id: string; userId: string; status?: string; label?: string; lastErrorCode?: string; lastAttemptAt?: Date; importFromDate?: Date; itemIdEnvelope?: string };
-type MockAccount = { id: string; userId: string; name?: string; type?: "CHECKING" | "CREDIT_CARD"; externalConnectionId?: string; externalAccountId?: string; financeMode?: string; archived?: boolean; closingDay?: number; dueDay?: number };
+type MockAccount = { id: string; userId: string; name?: string; type?: "CHECKING" | "CREDIT_CARD" | "INVESTMENT"; externalConnectionId?: string; externalAccountId?: string; financeMode?: string; archived?: boolean; closingDay?: number; dueDay?: number };
 type MockPluggyAccount = { id: string; itemId: string; type: "BANK" | "CREDIT"; subtype?: string; name?: string; currencyCode: string; balance?: number; updatedAt?: string; creditData?: { creditLimit?: number; availableCreditLimit?: number } };
 type MockBill = { id: string; dueDate: string; totalAmount: number; totalAmountCurrencyCode: string; minimumPaymentAmount: number };
 type MockPluggyTransaction = { id: string; accountId: string; description: string; date: string; amount: number; currencyCode: string; type: "DEBIT" | "CREDIT"; status: "POSTED" | "PENDING"; operationType?: string; billId?: string; billForecastDate?: string; creditCardMetadata?: { payeeMCC?: number | null; installmentNumber?: number; totalInstallments?: number; purchaseDate?: string; billPostDate?: string; billId?: string } };
@@ -95,6 +95,8 @@ vi.mock("@/server/open-finance/client", () => ({
   authenticatePluggy: async () => "api-key",
   getPluggyItemStatus: async () => ({ status: "UPDATED", executionStatus: "SUCCESS" }),
   getPluggyAccounts: async () => mocks.state.remoteAccounts,
+  investmentRemoteId: (connectionId: string) => `investments:${connectionId}`,
+  getPluggyInvestmentSnapshot: async (_key: string, _itemId: string, remoteId: string) => ({ balance: 350, transactions: { transactions: mocks.state.remoteTransactions.filter((row) => row.accountId === remoteId), invalid: 0 } }),
   getPluggyBills: async () => mocks.state.remoteBills,
   getPluggyTransactions: async (_key: string, accountId: string) => ({ transactions: mocks.state.remoteTransactions.filter((row: MockPluggyTransaction) => row.accountId === accountId), invalid: 0 }),
   PluggyHttpError: class PluggyHttpError extends Error {
@@ -309,6 +311,21 @@ describe("Open Finance deletion actions", () => {
   });
 
   describe("syncOpenFinance diagnostics", () => {
+    it("imports investment BUY/SELL as transfers and saves the investment balance", async () => {
+      const remoteId = `investments:${VALID_CONN_ID}`;
+      mocks.state.connections = [{ id: VALID_CONN_ID, userId: "user-a", itemIdEnvelope: "encrypted", importFromDate: new Date("2026-09-01T00:00:00Z"), status: "UPDATED" }];
+      mocks.state.accounts = [{ id: VALID_ACC_ID, userId: "user-a", name: "Investimentos", type: "INVESTMENT", externalConnectionId: VALID_CONN_ID, externalAccountId: remoteId, financeMode: "integracao", archived: false }];
+      mocks.state.remoteTransactions = [
+        { id: "buy", accountId: remoteId, description: "Aplicação", date: "2026-10-01T00:00:00Z", amount: 100, currencyCode: "BRL", type: "CREDIT", status: "POSTED", operationType: "INVESTMENT_TRANSFER" },
+        { id: "sell", accountId: remoteId, description: "Resgate", date: "2026-10-02T00:00:00Z", amount: 50, currencyCode: "BRL", type: "DEBIT", status: "POSTED", operationType: "INVESTMENT_TRANSFER" },
+      ];
+      expect(await syncOpenFinance(VALID_CONN_ID)).toMatchObject({ ok: true, imported: 2, status: "UPDATED" });
+      expect(mocks.upsertedTransactions).toEqual([
+        expect.objectContaining({ externalId: "buy", kind: "INCOME", isTransfer: true, amountCents: 10000 }),
+        expect.objectContaining({ externalId: "sell", kind: "EXPENSE", isTransfer: true, amountCents: 5000 }),
+      ]);
+      expect(mocks.updatedAccounts).toContainEqual({ values: expect.objectContaining({ bankBalanceCents: 35000 }) });
+    });
     it("enforces a 60-second cooldown using lastAttemptAt", async () => {
       mocks.state.connections = [{ id: VALID_CONN_ID, userId: "user-a", itemIdEnvelope: "encrypted", lastAttemptAt: new Date(Date.now() - 10_000) }];
       const result = await syncOpenFinance(VALID_CONN_ID);

@@ -1,9 +1,66 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Pluggy client", () => {
+  it("sums BRL investments and maps BUY/SELL to transfers with opposite directions", async () => {
+    const reply = (results: unknown[]) => new Response(JSON.stringify({ results, page: 1, totalPages: 1 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(reply([
+        { id: "brl-1", balance: 100.25, currencyCode: "BRL" },
+        { id: "brl-2", balance: 200.5, currencyCode: "BRL" },
+        { id: "usd", balance: 999, currencyCode: "USD" },
+      ]))
+      .mockResolvedValueOnce(reply([
+        { id: "buy", type: "BUY", amount: 100, tradeDate: "2026-10-01" },
+        { id: "sell", type: "SELL", value: 50, date: "2026-10-02" },
+        { id: "tax", type: "TAX", amount: 2, date: "2026-10-02" },
+        { id: "bad", type: "BUY", amount: 10, date: "invalid" },
+      ]))
+      .mockResolvedValueOnce(reply([]));
+    vi.stubGlobal("fetch", fetchMock);
+    const remoteId = investmentRemoteId("connection");
+    const snapshot = await getPluggyInvestmentSnapshot("key", "item", remoteId);
+    expect(snapshot.balance).toBe(300.75);
+    expect(snapshot.transactions.invalid).toBe(1);
+    expect(snapshot.transactions.transactions).toMatchObject([
+      { accountId: remoteId, type: "CREDIT", amount: 100, operationType: "INVESTMENT_TRANSFER" },
+      { accountId: remoteId, type: "DEBIT", amount: 50, operationType: "INVESTMENT_TRANSFER" },
+      { accountId: remoteId, type: "DEBIT", amount: 2, operationType: null },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects oversized investment snapshots instead of publishing a partial balance", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: Array.from({ length: 101 }, (_, i) => ({ id: String(i), balance: 1, currencyCode: "BRL" })) }))));
+    await expect(getPluggyInvestmentSnapshot("key", "item", "remote")).rejects.toThrow("PLUGGY_RESPONSE_LIMIT");
+  });
+
+  it("redacts investment IDs in provider errors and keeps endpoint logs generic", async () => {
+    const privateId = "private-investment-id";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ results: [{ id: privateId, balance: 1, currencyCode: "BRL" }] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: "NOT_FOUND", message: `Missing investment ${privateId}` }), { status: 404 })));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(getPluggyInvestmentSnapshot("key", "item", "remote")).rejects.toMatchObject({ endpoint: "/investments/:id/transactions", providerMessage: "Missing investment [redacted]" });
+      expect(log).toHaveBeenCalledWith("Pluggy HTTP error", { status: 404, code: "NOT_FOUND", endpoint: "/investments/:id/transactions" });
+    } finally { log.mockRestore(); }
+  });
+
+  it("keeps long investment transaction IDs distinct and stable", async () => {
+    const run = async () => {
+      vi.stubGlobal("fetch", vi.fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ results: [{ id: "i".repeat(200), balance: 1, currencyCode: "BRL" }] })))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ results: ["a", "b"].map((id) => ({ id, type: "BUY", amount: 1, date: "2026-10-01" })) }))));
+      return (await getPluggyInvestmentSnapshot("key", "item", "remote")).transactions.transactions.map((row) => row.id);
+    };
+    const ids = await run();
+    expect(new Set(ids).size).toBe(2);
+    expect(ids.every((id) => id.length <= 200)).toBe(true);
+    expect(await run()).toEqual(ids);
+  });
   it("cancelamento do sync chega ao fetch e não dispara retry nem outras páginas", async () => {
     const controller = new AbortController();
     const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {

@@ -4,6 +4,7 @@ import { Receipt } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
 import {
   getAvgMonthlyCostCents,
+  getBalances,
   getBudgetOverview,
   getDebtOverview,
   getCardCategoryBreakdown,
@@ -75,6 +76,7 @@ export default async function DashboardPage({
     debts,
     goals,
     onboarding,
+    balances,
   ] = await Promise.all([
     getUser(userId),
     // "cash": o resumo principal do painel é o retrato do dinheiro que
@@ -93,8 +95,10 @@ export default async function DashboardPage({
     getDebtOverview(userId),
     getGoals(userId),
     getOnboardingChecklist(userId),
+    getBalances(userId),
   ]);
 
+  const investedAccounts = balances.accounts.filter((a) => a.type === "INVESTMENT");
   const alerts = [...buildBudgetAlerts(budget.rows), ...buildGoalAlerts(goals)];
 
   const sobrou = balanceCents(summary);
@@ -228,6 +232,31 @@ export default async function DashboardPage({
           {isCurrentMonth && hasData && <DailyBudgetCard dailyBudget={dailyBudget} />}
           <ForecastCard forecast={forecast} monthName={monthLabel(ref)} />
         </section>
+
+      {investedAccounts.length > 0 ? (
+        <section className="mt-4" aria-label="Investimentos">
+          <Card className="min-w-0">
+            <CardHeader
+              title="Investimentos"
+              subtitle="Saldo das contas de investimento. Não entra em Entrou/Saiu."
+              action={
+                <Link href="/contas" className="inline-flex min-h-11 items-center text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300">
+                  Ver contas
+                </Link>
+              }
+            />
+            <Money cents={balances.investedCents} size="lg" className="text-2xl font-semibold" />
+            <ul className="mt-3 divide-y divide-[var(--border)] text-[0.8125rem]">
+              {investedAccounts.map((a) => (
+                <li key={a.id} className="flex items-baseline justify-between gap-3 py-2">
+                  <span className="muted min-w-0 truncate">{a.name}{a.bankBalanceAt ? ` · atualizado em ${new Date(a.bankBalanceAt).toLocaleDateString("pt-BR")}` : ""}</span>
+                  <Money cents={a.financeMode === "integracao" ? (a.bankBalanceCents ?? 0) : a.balanceCents} size="sm" className="font-medium" />
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
 
       {/* 2. Alerta/onboarding compacta logo abaixo */}
       <div className="mt-4 space-y-3">
