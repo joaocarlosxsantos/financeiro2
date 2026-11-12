@@ -2,8 +2,15 @@ import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 import { documentPolicy } from "./security-policy";
+import nextConfig from "../../next.config";
 
 describe("document security policy", () => {
+  it("aplica HSTS de dois anos a todas as rotas, subdomínios e preload", async () => {
+    const rules = await nextConfig.headers!();
+    expect(rules.find(rule => rule.source === "/(.*)")?.headers).toContainEqual({
+      key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload",
+    });
+  });
   it("production authorizes nonce scripts, local fonts/images and same-origin connections", () => {
     const policy = documentPolicy("random-value", false);
     expect(policy).toContain("'nonce-random-value'");

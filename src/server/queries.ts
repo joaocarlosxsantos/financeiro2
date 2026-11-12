@@ -39,7 +39,7 @@ import { transactionDateOrder, transactionsInInvoice } from "./transaction-dates
  */
 export async function getUser(userId: string) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) redirect("/api/sessao-invalida");
+  if (!user) redirect("/sessao-invalida");
   return user;
 }
 

@@ -16,7 +16,7 @@ import { safeNameSchema, safeOptionalTextSchema } from "@/server/validation/sani
 export type ActionState = { error?: string; ok?: boolean };
 
 const profileSchema = z.object({
-  name: z.string().trim().min(2, "Digite seu nome."),
+  name: safeNameSchema(2, 100, "Digite seu nome."),
   income: z.string().min(1, "Informe sua renda mensal."),
   emergencyMonths: z.coerce.number().int().min(1).max(24),
   savingsTargetPct: z.coerce.number().int().min(0).max(90),

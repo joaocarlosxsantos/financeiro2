@@ -1,4 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
 import { issueExportToken, verifyExportToken, verifyUserPassword, reauthenticateForExport } from "./reauth";
 import bcrypt from "bcryptjs";
 import { clearFailures } from "./rate-limit";
@@ -22,6 +24,7 @@ vi.mock("@/db", () => ({
 }));
 
 describe("reauth and export tokens", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     clearFailures("reauth:user-123");
   });
@@ -49,19 +52,23 @@ describe("reauth and export tokens", () => {
   });
 
   it("lança erro caso secret não esteja configurado fora de test", () => {
-    const origEnv = process.env.NODE_ENV;
-    const origAuth = process.env.AUTH_SECRET;
-    const origNextAuth = process.env.NEXTAUTH_SECRET;
-    try {
-      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
-      delete process.env.AUTH_SECRET;
-      delete process.env.NEXTAUTH_SECRET;
-      expect(() => issueExportToken("user-123", 60_000)).toThrow("AUTH_SECRET não definida");
-    } finally {
-      (process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
-      process.env.AUTH_SECRET = origAuth;
-      process.env.NEXTAUTH_SECRET = origNextAuth;
-    }
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_SECRET", undefined);
+    vi.stubEnv("NEXTAUTH_SECRET", undefined);
+    expect(() => issueExportToken("user-123", 60_000)).toThrow("AUTH_SECRET não definida");
+  });
+
+  it.each(["AUTH_SECRET", "NEXTAUTH_SECRET"])("rejeita o placeholder público de .env.example em %s", key => {
+    const example = readFileSync(new URL("../../.env.example", import.meta.url), "utf8");
+    const placeholder = /^AUTH_SECRET="([^"]+)"/m.exec(example)?.[1];
+    expect(placeholder).toBeTruthy();
+    vi.stubEnv("AUTH_SECRET", undefined);
+    vi.stubEnv("NEXTAUTH_SECRET", undefined);
+    vi.stubEnv(key, placeholder);
+    expect(() => issueExportToken("user-123")).toThrow("diferente do exemplo");
+    const payload = `user-123.${Date.now() + 60_000}`;
+    const forged = Buffer.from(`${payload}.${createHmac("sha256", placeholder!).update(payload).digest("hex")}`).toString("base64url");
+    expect(verifyExportToken(forged, "user-123")).toBe(false);
   });
 
   it("valida senha correta com sucesso", async () => {

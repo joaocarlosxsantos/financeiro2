@@ -10,8 +10,12 @@ import { signOut } from "@/lib/auth";
  *
  * Aqui o cookie é apagado antes do redirecionamento, o que quebra o laço.
  */
-export async function GET() {
-  await signOut({ redirectTo: "/login?sessao=expirada" });
+export async function POST(request: Request) {
+  if (request.headers.get("origin") !== new URL(request.url).origin) {
+    return Response.json({ error: "Origem inválida." }, { status: 403 });
+  }
+  await signOut({ redirect: false });
+  return Response.redirect(new URL("/login?sessao=expirada", request.url), 303);
 }
 
 export const runtime = "nodejs";

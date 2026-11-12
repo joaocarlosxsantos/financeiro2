@@ -10,6 +10,9 @@ const REAUTH_MAX_ATTEMPTS = 5;
 
 function getSecretKey(): string {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+  if (secret?.trim() === "troque-por-uma-chave-aleatoria-de-32-bytes") {
+    throw new Error("AUTH_SECRET precisa ser uma chave privada, diferente do exemplo.");
+  }
   if (!secret) {
     if (process.env.NODE_ENV === "test") {
       return "test-reauth-secret-key-32-chars-long";

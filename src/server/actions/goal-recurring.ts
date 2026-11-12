@@ -9,6 +9,7 @@ import { requireUserId } from "@/lib/auth";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import type { MonthRef } from "@/lib/dates";
 import { dateForMonth } from "@/lib/installments";
+import { safeNotesSchema } from "@/server/validation/sanitization";
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -22,7 +23,7 @@ const ruleSchema = z.object({
   goalId: z.string().min(1, "Escolha a meta."),
   amount: z.string().min(1, "Informe o valor."),
   dayOfMonth: z.coerce.number().int().min(1).max(31),
-  note: z.string().optional(),
+  note: safeNotesSchema(2000),
   startMonth: z.string().regex(/^\d{4}-\d{2}$/, "Informe o mês de início."),
   endMonth: z.string().optional(),
 });
@@ -133,7 +134,7 @@ export async function generateGoalRecurring(
       await tx
         .update(goals)
         .set({ savedCents: sql`${goals.savedCents} + ${rule.amountCents}`, updatedAt: new Date() })
-        .where(eq(goals.id, rule.goalId));
+        .where(and(eq(goals.id, rule.goalId), eq(goals.userId, userId)));
     }
   });
 

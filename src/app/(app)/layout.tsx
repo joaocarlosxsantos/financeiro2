@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .limit(1);
   // Sessão apontando para usuário inexistente: limpa o cookie antes de sair,
   // senão o login devolve para cá e vira laço.
-  if (!user) redirect("/api/sessao-invalida");
+  if (!user) redirect("/sessao-invalida");
   if (!user.onboardedAt) redirect("/onboarding");
 
   const [accounts, categories] = await Promise.all([getAccounts(userId), getCategories(userId)]);

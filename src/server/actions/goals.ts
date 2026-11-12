@@ -135,7 +135,7 @@ export async function upsertEmergencyGoal(targetCents: number) {
     await db
       .update(goals)
       .set({ targetCents, archived: false, updatedAt: new Date() })
-      .where(eq(goals.id, existing.id));
+      .where(and(eq(goals.id, existing.id), eq(goals.userId, userId)));
   } else {
     await db.insert(goals).values({
       userId,
