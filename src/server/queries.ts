@@ -1,4 +1,5 @@
-﻿import { redirect } from "next/navigation";
+﻿import { cache } from "react";
+import { redirect } from "next/navigation";
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -37,19 +38,19 @@ import { transactionDateOrder, transactionsInInvoice } from "./transaction-dates
  * estourar um 500 (e mandar direto para /login criaria um laço, porque de lá
  * a sessão ainda parece válida).
  */
-export async function getUser(userId: string) {
+export const getUser = cache(async (userId: string) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) redirect("/sessao-invalida");
   return user;
-}
+});
 
-export async function getAccounts(userId: string) {
+export const getAccounts = cache(async (userId: string) => {
   return db
     .select()
     .from(accountsTable)
     .where(and(eq(accountsTable.userId, userId), eq(accountsTable.archived, false)))
     .orderBy(asc(accountsTable.createdAt));
-}
+});
 
 export type OnboardingChecklist = {
   hasAccount: boolean;
@@ -109,13 +110,13 @@ export async function getAccountsWithStats(userId: string) {
   }));
 }
 
-export async function getCategories(userId: string) {
+export const getCategories = cache(async (userId: string) => {
   return db
     .select()
     .from(categoriesTable)
     .where(and(eq(categoriesTable.userId, userId), eq(categoriesTable.archived, false)))
     .orderBy(asc(categoriesTable.kind), asc(categoriesTable.name));
-}
+});
 
 export type CardMode = "accrual" | "cash";
 
@@ -412,7 +413,8 @@ export async function getGoals(userId: string) {
         list.map((g) => g.id),
       ),
     )
-    .orderBy(desc(goalContributions.date));
+    .orderBy(desc(goalContributions.date))
+    .limit(Math.max(50, list.length * 10));
 
   return list.map((goal) => ({
     ...goal,
@@ -1423,7 +1425,9 @@ export async function getDetectedSubscriptions(userId: string, connection: Pick<
           or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
           gte(txTable.date, ninetyDaysAgo),
         ),
-      ),
+      )
+      .orderBy(desc(txTable.date))
+      .limit(500),
     connection
       .select({
         description: recurringRulesTable.description,

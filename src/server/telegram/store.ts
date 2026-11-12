@@ -187,7 +187,9 @@ export async function processMessage(updateId: number, message: TelegramMessage)
     if (result.kind === "question") return answerQuestion(result.userId, chatId, result.question);
     // Interactive bot reads use the saved snapshot. Provider refresh belongs to
     // the integration's explicit sync or cron, never the webhook response path.
-    return db.transaction(tx => replyToCommand(message, tx, result.now, result.userId));
+    // Leituras financeiras (ex.: /resumo com 15+ queries) rodam diretamente no pool
+    // sem segurar uma db.transaction aberta por múltiplos round-trips.
+    return replyToCommand(message, db as unknown as TelegramTransaction, result.now, result.userId);
   }
   return result;
 }

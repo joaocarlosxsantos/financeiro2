@@ -395,14 +395,20 @@ export async function commitImport(rawInput: unknown): Promise<{ error?: string;
       // Limpa lotes de importação que ficaram sem nenhum lançamento — senão
       // o histórico em "Importações recentes" mostra um lote fantasma.
       const touchedBatchIds = [...new Set(removed.map((r) => r.importBatchId).filter((id): id is string => Boolean(id)))];
-      for (const oldBatchId of touchedBatchIds) {
-        const [{ count }] = await tx
-          .select({ count: sql<number>`count(*)::int` })
-          .from(transactions)
-          .where(and(eq(transactions.userId, userId), eq(transactions.importBatchId, oldBatchId)));
-        if (count === 0) {
-          await tx.delete(importBatches).where(and(eq(importBatches.id, oldBatchId), eq(importBatches.userId, userId)));
-        }
+      if (touchedBatchIds.length > 0) {
+        await tx
+          .delete(importBatches)
+          .where(
+            and(
+              eq(importBatches.userId, userId),
+              inArray(importBatches.id, touchedBatchIds),
+              sql`not exists (
+                select 1 from ${transactions}
+                where ${transactions.importBatchId} = ${importBatches.id}
+                  and ${transactions.userId} = ${userId}
+              )`,
+            ),
+          );
       }
     }
 

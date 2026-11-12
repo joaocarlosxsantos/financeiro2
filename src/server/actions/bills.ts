@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   billGroupings,
@@ -327,6 +327,31 @@ export async function createOneOffBill(_prev: ActionState, formData: FormData): 
 
 // ---------------------------------------------------------------- participantes de uma conta
 
+async function batchUpdateParticipantAmounts(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  participants: { id: string }[],
+  amounts: number[],
+) {
+  if (participants.length === 0) return;
+  if (participants.length === 1) {
+    await tx
+      .update(billParticipants)
+      .set({ amountCents: amounts[0] })
+      .where(eq(billParticipants.id, participants[0].id));
+    return;
+  }
+  const sqlChunks = [sql`case ${billParticipants.id}`];
+  for (let i = 0; i < participants.length; i++) {
+    sqlChunks.push(sql`when ${participants[i].id} then ${amounts[i]}::int`);
+  }
+  sqlChunks.push(sql`else ${billParticipants.amountCents} end`);
+  const caseClause = sql.join(sqlChunks, sql.raw(" "));
+  await tx
+    .update(billParticipants)
+    .set({ amountCents: caseClause })
+    .where(inArray(billParticipants.id, participants.map((p) => p.id)));
+}
+
 export async function addBillParticipant(billId: string, name: string, phone?: string): Promise<ActionState> {
   const userId = await requireUserId();
   const trimmed = name.trim();
@@ -360,12 +385,7 @@ export async function addBillParticipant(billId: string, name: string, phone?: s
 
     const newAmounts = recalculateSplit(bill.totalCents, oldAmounts, newCount);
 
-    for (let i = 0; i < allParticipants.length; i++) {
-      await tx
-        .update(billParticipants)
-        .set({ amountCents: newAmounts[i] })
-        .where(eq(billParticipants.id, allParticipants[i].id));
-    }
+    await batchUpdateParticipantAmounts(tx, allParticipants, newAmounts);
   });
 
   refresh();
@@ -403,12 +423,7 @@ export async function removeBillParticipant(participantId: string): Promise<Acti
     const newCount = remainingParticipants.length;
     const newAmounts = recalculateSplit(row.totalCents, oldAmounts, newCount, removedIndex);
 
-    for (let i = 0; i < remainingParticipants.length; i++) {
-      await tx
-        .update(billParticipants)
-        .set({ amountCents: newAmounts[i] })
-        .where(eq(billParticipants.id, remainingParticipants[i].id));
-    }
+    await batchUpdateParticipantAmounts(tx, remainingParticipants, newAmounts);
   });
 
   refresh();
@@ -490,9 +505,7 @@ export async function updateBillAmount(_prev: ActionState, formData: FormData): 
 
   await db.transaction(async (tx) => {
     await tx.update(bills).set(billUpdates).where(eq(bills.id, billId));
-    for (let i = 0; i < participants.length; i++) {
-      await tx.update(billParticipants).set({ amountCents: amounts[i] }).where(eq(billParticipants.id, participants[i].id));
-    }
+    await batchUpdateParticipantAmounts(tx, participants, amounts);
   });
 
   refresh();

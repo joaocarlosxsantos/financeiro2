@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   results: [] as unknown[][],
   events: [] as { kind: string; value: unknown }[],
   transaction: vi.fn(),
+  select: vi.fn(),
+  insert: vi.fn(),
+  delete: vi.fn(),
   balance: vi.fn(),
   summary: vi.fn(),
   forecast: vi.fn(),
@@ -15,7 +18,14 @@ const mocks = vi.hoisted(() => ({
   ai: vi.fn(),
   refresh: vi.fn(),
 }));
-vi.mock("@/db", () => ({ db: { transaction: (...args: unknown[]) => mocks.transaction(...args) } }));
+vi.mock("@/db", () => ({
+  db: {
+    transaction: (...args: unknown[]) => mocks.transaction(...args),
+    select: (...args: unknown[]) => mocks.select(...args),
+    insert: (...args: unknown[]) => mocks.insert(...args),
+    delete: (...args: unknown[]) => mocks.delete(...args),
+  },
+}));
 vi.mock("@/server/queries", () => ({ getBalances: (...args: unknown[]) => mocks.balance(...args) }));
 vi.mock("./insight-store", () => ({
   manualSummary: (...args: unknown[]) => mocks.summary(...args),
@@ -59,6 +69,9 @@ beforeEach(() => {
     };
     return chain;
   };
+  mocks.select.mockImplementation(() => query("select"));
+  mocks.insert.mockImplementation((table: unknown) => query("insert", table));
+  mocks.delete.mockImplementation((table: unknown) => query("delete", table));
   mocks.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => callback({
     insert: (table: unknown) => query("insert", table),
     delete: (table: unknown) => query("delete", table),
@@ -82,7 +95,7 @@ describe("persistência Telegram", () => {
     mocks.balance.mockResolvedValue({ availableCents: 100, totalIncomplete: false });
     expect(await processMessage(11, message("/saldo"))).toContain("1,00");
     expect(mocks.refresh).not.toHaveBeenCalled();
-    expect(commits).toBe(2);
+    expect(commits).toBe(1);
   });
   it.each(["/ajuda", "/pausar", "/start", "/desconhecido"])("não faz refresh em comando sem leitura financeira: %s", async text => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);

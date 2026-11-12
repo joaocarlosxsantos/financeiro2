@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, openFinanceInvoices, telegramDeliveries, transactions, users } from "@/db/schema";
 import { type InsightData, type InsightWindow } from "./insights";
@@ -65,27 +65,45 @@ export async function loadCardInvoicesAlerts(
     const todayTime = civilToday.getTime();
     const cardInvoices: NonNullable<InsightData["cardInvoices"]> = [];
 
-    for (const card of cardAccounts) {
-      if (!card.closingDay || !card.dueDay) continue;
+    const validCards = cardAccounts.filter(
+      (c): c is typeof c & { closingDay: number; dueDay: number } => Boolean(c.closingDay && c.dueDay),
+    );
+    if (!validCards.length) return cardInvoices;
+
+    const cyclesByCard = new Map(
+      validCards.map((card) => [card.id, invoiceCycle(civilToday, card.closingDay, card.dueDay)]),
+    );
+
+    const ofInvoices = await connection
+      .select({
+        accountId: openFinanceInvoices.accountId,
+        invoiceRef: openFinanceInvoices.invoiceRef,
+        totalAmountCents: openFinanceInvoices.totalAmountCents,
+      })
+      .from(openFinanceInvoices)
+      .where(
+        and(
+          eq(openFinanceInvoices.userId, userId),
+          inArray(
+            openFinanceInvoices.accountId,
+            validCards.map((c) => c.id),
+          ),
+        ),
+      );
+
+    const ofInvoiceMap = new Map<string, number | null>();
+    for (const inv of ofInvoices) {
+      if (inv.accountId && inv.invoiceRef) {
+        ofInvoiceMap.set(`${inv.accountId}:${inv.invoiceRef}`, inv.totalAmountCents);
+      }
+    }
+
+    for (const card of validCards) {
       try {
-        const cycle = invoiceCycle(civilToday, card.closingDay, card.dueDay);
-        let invoiceCents: number | null = null;
+        const cycle = cyclesByCard.get(card.id)!;
+        let invoiceCents: number | null = ofInvoiceMap.get(`${card.id}:${cycle.ref}`) ?? null;
 
-        const [ofInvoice] = await connection
-          .select({ totalAmountCents: openFinanceInvoices.totalAmountCents })
-          .from(openFinanceInvoices)
-          .where(
-            and(
-              eq(openFinanceInvoices.userId, userId),
-              eq(openFinanceInvoices.accountId, card.id),
-              eq(openFinanceInvoices.invoiceRef, cycle.ref),
-            ),
-          )
-          .limit(1);
-
-        if (ofInvoice && ofInvoice.totalAmountCents !== null) {
-          invoiceCents = ofInvoice.totalAmountCents;
-        } else {
+        if (invoiceCents === null) {
           const [txRow] = await connection
             .select({ total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)::int` })
             .from(transactions)
