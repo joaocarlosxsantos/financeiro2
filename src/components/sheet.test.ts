@@ -152,6 +152,8 @@ describe("Sheet modal/drawer component", () => {
       } else {
         expect(html).toContain("open:items-end");
         expect(html).toContain("max-h-[90%]");
+        expect(html).toContain("min-h-0");
+        expect(html).toContain("pt-[max(16px,env(safe-area-inset-top))]");
       }
     });
   });

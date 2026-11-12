@@ -78,19 +78,30 @@ export function Sheet({
 
     dialog.showModal();
 
-    // Foco inicial: prioriza data-autofocus / autofocus, depois primeiro elemento interativo
+    // Foco inicial: prioriza data-autofocus / autofocus, depois primeiro elemento interativo.
+    // Usamos preventScroll: true para evitar que o navegador role o container do diálogo
+    // enquanto o painel ainda está transicionando ou fora do campo de visão.
     const initialFocus =
       dialog.querySelector<HTMLElement>("[data-autofocus], [autofocus]") ||
       dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    initialFocus?.focus();
+    initialFocus?.focus({ preventScroll: true });
+    dialog.scrollTop = 0;
 
     // Visual viewport adapt para teclado em navegadores mobile
     const viewport = window.visualViewport;
     function fitKeyboard() {
       if (!viewport || window.matchMedia("(min-width: 768px)").matches) return;
-      dialog.style.height = `${viewport.height}px`;
-      dialog.style.top = `${viewport.offsetTop}px`;
-      dialog.style.bottom = "auto";
+      const isKeyboardOpen = viewport.height < window.innerHeight * 0.85;
+      if (isKeyboardOpen) {
+        dialog.style.height = `${viewport.height}px`;
+        dialog.style.top = `${viewport.offsetTop}px`;
+        dialog.style.bottom = "auto";
+      } else {
+        dialog.style.height = "";
+        dialog.style.top = "";
+        dialog.style.bottom = "";
+      }
+      dialog.scrollTop = 0;
     }
     fitKeyboard();
     viewport?.addEventListener("resize", fitKeyboard);
@@ -98,7 +109,10 @@ export function Sheet({
 
     document.body.style.overflow = "hidden";
     window.history.pushState({ ...window.history.state, sheet: marker }, "");
-    const frame = requestAnimationFrame(() => setVisible(true));
+    const frame = requestAnimationFrame(() => {
+      setVisible(true);
+      dialog.scrollTop = 0;
+    });
 
     function dismiss(navigateBack = true) {
       if (closing || disabledRef.current) return;
@@ -207,10 +221,10 @@ export function Sheet({
       className={cn(
         "fixed inset-0 z-50 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-[var(--text)]",
         "backdrop:bg-black/60 backdrop:backdrop-blur-sm",
-        // Mobile: alinha na base (bottom sheet)
-        "open:flex open:items-end open:justify-center",
+        // Mobile: alinha na base (bottom sheet) com respiro para safe-area-inset-top
+        "pt-[max(16px,env(safe-area-inset-top))] open:flex open:items-end open:justify-center",
         // Desktop: centraliza perfeitamente no centro da tela com respiro
-        "md:px-6 md:py-8 md:open:items-center"
+        "md:p-0 md:px-6 md:py-8 md:open:items-center"
       )}
     >
       <section
@@ -218,7 +232,7 @@ export function Sheet({
         data-sheet-panel
         style={{ backdropFilter: "blur(20px) saturate(140%)" }}
         className={cn(
-          "glass relative flex w-full flex-col overflow-hidden border border-[var(--border)] bg-[var(--surface)]",
+          "glass relative flex w-full min-h-0 flex-col overflow-hidden border border-[var(--border)] bg-[var(--surface)]",
           maxWidthClasses[maxWidth] ?? "max-w-lg",
           // Mobile: bottom sheet com altura até 90% da viewport e cantos superiores arredondados
           "max-h-[90%] rounded-t-2xl pb-[max(12px,env(safe-area-inset-bottom))]",
