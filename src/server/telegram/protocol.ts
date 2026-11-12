@@ -27,6 +27,17 @@ export function validWebhookSecret(actual: string | null, expected: string | und
 }
 
 const id = z.number().int().positive().refine(Number.isSafeInteger);
+const callbackSchema = z.object({
+  id: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/),
+  from: z.object({ id, is_bot: z.literal(false) }),
+  message: z.object({
+    message_id: id,
+    date: z.number().int().positive(),
+    chat: z.object({ id, type: z.literal("private") }),
+    from: z.object({ id, is_bot: z.literal(true) }),
+  }),
+  data: z.string().min(1).max(64).refine(value => Buffer.byteLength(value, "utf8") <= 64),
+});
 export const updateSchema = z.object({
   update_id: z.number().int().nonnegative().max(2_147_483_647),
   message: z.object({
@@ -34,10 +45,14 @@ export const updateSchema = z.object({
     chat: z.object({ id, type: z.literal("private") }),
     from: z.object({ id, is_bot: z.literal(false) }),
   }).optional(),
-}).refine((value) => !value.message || value.message.chat.id === value.message.from.id);
+  callback_query: callbackSchema.optional(),
+}).refine((value) => !value.message || value.message.chat.id === value.message.from.id)
+  .refine(value => !value.callback_query || value.callback_query.from.id === value.callback_query.message.chat.id)
+  .refine(value => !(value.message && value.callback_query));
 
 export type TelegramUpdate = z.infer<typeof updateSchema>;
 export type TelegramMessage = NonNullable<TelegramUpdate["message"]>;
+export type TelegramCallback = NonNullable<TelegramUpdate["callback_query"]>;
 
 
 function commandText(text: string | undefined) {
