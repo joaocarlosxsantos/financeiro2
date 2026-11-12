@@ -123,55 +123,25 @@ self.addEventListener("fetch", (event) => {
   // Sem fallback: se falhar, o app trata o erro normalmente.
 });
 
-// ----- Notificações Push Web (PWA) -----
 
-self.addEventListener("push", (event) => {
-  let data = {
-    title: "Mutano Contas",
-    body: "Notificação de teste recebida!",
-    icon: "/icon.svg",
-    badge: "/icon.svg",
-    url: "/configuracoes/teste-push",
-  };
-
-  if (event.data) {
-    try {
-      const parsed = event.data.json();
-      data = { ...data, ...parsed };
-    } catch {
-      data.body = event.data.text() || data.body;
-    }
-  }
-
-  const options = {
-    body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    data: { url: data.url },
-    tag: "mutano-test-push",
-    renotify: true,
-  };
-
-  event.waitUntil(self.registration.showNotification(data.title, options));
+// Push payloads never control the title or navigate outside this app.
+function notificationUrl(value) {
+  try { const url=new URL(value || "/notificacoes",self.location.origin);if(url.origin===self.location.origin)return url.href; } catch {}
+  return self.location.origin+"/notificacoes";
+}
+self.addEventListener("push",event=>{
+  let data={};try{data=event.data?.json() || {};}catch{}
+  event.waitUntil(self.registration.showNotification("Mutano Contas",{
+    body:typeof data.body==="string"?data.body.slice(0,180):"Você tem uma nova notificação. Abra o app para conferir.",
+    icon:"/icon-192.png",badge:"/icon-192.png",data:{url:notificationUrl(data.url)},
+    tag:typeof data.tag==="string"?data.tag.slice(0,80):"mutano-notification",
+  }));
 });
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const targetUrl = event.notification.data?.url || "/configuracoes/teste-push";
-
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (client.url && client.url.includes(targetUrl) && "focus" in client) {
-            return client.focus();
-          }
-        }
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(targetUrl);
-        }
-      })
-  );
+self.addEventListener("notificationclick",event=>{
+ event.notification.close();const target=notificationUrl(event.notification.data?.url);
+ event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients=>{
+  const existing=clients.find(c=>new URL(c.url).origin===self.location.origin);
+  if(existing&&"navigate"in existing){await existing.navigate(target);return existing.focus();}
+  return self.clients.openWindow(target);
+ }));
 });
-

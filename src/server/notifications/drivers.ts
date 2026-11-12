@@ -10,10 +10,11 @@ export const notificationDrivers: NotificationDrivers = {
   async preferences(userId) {
     const [row] = await db.select().from(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId)).limit(1);
     if (row) return preferencesSchema.parse(Object.fromEntries(Object.keys(DEFAULT_NOTIFICATION_PREFERENCES).map(k => [k, row[k as keyof typeof row]])));
-    const [legacy] = await db.select({ summary: telegramPreferences.summary, spending: telegramPreferences.spending,
+    const [legacy] = await db.select({ enabled: telegramPreferences.enabled, summary: telegramPreferences.summary, spending: telegramPreferences.spending,
       dueBills: telegramPreferences.dueBills, budget: telegramPreferences.budget, cardInvoice: telegramPreferences.cardInvoice,
       negativeForecast: telegramPreferences.negativeForecast }).from(telegramPreferences).where(eq(telegramPreferences.userId, userId)).limit(1);
-    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...legacy };
+    const { enabled, ...flags } = legacy ?? {};
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...flags, channelTelegram: Boolean(enabled) };
   },
   async receipt(event) {
     const [created] = await db.insert(notices).values(event).onConflictDoNothing({ target: [notices.userId, notices.dedupeKey] }).returning({ id: notices.id });

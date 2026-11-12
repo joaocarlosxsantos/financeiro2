@@ -32,16 +32,16 @@ export default async function SettingsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="min-w-0 border-[var(--acento)]/30 lg:col-span-2">
           <CardHeader
-            title="Teste de notificação (push)"
-            subtitle="Validação temporária de notificações nativas no iPhone (PWA) e Android."
+            title="Notificações"
+            subtitle="Caixa de avisos no app, Web Push nativo (PWA) e preferências por canal."
           />
           <div className="p-4 pt-0">
             <Link
               className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--acento)] px-4 py-2 text-sm font-semibold text-[var(--on-acento)] transition hover:opacity-90"
-              href="/configuracoes/teste-push"
+              href="/notificacoes"
             >
               <Bell className="size-4" />
-              Abrir teste de notificação (push)
+              Abrir notificações
               <ArrowRight className="size-4" />
             </Link>
           </div>

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { NotificationBell } from "@/components/notification-center";
 import { Sidebar } from "@/components/sidebar";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { getAccounts, getCategories } from "@/server/queries";
@@ -38,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           accounts={accounts.filter((account) => account.financeMode === "manual").map(({ id, name }) => ({ id, name }))}
           categories={categories.map(({ id, name, kind, nature, color }) => ({ id, name, kind, nature, color }))} />
         <div className="min-w-0 flex-1">
+          <div className="flex justify-end px-4 pt-3 md:px-6"><NotificationBell /></div>
           <main id="conteudo" className="mx-auto min-w-0 max-w-[1120px] px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 lg:max-w-none lg:py-10 xl:px-8">
             {children}
           </main>
