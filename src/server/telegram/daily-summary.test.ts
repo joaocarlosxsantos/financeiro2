@@ -21,6 +21,16 @@ import {
 import type { InsightData, Preferences } from "./insights";
 
 describe("Daily Summary - formatDailySummary", () => {
+  it("separa disponível, investido e patrimônio, sem somar o investimento novamente", () => {
+    const text = formatDailySummary({
+      dayLabel: "12/11", accounts: { totalAvailableCents: 1000, investedCents: 2000, netWorthCents: 2500, incomplete: true },
+      yesterdayMovements: { incomeCents: 0, expenseCents: 100, hasMovements: true }, cards: [], insights: [],
+    });
+    expect(text).toContain("Saldo total disponível: R$ 10,00 (parcial)");
+    expect(text).toContain("Investido: R$ 20,00 (parcial)");
+    expect(text).toContain("Patrimônio líquido: R$ 25,00 (parcial)");
+    expect(text).not.toContain("R$ 30,00");
+  });
   const sampleData: DailySummaryData = {
     dayLabel: "11/11",
     accounts: {

@@ -1,6 +1,7 @@
 import { canUseCapability } from "@/lib/usage-profile";
 import Link from "next/link";
 import { Receipt } from "lucide-react";
+import { investmentPosition } from "@/lib/investments";
 import { requireUserId } from "@/lib/auth";
 import {
   getAvgMonthlyCostCents,
@@ -99,6 +100,7 @@ export default async function DashboardPage({
   ]);
 
   const investedAccounts = balances.accounts.filter((a) => a.type === "INVESTMENT");
+  const position = investmentPosition(balances);
   const alerts = [...buildBudgetAlerts(budget.rows), ...buildGoalAlerts(goals)];
 
   const sobrou = balanceCents(summary);
@@ -238,7 +240,7 @@ export default async function DashboardPage({
           <Card className="min-w-0">
             <CardHeader
               title="Investimentos"
-              subtitle="Saldo das contas de investimento. Não entra em Entrou/Saiu."
+              subtitle="Saldo atual. Aplicações e resgates ficam fora de Entrou/Saiu; impostos contam como despesa."
               action={
                 <Link href="/contas" className="inline-flex min-h-11 items-center text-[0.8125rem] font-medium text-brand-600 hover:underline dark:text-brand-300">
                   Ver contas
@@ -246,11 +248,13 @@ export default async function DashboardPage({
               }
             />
             <Money cents={balances.investedCents} size="lg" className="text-2xl font-semibold" />
+            {position.incomplete ? <p className="muted mt-1 text-xs">Saldo parcial: há investimento sem saldo atualizado.</p> : null}
+            {position.sharePct !== null ? <p className="muted mt-1 text-xs">{position.sharePct.toLocaleString("pt-BR")}% do patrimônio líquido</p> : null}
             <ul className="mt-3 divide-y divide-[var(--border)] text-[0.8125rem]">
               {investedAccounts.map((a) => (
                 <li key={a.id} className="flex items-baseline justify-between gap-3 py-2">
                   <span className="muted min-w-0 truncate">{a.name}{a.bankBalanceAt ? ` · atualizado em ${new Date(a.bankBalanceAt).toLocaleDateString("pt-BR")}` : ""}</span>
-                  <Money cents={a.financeMode === "integracao" ? (a.bankBalanceCents ?? 0) : a.balanceCents} size="sm" className="font-medium" />
+                  {a.financeMode === "integracao" && a.bankBalanceCents === null ? <span className="muted">Sem saldo atualizado</span> : <Money cents={a.balanceCents} size="sm" className="font-medium" />}
                 </li>
               ))}
             </ul>

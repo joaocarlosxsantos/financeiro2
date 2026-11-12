@@ -32,7 +32,7 @@ export type ToolName = keyof typeof toolSchemas;
 export type ToolInput<Name extends ToolName> = z.infer<(typeof toolSchemas)[Name]>;
 
 const descriptions: Record<ToolName, string> = {
-  get_balance: "Saldo disponível registrado no app, em centavos BRL, com indicação de total parcial.",
+  get_balance: "Saldos atuais em centavos BRL: disponível, investido e patrimônio líquido, com indicação de total parcial. Mostre Investido separado do Disponível; patrimônio já inclui investimentos, metas e dívidas. Não some os campos novamente.",
   get_spending_by_category: "Até cinco categorias com maiores despesas no período inclusivo, máximo 93 dias, sem transferências ou pagamentos de cartão.",
   get_largest_expenses: "Até cinco maiores despesas no período inclusivo de até 93 dias: data, categoria e valor, sem descrição privada ou conta bancária.",
   compare_months: "Compara entradas e despesas de dois meses completos/registrados. No máximo 24 meses de distância; não inclui dias futuros.",

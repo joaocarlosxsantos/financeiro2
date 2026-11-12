@@ -33,6 +33,17 @@ export async function disconnect(userId: string) {
 
 type TelegramTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+export async function loadTelegramBalance(userId: string, connection: Pick<typeof db, "select">) {
+  const balance = await getBalances(userId, connection);
+  return {
+    availableCents: balance.availableCents,
+    investedCents: balance.investedCents,
+    netWorthCents: balance.netWorthCents,
+    totalIncomplete: balance.totalIncomplete,
+    needsOpeningBalance: balance.needsOpeningBalance,
+  };
+}
+
 async function replyToCommand(message: TelegramMessage, tx: TelegramTransaction, now: Date, expectedUserId?: string | null) {
   return commandReply(message, {
     async consumeCode(codeHash, targetChatId) {
@@ -52,7 +63,7 @@ async function replyToCommand(message: TelegramMessage, tx: TelegramTransaction,
       return expectedUserId && link?.userId !== expectedUserId ? null : link?.userId ?? null;
     },
     // Usa a conexão já reservada; abrir outra aqui pode esgotar o pool.
-    balance: (userId) => getBalances(userId, tx),
+    balance: (userId) => loadTelegramBalance(userId, tx),
     summary: (userId) => renderDailySummary(userId, tx as unknown as typeof db),
     report: (userId) => loadMonthlyReport(userId, now, tx),
     forecast: (userId) => manualForecast(userId, tx),

@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { getTableColumns } from "drizzle-orm";
 import { accounts } from "@/db/schema";
-import { getBalances } from "./queries";
+import { getBalances, getMonthSummary, getTransactions } from "./queries";
 
 const { query } = vi.hoisted(() => ({ query: vi.fn() }));
 vi.mock("@/db", async () => {
@@ -10,6 +10,27 @@ vi.mock("@/db", async () => {
 });
 
 beforeEach(() => { query.mockReset(); });
+
+it("keeps investment transfers out of the monthly totals and includes posted investment tax", async () => {
+  query.mockResolvedValue({ rows: [["EXPENSE", "VARIABLE", 250]] });
+  expect(await getMonthSummary("owner", { year: 2026, month: 11 })).toEqual({ incomeCents: 0, expenseCents: 250, fixedCents: 0, variableCents: 250 });
+  const [statement, params] = query.mock.calls[0];
+  expect(statement).toContain('"transactions"."is_transfer" =');
+  expect(params).toContain(false);
+  expect(params).toContain("POSTED");
+  expect(params.filter((param: unknown) => param === "owner")).toHaveLength(2);
+  expect(statement).not.toContain("<> 'INVESTMENT'");
+});
+
+it("scopes the selected investment account to its owner in the transaction query", async () => {
+  query.mockResolvedValue({ rows: [] });
+  await getTransactions("owner", { accountId: "investment" });
+  const [statement, params] = query.mock.calls[0];
+  expect(statement).toContain('"transactions"."user_id" =');
+  expect(statement).toContain('"transactions"."account_id" =');
+  expect(params).toContain("owner");
+  expect(params).toContain("investment");
+});
 
 it("separates manual and integrated investments from available cash, keeping both in net worth", async () => {
   const fixture = (id: string, type: string, financeMode: string, openingBalanceCents: number, bankBalanceCents: number | null) => ({

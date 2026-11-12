@@ -28,8 +28,8 @@ const sqlQuery = (value: SQL) => new PgDialect().sqlToQuery(value);
 describe("ferramentas de leitura por dono", () => {
   it("saldo só devolve agregado, nunca nomes de conta ou identificadores", async () => {
     const conn = connection([]);
-    mocks.balance.mockResolvedValue({ availableCents: 1000, totalIncomplete: true, needsOpeningBalance: false, accounts: [{ id: "private", institution: "bank", name: "private" }] });
-    expect(await executeReadTool("owner", "get_balance", {}, "2026-11-10", conn.db)).toEqual({ availableCents: 1000, partial: true, checkOpeningBalance: false, currency: "BRL" });
+    mocks.balance.mockResolvedValue({ availableCents: 1000, investedCents: 2000, netWorthCents: 2500, totalIncomplete: true, needsOpeningBalance: false, accounts: [{ id: "private", institution: "bank", name: "private" }] });
+    expect(await executeReadTool("owner", "get_balance", {}, "2026-11-10", conn.db)).toEqual({ availableCents: 1000, investedCents: 2000, netWorthCents: 2500, partial: true, checkOpeningBalance: false, currency: "BRL" });
     expect(mocks.balance).toHaveBeenCalledWith("owner", conn.db);
   });
   it.each(["get_spending_by_category", "get_largest_expenses"])("%s filtra usuário/período e limita a cinco sem descrição/nota", async (name) => {

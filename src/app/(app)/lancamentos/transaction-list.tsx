@@ -14,6 +14,7 @@ import {
 import { deletePluggyTransaction } from "@/server/actions/open-finance";
 import { recategorizeUncategorizedTransactions } from "@/server/actions/categorization";
 import { formatCents } from "@/lib/money";
+import { investmentMovementLabel } from "@/lib/investments";
 import { formatDayMonth } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -323,6 +324,8 @@ function Row({
 
           {tx.externalStatus === "PENDING" ? <span className="rounded bg-[var(--color-warn-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-warn)]">provisório · pendente</span> : null}
 
+          {tx.accountType === "INVESTMENT" ? <span className="rounded-[var(--radius-xs)] bg-[var(--surface-2)] px-1.5 py-0.5 text-xs ring-1 ring-[var(--border)] ring-inset">{investmentMovementLabel(tx) ?? "Investimento"}</span> : null}
+
           {tx.isTransfer ? (
             <span
               className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]"
@@ -347,7 +350,7 @@ function Row({
           ) : null}
           {tx.isCardPayment ? <span className="rounded bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]" title="Conta no cash; excluído do accrual">pagamento de fatura</span> : null}
           {tx.possibleCardPayment ? <span className="muted text-xs" title="Mesmo valor e mês de uma compra no cartão; sugestão sem classificação automática">possível pagamento de fatura</span> : null}
-          {tx.origin && tx.origin !== "MANUAL" && !tx.isCard && tx.kind === "EXPENSE" ? <button type="button" disabled={pending} aria-pressed={Boolean(tx.isCardPayment)} onClick={() => start(async () => { await setTransactionCardPayment(tx.id, !tx.isCardPayment); })} className="min-h-11 min-w-11 cursor-pointer rounded border px-1.5 py-0.5 text-xs text-[var(--text-brand)] hover:bg-[var(--surface-2)]">{tx.isCardPayment ? "Desmarcar pagamento" : "Marcar pagamento"}</button> : null}
+          {tx.origin && tx.origin !== "MANUAL" && !tx.isCard && tx.accountType !== "INVESTMENT" && tx.kind === "EXPENSE" ? <button type="button" disabled={pending} aria-pressed={Boolean(tx.isCardPayment)} onClick={() => start(async () => { await setTransactionCardPayment(tx.id, !tx.isCardPayment); })} className="min-h-11 min-w-11 cursor-pointer rounded border px-1.5 py-0.5 text-xs text-[var(--text-brand)] hover:bg-[var(--surface-2)]">{tx.isCardPayment ? "Desmarcar pagamento" : "Marcar pagamento"}</button> : null}
           {tx.installmentNumber && tx.installmentTotal ? (
             <span
               className="rounded-[var(--radius-xs)] bg-[var(--color-save-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-brand)]"

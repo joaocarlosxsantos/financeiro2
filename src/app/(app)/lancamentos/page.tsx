@@ -147,6 +147,7 @@ export default async function TransactionsPage({
       accountId: t.accountId,
       accountName: t.accountName,
       isCard: t.accountType === "CREDIT_CARD",
+      accountType: t.accountType,
       notes: t.notes,
       isTransfer: t.isTransfer,
       externalStatus: t.externalStatus,
@@ -167,7 +168,7 @@ export default async function TransactionsPage({
   });
 
   for (const transaction of plain) {
-    transaction.possibleCardPayment = !transaction.isCard && transaction.kind === "EXPENSE" && hasPossibleCardPaymentMatch({ date: transaction.date, amountCents: transaction.amountCents, origin: transaction.origin ?? "", isCardPayment: Boolean(transaction.isCardPayment) }, invoices);
+    transaction.possibleCardPayment = !transaction.isCard && transaction.accountType !== "INVESTMENT" && transaction.kind === "EXPENSE" && hasPossibleCardPaymentMatch({ date: transaction.date, amountCents: transaction.amountCents, origin: transaction.origin ?? "", isCardPayment: Boolean(transaction.isCardPayment) }, invoices);
   }
 
   const plainCategories = categories.map((c) => ({
@@ -213,7 +214,7 @@ export default async function TransactionsPage({
 
       <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
-          <Filters categories={plainCategories} />
+          <Filters categories={plainCategories} accounts={accounts.map((account) => ({ id: account.id, name: account.name, type: account.type }))} />
 
           {uncategorized > 0 ? (
             <Hint tone="info">

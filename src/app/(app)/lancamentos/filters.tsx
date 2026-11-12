@@ -6,7 +6,7 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import type { PlainCategory } from "./types";
 
-export function Filters({ categories }: { categories: PlainCategory[] }) {
+export function Filters({ categories, accounts }: { categories: PlainCategory[]; accounts: Array<{ id: string; name: string; type: string }> }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -14,6 +14,7 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
 
   function update(key: string, value: string) {
     const sp = new URLSearchParams(params.toString());
+    if (key === "acc") sp.delete("accountId");
     if (value) sp.set(key, value);
     else sp.delete(key);
     router.push(`${pathname}?${sp.toString()}`);
@@ -23,7 +24,8 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
   const nature = params.get("nature") ?? "";
   const cat = params.get("cat") ?? "";
   const acc = params.get("acc") ?? "";
-  const hasFilters = Boolean(kind || nature || cat || acc || params.get("q"));
+  const selectedAccount = params.get("accountId") || (acc !== "CARD" && acc !== "OTHER" ? acc : "");
+  const hasFilters = Boolean(kind || nature || cat || acc || selectedAccount || params.get("q"));
 
   return (
     <div className="card flex flex-wrap items-center gap-2 p-2.5">
@@ -62,11 +64,16 @@ export function Filters({ categories }: { categories: PlainCategory[] }) {
       <span className="mx-0.5 h-4 w-px bg-[var(--border)]" aria-hidden />
 
       <Chip active={acc === "OTHER"} onClick={() => update("acc", acc === "OTHER" ? "" : "OTHER")}>
-        Conta corrente
+        Sem cartão
       </Chip>
       <Chip active={acc === "CARD"} onClick={() => update("acc", acc === "CARD" ? "" : "CARD")}>
         Cartão
       </Chip>
+
+      <select aria-label="Filtrar por conta" value={selectedAccount} onChange={(e) => update("acc", e.target.value)} className="input-base min-h-12 max-w-full cursor-pointer text-base md:min-h-8 md:text-xs">
+        <option value="">Todas as contas</option>
+        {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}{account.type === "INVESTMENT" ? " · Investimento" : ""}</option>)}
+      </select>
 
       <select
         value={cat}

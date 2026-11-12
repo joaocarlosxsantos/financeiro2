@@ -5,7 +5,9 @@ import {
   getMonthSummary,
   getMonthlySeries,
   getTopExpenses,
+  getBalances,
 } from "@/server/queries";
+import { InvestmentSummary } from "@/components/investment-summary";
 import { currentMonthRef, formatDayMonth, monthRefFromParam, monthLabel, shiftMonth, todayRef } from "@/lib/dates";
 import { formatCents, pct } from "@/lib/money";
 import { categoryDeltas, spendingPace } from "@/lib/finance";
@@ -30,13 +32,14 @@ export default async function InsightsPage({
   const today = currentMonthRef();
   const isCurrentMonth = ref.year === today.year && ref.month === today.month;
 
-  const [summary, prevSummary, breakdown, prevBreakdown, topExpenses, series] = await Promise.all([
+  const [summary, prevSummary, breakdown, prevBreakdown, topExpenses, series, balances] = await Promise.all([
     getMonthSummary(userId, ref, { cardMode: "cash" }),
     getMonthSummary(userId, prevRef, { cardMode: "cash" }),
     getCategoryBreakdown(userId, ref, { cardMode: "cash" }),
     getCategoryBreakdown(userId, prevRef, { cardMode: "cash" }),
     getTopExpenses(userId, ref, 6),
     getMonthlySeries(userId, 6, ref, { cardMode: "cash" }),
+    getBalances(userId),
   ]);
 
   const hasData = summary.expenseCents > 0 || summary.incomeCents > 0 || prevSummary.expenseCents > 0;
@@ -80,6 +83,8 @@ export default async function InsightsPage({
         description="Um raio-x do seu mês: pra onde o dinheiro está indo, o que mudou desde o mês passado e no que vale prestar atenção."
         action={<MonthSwitcher value={ref} />}
       />
+
+      <InvestmentSummary balance={balances} />
 
       {!hasData ? (
         <Card className="min-w-0 p-0">

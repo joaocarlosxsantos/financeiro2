@@ -102,7 +102,7 @@ export default async function AccountsPage() {
 
             <ul className="space-y-2.5 text-[0.8125rem]">
               <Row label="Disponível em contas" value={overview.availableCents} incomplete={overview.totalIncomplete} />
-              {overview.investedCents !== 0 ? <Row label="Investido" value={overview.investedCents} /> : null}
+              {overview.accounts.some((account) => account.type === "INVESTMENT") ? <Row label="Investido" value={overview.investedCents} incomplete={overview.accounts.some((account) => account.type === "INVESTMENT" && account.financeMode === "integracao" && account.bankBalanceCents === null)} /> : null}
               <Row label="Guardado em metas" value={overview.savedInGoalsCents} />
               <Row label="Dívidas" value={-overview.debtBalanceCents} negative />
             </ul>

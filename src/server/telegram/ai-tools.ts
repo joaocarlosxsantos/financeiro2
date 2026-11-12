@@ -13,7 +13,7 @@ export async function executeReadTool(userId: string, name: string, input: unkno
     or(isNull(transactions.externalStatus), eq(transactions.externalStatus, "POSTED")));
   if (parsed.name === "get_balance") {
     const balance = await getBalances(userId, connection);
-    return { availableCents: balance.availableCents, partial: balance.totalIncomplete, checkOpeningBalance: balance.needsOpeningBalance, currency: "BRL" };
+    return { availableCents: balance.availableCents, investedCents: balance.investedCents, netWorthCents: balance.netWorthCents, partial: balance.totalIncomplete, checkOpeningBalance: balance.needsOpeningBalance, currency: "BRL" };
   }
   const args = parsed.input;
   if ("start_date" in args) {

@@ -32,7 +32,7 @@ vi.mock("./daily-summary", () => ({
 vi.mock("./ai-service", () => ({ answerQuestion: (...args: unknown[]) => mocks.ai(...args) }));
 vi.mock("@/server/open-finance/refresh", () => ({ readWithOpenFinanceRefresh: (...args: unknown[]) => mocks.refresh(...args) }));
 
-import { disconnect, issueLink, processMessage } from "./store";
+import { disconnect, issueLink, loadTelegramBalance, processMessage } from "./store";
 import { telegramLinkCodes, telegramLinks, telegramPreferences, users } from "@/db/schema";
 import { hashCode, newLinkCode, type TelegramMessage } from "./protocol";
 
@@ -67,6 +67,12 @@ beforeEach(() => {
 });
 
 describe("persistência Telegram", () => {
+  it("retorna investimento e patrimônio do dono sem enviar detalhes privados das contas", async () => {
+    const connection = { select: vi.fn() } as unknown as Parameters<typeof loadTelegramBalance>[1];
+    mocks.balance.mockResolvedValue({ availableCents: 1000, investedCents: 2000, netWorthCents: 2500, totalIncomplete: true, needsOpeningBalance: false, accounts: [{ id: "private-account", name: "private-name" }] });
+    expect(await loadTelegramBalance("linked-owner", connection)).toEqual({ availableCents: 1000, investedCents: 2000, netWorthCents: 2500, totalIncomplete: true, needsOpeningBalance: false });
+    expect(mocks.balance).toHaveBeenCalledWith("linked-owner", connection);
+  });
   it("faz refresh fora do claim do chat e antes de ler os dados financeiros", async () => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     const callback = mocks.transaction.getMockImplementation()!;

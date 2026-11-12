@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
       kind: t.kind as "INCOME" | "EXPENSE",
       nature: t.nature as "FIXED" | "VARIABLE",
       accountName: t.accountName,
+      accountType: t.accountType,
+      origin: t.origin,
       amountCents: t.amountCents,
       isTransfer: t.isTransfer,
       installmentNumber: t.installmentNumber,

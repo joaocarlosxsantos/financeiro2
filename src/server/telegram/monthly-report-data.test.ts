@@ -3,9 +3,9 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { loadMonthlyReport, monthlyWindow } from "./monthly-report";
 
-const mocks = vi.hoisted(() => ({ summary: vi.fn(), categories: vi.fn() }));
+const mocks = vi.hoisted(() => ({ summary: vi.fn(), categories: vi.fn(), balance: vi.fn(async () => ({ availableCents: 1000, investedCents: 2000, netWorthCents: 2500, totalIncomplete: true })) }));
 vi.mock("@/db", () => ({ db: { select: () => { throw new Error("use a conexão fornecida"); } } }));
-vi.mock("@/server/queries", () => ({ getMonthSummary: mocks.summary, getCategoryBreakdown: mocks.categories }));
+vi.mock("@/server/queries", () => ({ getMonthSummary: mocks.summary, getCategoryBreakdown: mocks.categories, getBalances: mocks.balance }));
 
 describe("dados do relatório mensal", () => {
   it("fecha dezembro no dia 1 de janeiro às 08h de São Paulo", () => {
@@ -30,6 +30,11 @@ describe("dados do relatório mensal", () => {
     expect(output).toContain("Mercado");
     expect(output).toContain("Orçamentos estourados");
     expect(output).not.toContain("https://bad.test");
+    expect(output).toContain("Posição atual (parcial) — não é o saldo de fechamento");
+    expect(output).toMatch(/Disponível: R\$\s*10,00/);
+    expect(output).toMatch(/Investido: R\$\s*20,00/);
+    expect(output).toMatch(/Patrimônio líquido: R\$\s*25,00/);
+    expect(mocks.balance).toHaveBeenCalledWith("linked-owner", connection);
   });
   it("o automático compara meses fechados e omite seções desativadas", async () => {
     mocks.summary.mockReset().mockResolvedValue({ incomeCents: 0, expenseCents: 0 });

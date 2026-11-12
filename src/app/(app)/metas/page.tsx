@@ -7,7 +7,9 @@ import {
   getGoals,
   getMonthSummary,
   getUser,
+  getBalances,
 } from "@/server/queries";
+import { InvestmentSummary } from "@/components/investment-summary";
 import { currentMonthRef } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { balanceCents, emergencyTargetCents, monthsToTarget } from "@/lib/finance";
@@ -27,12 +29,13 @@ export default async function GoalsPage() {
   const userId = await requireUserId();
   const ref = currentMonthRef();
 
-  const [user, goals, avgCost, summary, goalRecurring] = await Promise.all([
+  const [user, goals, avgCost, summary, goalRecurring, balances] = await Promise.all([
     getUser(userId),
     getGoals(userId),
     getAvgMonthlyCostCents(userId, 3),
     getMonthSummary(userId, ref),
     getGoalRecurringStatus(userId, ref),
+    getBalances(userId),
   ]);
 
   // Uma regra por meta é o fluxo pensado na interface — se existir mais de
@@ -62,6 +65,9 @@ export default async function GoalsPage() {
       />
 
       <GoalRecurringBanner count={goalRecurring.pending.length} amountCents={goalRecurring.pendingAmountCents} />
+      <InvestmentSummary balance={balances}>
+        Compare o saldo investido com sua meta de investimento. Ele não é atribuído automaticamente às metas; os valores guardados continuam separados.
+      </InvestmentSummary>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">

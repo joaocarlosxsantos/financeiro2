@@ -29,6 +29,7 @@ export type PlainTransaction = {
   accountName: string;
   /** Compra no cartão — é demonstrativo: fica fora do resumo do painel até a fatura ser paga. */
   isCard: boolean;
+  accountType?: string;
   notes: string | null;
   /** Movimento entre contas suas — fica fora dos totais de receita e despesa. */
   isTransfer: boolean;

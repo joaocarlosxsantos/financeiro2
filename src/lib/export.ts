@@ -1,4 +1,5 @@
 import { formatDate } from "./dates";
+import { investmentMovementLabel } from "./investments";
 
 export type ExportTransactionInput = {
   date: Date;
@@ -7,6 +8,8 @@ export type ExportTransactionInput = {
   kind: "INCOME" | "EXPENSE";
   nature: "FIXED" | "VARIABLE";
   accountName: string;
+  accountType?: string;
+  origin?: string;
   amountCents: number;
   isTransfer: boolean;
   installmentNumber: number | null;
@@ -40,7 +43,7 @@ export function buildExportRows(transactions: ExportTransactionInput[]): ExportR
     Data: formatDate(t.date),
     Descrição: t.description,
     Categoria: t.categoryName ?? "Sem categoria",
-    Tipo: t.kind === "INCOME" ? "Entrada" : "Saída",
+    Tipo: investmentMovementLabel(t) ?? (t.kind === "INCOME" ? "Entrada" : "Saída"),
     Natureza: t.nature === "FIXED" ? "Fixo" : "Variável",
     Conta: t.accountName,
     "Valor (R$)": Number(((t.kind === "INCOME" ? t.amountCents : -t.amountCents) / 100).toFixed(2)),

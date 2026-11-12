@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { budgets, categories } from "@/db/schema";
 import { currentMonthRef, getNowInSaoPaulo, monthLabel, monthRange, monthRefToParam, shiftMonth, todayRef, type MonthRef } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
-import { getCategoryBreakdown, getMonthSummary } from "@/server/queries";
+import { getBalances, getCategoryBreakdown, getMonthSummary } from "@/server/queries";
 import { safeLabel } from "./ai-policy";
 import type { InsightWindow, Preferences } from "./insights";
 
@@ -34,13 +34,14 @@ export async function loadMonthlyReport(
   const options = { connection, endExclusive: periodEnd(ref, day) };
   const spending = automatic?.spending ?? true;
   const budget = automatic?.budget ?? true;
-  const [current, prior, spendingRows, limits] = await Promise.all([
+  const [current, prior, spendingRows, limits, balances] = await Promise.all([
     getMonthSummary(userId, ref, options),
     getMonthSummary(userId, previous, { connection, endExclusive: periodEnd(previous, day) }),
     spending || budget ? getCategoryBreakdown(userId, ref, options) : [],
     budget ? connection.select({ categoryId: budgets.categoryId, limitCents: budgets.limitCents }).from(budgets)
       .innerJoin(categories, and(eq(categories.id, budgets.categoryId), eq(categories.userId, userId)))
       .where(and(eq(budgets.userId, userId), eq(budgets.periodYear, ref.year), eq(budgets.periodMonth, ref.month))) : [],
+    getBalances(userId, connection),
   ]);
 
   const balance = current.incomeCents - current.expenseCents;
@@ -56,6 +57,10 @@ export async function loadMonthlyReport(
     `Receitas: ${delta(current.incomeCents - prior.incomeCents)} · despesas: ${delta(current.expenseCents - prior.expenseCents)}`,
     `Variação do saldo: ${delta(balance - priorBalance)}`,
   ];
+  lines.push("", `Posição atual${balances.totalIncomplete ? " (parcial)" : ""} — não é o saldo de fechamento`,
+    `Disponível: ${formatCents(balances.availableCents)}`,
+    `Investido: ${formatCents(balances.investedCents)}`,
+    `Patrimônio líquido: ${formatCents(balances.netWorthCents)}`);
   if (spending) {
     lines.push("", "Maiores categorias de despesa");
     for (const row of spendingRows.slice(0, 5)) lines.push(`${safeLabel(row.name)}: ${formatCents(row.totalCents)}`);

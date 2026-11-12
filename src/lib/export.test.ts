@@ -23,6 +23,17 @@ test("despesa vira valor negativo, entrada vira valor positivo", () => {
   assert.equal(rows[1]["Valor (R$)"], 5000);
 });
 
+test("exportação identifica aplicação e resgate como transferências e imposto como despesa", () => {
+  const investment = { ...base, accountType: "INVESTMENT", origin: "PLUGGY" };
+  const rows = buildExportRows([
+    { ...investment, isTransfer: true, kind: "INCOME", description: "Aplicação · CDB" },
+    { ...investment, isTransfer: true, description: "Resgate · CDB" },
+    { ...investment, description: "Imposto · CDB" },
+  ]);
+  assert.deepEqual(rows.map((row) => [row.Tipo, row.Transferência]), [["Aplicação", "Sim"], ["Resgate", "Sim"], ["Imposto", "Não"]]);
+  assert.equal(rows[2]["Valor (R$)"], -123.45);
+});
+
 test("sem categoria vira texto explícito, não fica em branco", () => {
   const rows = buildExportRows([{ ...base, categoryName: null }]);
   assert.equal(rows[0].Categoria, "Sem categoria");

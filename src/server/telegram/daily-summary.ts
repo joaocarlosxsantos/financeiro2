@@ -21,6 +21,8 @@ export interface DailySummaryData {
   dayLabel: string;
   accounts: {
     totalAvailableCents: number;
+    investedCents?: number;
+    netWorthCents?: number;
     incomplete?: boolean;
   };
   yesterdayMovements: YesterdayMovements;
@@ -52,6 +54,8 @@ export function formatDailySummary(data: DailySummaryData): string {
   const accountLines: string[] = ["💰 *CONTA*"];
   const totalStr = formatCurrency(data.accounts.totalAvailableCents);
   accountLines.push(`• Saldo total disponível: ${totalStr}${data.accounts.incomplete ? " (parcial)" : ""}`);
+  if (data.accounts.investedCents !== undefined) accountLines.push(`• Investido: ${formatCurrency(data.accounts.investedCents)}${data.accounts.incomplete ? " (parcial)" : ""}`);
+  if (data.accounts.netWorthCents !== undefined) accountLines.push(`• Patrimônio líquido: ${formatCurrency(data.accounts.netWorthCents)}${data.accounts.incomplete ? " (parcial)" : ""}`);
 
   if (data.yesterdayMovements.hasMovements) {
     const inc = formatCurrency(data.yesterdayMovements.incomeCents);
@@ -289,6 +293,8 @@ export async function loadDailySummaryData(
     dayLabel,
     accounts: {
       totalAvailableCents: balances.availableCents,
+      investedCents: balances.investedCents,
+      netWorthCents: balances.netWorthCents,
       incomplete: balances.totalIncomplete,
     },
     yesterdayMovements,
