@@ -6,6 +6,10 @@ export type InlineDependencies = {
   callback(updateId: number, callback: TelegramCallback): Promise<InlineResult>;
   keyboard(message: TelegramMessage, reply: string | null): Promise<InlineKeyboard | undefined>;
   details(callback: TelegramCallback, action: DetailAction): Promise<boolean>;
+  background?: {
+    schedule(task: () => Promise<void>): void;
+    notify(callback: TelegramCallback, text: string): Promise<boolean>;
+  };
 };
 
 /** Limite real sobre o stream: Content-Length pode estar ausente ou mentir. */
@@ -55,6 +59,32 @@ export async function handleWebhook(
   if (!parsed.success) return Response.json({ ok: true }, { headers });
   const callback = parsed.data.callback_query;
   if (callback) {
+    if (inline?.background) {
+      const { background } = inline;
+      background.schedule(async () => {
+        let text: string;
+        try {
+          const result = await inline.callback(parsed.data.update_id, callback);
+          if (result.details) {
+            if (await inline.details(callback, result.details)) return;
+            console.error("[telegram-callback]", { stage: "details", status: "failed" });
+            text = CALLBACK_TEXT.detailsFailed;
+          } else text = result.text;
+        } catch (error) {
+          const err = error as { name?: string; code?: string | number };
+          console.error("[telegram-callback]", { name: err?.name ?? "Error", code: err?.code ?? null });
+          text = CALLBACK_TEXT.failed;
+        }
+        try {
+          if (!await background.notify(callback, text)) console.error("[telegram-callback]", { stage: "notify", status: "failed" });
+        } catch {
+          console.error("[telegram-callback]", { stage: "notify", status: "failed" });
+        }
+      });
+      // Telegram executes this method from the webhook response. No DB or outbound
+      // request may delay it; after() keeps the subsequent work alive on Vercel.
+      return Response.json({ method: "answerCallbackQuery", callback_query_id: callback.id, cache_time: 0 }, { headers });
+    }
     let text: string = CALLBACK_TEXT.invalid;
     try {
       if (inline) {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleWebhook, type InlineDependencies } from "./webhook";
-import { sendCallbackDetails } from "./callback-delivery";
-import { CALLBACK_TEXT } from "./inline-actions";
+import { sendCallbackDetails, sendCallbackResult } from "./callback-delivery";
+import { CALLBACK_TEXT, createActionKeyboard } from "./inline-actions";
 import type { TelegramCallback } from "./protocol";
 
 const callback: TelegramCallback = { id: "query-123", from: { id: 123, is_bot: false },
@@ -13,6 +13,52 @@ const request = (body: unknown = payload, secret = "secret") => new Request("htt
 const deps = (): InlineDependencies => ({ callback: vi.fn().mockResolvedValue({ text: CALLBACK_TEXT.paused }), keyboard: vi.fn(), details: vi.fn() });
 
 describe("webhook de callback", () => {
+  function deferred() {
+    const tasks: (() => Promise<void>)[] = [];
+    const inline = deps();
+    inline.background = { schedule: task => { tasks.push(task); }, notify: vi.fn().mockResolvedValue(true) };
+    return { inline, tasks };
+  }
+  it("ACK do botão real /resumo retorna 200 antes de iniciar banco e envio", async () => {
+    const { inline, tasks } = deferred();
+    const data = createActionKeyboard("/resumo", "123", "owner", "secret").inline_keyboard[0][0].callback_data;
+    expect(Buffer.byteLength(data)).toBeLessThanOrEqual(64);
+    expect(data).toMatch(/^v1:d2:/);
+    const query = { ...callback, data };
+    const response = await handleWebhook(request({ update_id: 30, callback_query: query }), "secret", vi.fn(), undefined, inline);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ method: "answerCallbackQuery", callback_query_id: callback.id, cache_time: 0 });
+    expect(inline.callback).not.toHaveBeenCalled();
+    expect(inline.details).not.toHaveBeenCalled();
+    vi.mocked(inline.callback).mockResolvedValue({ text: CALLBACK_TEXT.details, details: "d2" });
+    vi.mocked(inline.details).mockResolvedValue(true);
+    await tasks[0]();
+    expect(inline.callback).toHaveBeenCalledWith(30, query);
+    expect(inline.details).toHaveBeenCalledWith(query, "d2");
+    expect(inline.background!.notify).not.toHaveBeenCalled();
+  });
+  it.each(["database", "details"])("falha de %s após ACK envia erro amigável e log seguro", async stage => {
+    const { inline, tasks } = deferred();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    if (stage === "database") vi.mocked(inline.callback).mockRejectedValue(new Error("private-token"));
+    else {
+      vi.mocked(inline.callback).mockResolvedValue({ text: CALLBACK_TEXT.details, details: "d2" });
+      vi.mocked(inline.details).mockResolvedValue(false);
+    }
+    await handleWebhook(request(), "secret", vi.fn(), undefined, inline);
+    await tasks[0]();
+    expect(inline.background!.notify).toHaveBeenCalledWith(callback, stage === "database" ? CALLBACK_TEXT.failed : CALLBACK_TEXT.detailsFailed);
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private-token");
+    log.mockRestore();
+  });
+  it("rejeição de autorização é entregue sem enviar detalhes", async () => {
+    const { inline, tasks } = deferred();
+    vi.mocked(inline.callback).mockResolvedValue({ text: CALLBACK_TEXT.denied });
+    await handleWebhook(request(), "secret", vi.fn(), undefined, inline);
+    await tasks[0]();
+    expect(inline.details).not.toHaveBeenCalled();
+    expect(inline.background!.notify).toHaveBeenCalledWith(callback, CALLBACK_TEXT.denied);
+  });
   it("acknowledges o callback sem acionar mensagens/IA nem parse_mode", async () => {
     const inline = deps(), process = vi.fn();
     const response = await handleWebhook(request(), "secret", process, undefined, inline);
@@ -68,6 +114,15 @@ describe("webhook de callback", () => {
 });
 
 describe("entrega de detalhes", () => {
+  it("envia resultado final protegido e trata falhas da API sem expor dados", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    expect(await sendCallbackResult(callback, CALLBACK_TEXT.failed, "test-token", fetcher)).toBe(true);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ chat_id: 123, text: CALLBACK_TEXT.failed, protect_content: true });
+    fetcher.mockResolvedValue(Response.json({ ok: false }, { status: 429 }));
+    expect(await sendCallbackResult(callback, CALLBACK_TEXT.failed, "test-token", fetcher)).toBe(false);
+    fetcher.mockRejectedValue(new Error("test-token"));
+    expect(await sendCallbackResult(callback, CALLBACK_TEXT.failed, "test-token", fetcher)).toBe(false);
+  });
   it("usa somente API fixa, chat validado e link do app sem credenciais ou dados financeiros", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ ok: true }));
     expect(await sendCallbackDetails(callback, "d1", "fake-test-token", fetcher)).toBe(true);
