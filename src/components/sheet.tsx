@@ -78,13 +78,16 @@ export function Sheet({
 
     dialog.showModal();
 
-    // Foco inicial: prioriza data-autofocus / autofocus, depois primeiro elemento interativo.
-    // Usamos preventScroll: true para evitar que o navegador role o container do diálogo
-    // enquanto o painel ainda está transicionando ou fora do campo de visão.
-    const initialFocus =
-      dialog.querySelector<HTMLElement>("[data-autofocus], [autofocus]") ||
-      dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    initialFocus?.focus({ preventScroll: true });
+    // Foco inicial acessível: prioriza elemento com autofocus/data-autofocus explícito
+    // (ex.: campo de formulário). Se não houver, foca o próprio container do diálogo
+    // (com tabindex="-1" e sem anel de foco visual), evitando que o botão "X" de fechar
+    // receba o anel de foco/seleção indesejado ao abrir no mobile, preservando :focus-visible via teclado.
+    const explicitAutofocus = dialog.querySelector<HTMLElement>("[data-autofocus], [autofocus]");
+    if (explicitAutofocus) {
+      explicitAutofocus.focus({ preventScroll: true });
+    } else {
+      dialog.focus({ preventScroll: true });
+    }
     dialog.scrollTop = 0;
 
     // Visual viewport adapt para teclado em navegadores mobile
@@ -204,6 +207,7 @@ export function Sheet({
     <dialog
       ref={dialogRef}
       role={role}
+      tabIndex={-1}
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={describedBy}
@@ -219,7 +223,7 @@ export function Sheet({
         }
       }}
       className={cn(
-        "fixed inset-0 z-50 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-[var(--text)]",
+        "fixed inset-0 z-50 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-transparent p-0 text-[var(--text)] outline-none focus:outline-none focus-visible:outline-none",
         "backdrop:bg-black/60 backdrop:backdrop-blur-sm",
         // Mobile: alinha na base (bottom sheet) com respiro para safe-area-inset-top
         "pt-[max(16px,env(safe-area-inset-top))] open:flex open:items-end open:justify-center",

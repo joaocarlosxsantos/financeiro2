@@ -15,6 +15,8 @@ describe("Sheet modal/drawer component", () => {
 
     expect(html).toContain("<dialog");
     expect(html).toContain('role="dialog"');
+    expect(html).toContain('tabindex="-1"');
+    expect(html).toContain("outline-none");
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain("<h2");
     expect(html).toContain("Novo lançamento</h2>");
