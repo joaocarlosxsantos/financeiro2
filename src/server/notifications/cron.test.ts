@@ -25,6 +25,8 @@ describe("unified notification crons", () => {
     expect(notificationWindow("insights", now)).toBe("2026-11-12:8");
     expect(notificationWindow("insights", new Date("2026-11-12T17:00:00Z"))).toBe("2026-11-12:14");
     expect(notificationWindow("monthly", new Date("2027-01-01T11:00:00Z"))).toBe("2026-12:month");
+    expect(notificationWindow("alerts", now)).toBe("2026-11-12:alerts");
+    expect(notificationWindow("alerts", new Date("2026-11-12T04:00:00Z"))).toBeNull();
     expect(notificationWindow("monthly", now)).toBeNull();
     expect(notificationWindow("daily", new Date("2026-11-12T04:00:00Z"))).toBeNull();
   });

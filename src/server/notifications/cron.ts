@@ -1,7 +1,7 @@
 import { validWebhookSecret } from "@/server/telegram/protocol";
 import { getNowInSaoPaulo, monthRefToParam, shiftMonth, currentMonthRef, todayRef } from "@/lib/dates";
 import type { NotificationEvent } from "./policy";
-export type NotificationCronMode = "daily" | "insights" | "monthly";
+export type NotificationCronMode = "daily" | "insights" | "monthly" | "alerts";
 export interface NotificationCronDependencies {
   users(after?: string): Promise<{ id: string }[]>;
   events(userId: string, mode: NotificationCronMode, now: Date): Promise<NotificationEvent[]>;
@@ -11,7 +11,8 @@ export function notificationWindow(mode: NotificationCronMode, now: Date) {
   const local = getNowInSaoPaulo(now), hour = local.getHours();
   if (hour < 8 || hour > 21 || (mode === "monthly" && local.getDate() !== 1)) return null;
   const day = todayRef(now);
-  return mode === "daily" ? `${day}:ds` : mode === "monthly" ? `${monthRefToParam(shiftMonth(currentMonthRef(now), -1))}:month` : `${day}:${hour >= 20 ? 20 : hour >= 14 ? 14 : 8}`;
+  return mode === "daily" ? `${day}:ds` : mode === "monthly" ? `${monthRefToParam(shiftMonth(currentMonthRef(now), -1))}:month`
+    : mode === "alerts" ? `${day}:alerts` : `${day}:${hour >= 20 ? 20 : hour >= 14 ? 14 : 8}`;
 }
 export async function handleNotificationCron(request: Request, mode: NotificationCronMode, deps?: NotificationCronDependencies, now = new Date()) {
   const headers = { "Cache-Control": "no-store" }, secret = process.env.CRON_SECRET;
