@@ -9,7 +9,7 @@ import { runDailySummaryBatch } from "@/server/telegram/daily-summary";
 
 const now = new Date("2026-11-12T11:00:00Z");
 function dependencies(): FinancialRefreshDependencies {
-  return { connections: vi.fn().mockResolvedValue([{ id: "connection", lastSyncedAt: new Date(now.getTime() - 30_000) }]), sync: vi.fn().mockResolvedValue({ skipped: true }), now: () => now };
+  return { connections: vi.fn().mockResolvedValue([{ id: "connection", lastSyncedAt: new Date(now.getTime() - 30_000), dataAt: null }]), sync: vi.fn().mockResolvedValue({ skipped: true }), now: () => now };
 }
 beforeEach(() => vi.resetAllMocks());
 afterEach(() => vi.useRealTimers());
@@ -22,7 +22,7 @@ describe("atualização compartilhada antes das leituras", () => {
     const query = { from: () => query, where: () => query, then: (resolve: (value: typeof rows) => unknown) => Promise.resolve(rows).then(resolve) };
     mocks.select.mockReturnValue(query);
     mocks.sync.mockResolvedValue({ skipped: true });
-    expect(await refreshFinancialData("owner")).toBe("Atualizado há 30 s.");
+    expect(await refreshFinancialData("owner")).toBe("Nada novo desde 07:59 (12/11).");
     expect(mocks.sync).toHaveBeenCalledExactlyOnceWith("owner", "connection", "auto", { signal: expect.any(AbortSignal) });
   });
   it("sincroniza antes de ler, usando a identidade do servidor", async () => {
@@ -31,10 +31,26 @@ describe("atualização compartilhada antes das leituras", () => {
     const read = vi.fn(async () => { expect(deps.sync).toHaveBeenCalledWith("owner", "connection", expect.any(AbortSignal)); return "Saldo salvo"; });
     expect(await readWithOpenFinanceRefresh("owner", read, deps)).toBe("Saldo salvo\n\nAtualizado há 0 s.");
   });
-  it("cooldown usa os dados já salvos e informa a idade do snapshot", async () => {
+  it("cooldown usa os dados já salvos e informa que nada mudou desde o horário do dado", async () => {
     const deps = dependencies();
-    expect(await readWithOpenFinanceRefresh("owner", async () => "Saldo", deps)).toBe("Saldo\n\nAtualizado há 30 s.");
+    expect(await readWithOpenFinanceRefresh("owner", async () => "Saldo", deps)).toBe("Saldo\n\nNada novo desde 07:59 (12/11).");
     expect(deps.sync).toHaveBeenCalledTimes(1);
+  });
+  it("usa o horário do dado do banco, não o da última tentativa de sync", async () => {
+    const deps = dependencies();
+    vi.mocked(deps.connections).mockResolvedValue([{ id: "connection", lastSyncedAt: now, dataAt: new Date(now.getTime() - 3 * 60 * 60 * 1000) }]);
+    vi.mocked(deps.sync).mockResolvedValue({ lastSyncedAt: now, dataAt: new Date(now.getTime() - 3 * 60 * 60 * 1000) });
+    expect(await refreshFinancialData("owner", deps)).toBe("Dados do banco de 05:00 (12/11); podem estar desatualizados.");
+  });
+  it("avisa quando a Pluggy aceitou a atualização mas ainda não concluiu", async () => {
+    const deps = dependencies();
+    vi.mocked(deps.sync).mockResolvedValue({ lastSyncedAt: now, itemUpdate: "pending" });
+    expect(await refreshFinancialData("owner", deps)).toBe("O banco ainda está processando a atualização; dados de 08:00 (12/11).");
+  });
+  it("avisa quando o conector recusou o pedido de atualização", async () => {
+    const deps = dependencies();
+    vi.mocked(deps.sync).mockResolvedValue({ lastSyncedAt: new Date(now.getTime() - 30_000), itemUpdate: "unavailable" });
+    expect(await refreshFinancialData("owner", deps)).toBe("Não consegui solicitar atualização ao banco; dados de 07:59 (12/11).");
   });
   it("falha não impede leitura e informa a hora conhecida sem expor erro", async () => {
     const deps = dependencies();
@@ -71,7 +87,7 @@ describe("atualização compartilhada antes das leituras", () => {
   });
   it("conexões são processadas em sequência dentro do mesmo teto e isolam falhas", async () => {
     const deps = dependencies();
-    vi.mocked(deps.connections).mockResolvedValue([{ id: "one", lastSyncedAt: now }, { id: "two", lastSyncedAt: now }]);
+    vi.mocked(deps.connections).mockResolvedValue([{ id: "one", lastSyncedAt: now, dataAt: null }, { id: "two", lastSyncedAt: now, dataAt: null }]);
     let active = 0;
     vi.mocked(deps.sync).mockImplementation(async (_owner, id) => {
       expect(++active).toBe(1);
@@ -84,7 +100,7 @@ describe("atualização compartilhada antes das leituras", () => {
   });
   it("não inventa horário sem snapshot e preserva o limite de 4096 sem quebrar emoji", async () => {
     const deps = dependencies();
-    vi.mocked(deps.connections).mockResolvedValue([{ id: "one", lastSyncedAt: null }]);
+    vi.mocked(deps.connections).mockResolvedValue([{ id: "one", lastSyncedAt: null, dataAt: null }]);
     vi.mocked(deps.sync).mockResolvedValue({ error: "unavailable" });
     expect(await refreshFinancialData("owner", deps)).toContain("sem horário de atualização disponível");
     const result = appendRefreshNotice("😀".repeat(3000), "Atualizado há 1 s.");

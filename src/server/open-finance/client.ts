@@ -42,12 +42,13 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   return { code, message };
 }
 
-async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
+async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal, method?: "GET" | "POST" | "PATCH"): Promise<unknown> {
+  const verb = method ?? (body ? "POST" : "GET");
   for (let attempt = 0; attempt < 2; attempt++) {
     signal?.throwIfAborted();
     try {
       const response = await fetch(`${BASE}${path}`, {
-        method: body ? "POST" : "GET", redirect: "error", cache: "no-store",
+        method: verb, redirect: "error", cache: "no-store",
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000),
         headers: { "content-type": "application/json", ...(apiKey ? { "X-API-KEY": apiKey } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -130,6 +131,16 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
 export async function getPluggyItemStatus(apiKey: string, itemId: string, signal?: AbortSignal) {
   const item = await getPluggyItem(apiKey, itemId, signal);
   return { status: item.status, executionStatus: item.executionStatus };
+}
+
+/** PATCH /items/{id} sem credenciais: pede à Pluggy um novo sync usando o consentimento salvo. */
+export async function requestPluggyItemUpdate(apiKey: string, itemId: string, signal?: AbortSignal) {
+  const item = z.object({
+    id: z.string(),
+    status: z.string().max(80),
+    executionStatus: z.string().max(80).nullable().optional(),
+  }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, {}, signal, "PATCH"));
+  return { accepted: true as const, status: item.status, executionStatus: item.executionStatus ?? null };
 }
 
 async function collect(path: string, apiKey: string, pagination: "cursor" | "page", signal?: AbortSignal) {

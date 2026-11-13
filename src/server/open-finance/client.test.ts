@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, requestPluggyItemUpdate } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -187,6 +187,17 @@ describe("Pluggy client", () => {
     vi.stubGlobal("fetch", fetchMock);
     expect(await getPluggyItemStatus("temporary-key", "item-id")).toEqual({ status: "UPDATED", executionStatus: "SUCCESS" });
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.pluggy.ai/items/item-id");
+  });
+
+  it("pede atualização do item com PATCH e corpo vazio (credenciais ficam no cofre da Pluggy)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "item-id", status: "UPDATING", executionStatus: null }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await requestPluggyItemUpdate("api-key", "item-id")).toEqual({ accepted: true, status: "UPDATING", executionStatus: null });
+    const [url, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.pluggy.ai/items/item-id");
+    expect(options.method).toBe("PATCH");
+    expect(options.body).toBe("{}");
+    expect(options.headers).toMatchObject({ "X-API-KEY": "api-key" });
   });
 
   it("preserves sanitized 403 code/message without credentials or IDs and maps it for the UI", async () => {

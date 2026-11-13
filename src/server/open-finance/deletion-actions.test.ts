@@ -94,6 +94,7 @@ vi.mock("@/server/open-finance/crypto", () => ({ decryptSecret: () => "decrypted
 vi.mock("@/server/open-finance/client", () => ({
   authenticatePluggy: async () => "api-key",
   getPluggyItemStatus: async () => ({ status: "UPDATED", executionStatus: "SUCCESS" }),
+  requestPluggyItemUpdate: async () => ({ accepted: true, status: "UPDATING", executionStatus: null }),
   getPluggyAccounts: async () => mocks.state.remoteAccounts,
   investmentRemoteId: (connectionId: string) => `investments:${connectionId}`,
   getPluggyInvestmentSnapshot: async (_key: string, _itemId: string, remoteId: string) => ({ balance: 350, transactions: { transactions: mocks.state.remoteTransactions.filter((row) => row.accountId === remoteId), invalid: 0 } }),
