@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { Sheet } from "./sheet";
+import { Button } from "./ui/button";
 
 type Item = { id: string; title: string; body: string; actionUrl: string; critical: boolean; readAt: string | null; createdAt: string };
 type Feed = { items: Item[]; unreadCount: number; hasMore: boolean };
@@ -28,22 +29,22 @@ export function NotificationsFeed({ compact = false }: { compact?: boolean }) {
   }
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center gap-2">
-      {!compact && ([['all','Todas'],['unread','Não lidas'],['critical','Críticas']] as const).map(([value,label]) => <button key={value} className="min-h-11 rounded-lg border border-[var(--border)] px-3 text-sm" aria-pressed={filter===value} onClick={() => { setFilter(value); setPage(1); }}>{label}</button>)}
-      <button disabled={busy || !feed?.unreadCount} onClick={() => void update("read_all")} className="min-h-11 px-2 text-sm underline disabled:opacity-50">Marcar todas como lidas</button>
+      {!compact && ([['all','Todas'],['unread','Não lidas'],['critical','Críticas']] as const).map(([value,label]) => <Button key={value} size="sm" variant={filter===value ? "primary" : "soft"} aria-pressed={filter===value} onClick={() => { setFilter(value); setPage(1); }}>{label}</Button>)}
+      <Button size="sm" variant="ghost" disabled={busy || !feed?.unreadCount} onClick={() => void update("read_all")} className="text-[var(--text-muted)] hover:text-[var(--text)]">Marcar todas como lidas</Button>
     </div>
-    {error && <p role="alert" className="text-sm text-[var(--text-out)]">{error} <button className="underline" onClick={() => void reload()}>Tentar novamente</button></p>}
+    {error && <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-out)]"><span>{error}</span><Button size="sm" variant="outline" onClick={() => void reload()}>Tentar novamente</Button></div>}
     {!feed && !error && <p role="status">Carregando notificações…</p>}
     {feed?.items.length===0 && <p className="text-sm text-[var(--text-muted)]">Nenhuma notificação por aqui.</p>}
     <ul className="divide-y divide-[var(--border)]">{feed?.items.slice(0,compact?10:20).map(item => <li key={item.id} className="flex items-start gap-2 py-3">
-      <button disabled={busy} onClick={() => void update("read",item.id,item.actionUrl)} className="min-h-11 min-w-0 flex-1 text-left">
+      <button disabled={busy} onClick={() => void update("read",item.id,item.actionUrl)} className="min-h-11 min-w-0 flex-1 cursor-pointer rounded-lg px-1 text-left transition-colors hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] disabled:cursor-not-allowed disabled:opacity-50">
         <span className="flex items-center gap-2 font-medium">{!item.readAt && <span aria-label="Não lida" className="size-2 shrink-0 rounded-full bg-[var(--acento)]" />}{item.critical ? "Atenção" : item.title}</span>
         <span className="mt-1 block whitespace-pre-line break-words text-sm text-[var(--text-muted)]">{item.body}</span>
         <time className="mt-1 block text-xs text-[var(--text-muted)]" dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",dateStyle:"short",timeStyle:"short"}).format(new Date(item.createdAt))}</time>
       </button>
-      <button disabled={busy} aria-label="Dispensar notificação" onClick={() => void update("archive",item.id)} className="min-h-11 px-2 text-sm underline">Dispensar</button>
+      <Button size="sm" variant="ghost" disabled={busy} aria-label="Dispensar notificação" onClick={() => void update("archive",item.id)} className="shrink-0 text-[var(--text-muted)] hover:text-[var(--text)]">Dispensar</Button>
     </li>)}</ul>
-    {!compact && feed && <div className="flex items-center justify-between gap-3"><button disabled={page===1} className="min-h-11 px-3 disabled:opacity-40" onClick={() => setPage(p=>p-1)}>Anterior</button><span className="text-sm">Página {page}</span><button disabled={!feed.hasMore} className="min-h-11 px-3 disabled:opacity-40" onClick={() => setPage(p=>p+1)}>Próxima</button></div>}
-    {compact && <Link href="/notificacoes" className="block min-h-11 py-3 text-sm underline">Ver todas e configurar notificações</Link>}
+    {!compact && feed && <div className="flex items-center justify-between gap-3"><Button size="sm" variant="soft" disabled={page===1} onClick={() => setPage(p=>p-1)}>Anterior</Button><span className="text-sm" aria-live="polite">Página {page}</span><Button size="sm" variant="soft" disabled={!feed.hasMore} onClick={() => setPage(p=>p+1)}>Próxima</Button></div>}
+    {compact && <Link href="/notificacoes" className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--line)] px-4 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] active:bg-[var(--surface-3)]">Ver todas e configurar notificações</Link>}
   </div>;
 }
 export function NotificationBell() {
