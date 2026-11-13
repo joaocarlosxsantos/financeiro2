@@ -4,7 +4,7 @@ import { accounts, categories, categoryRules, openFinanceConnections, openFinanc
 import { getProfileRestriction } from "@/server/usage-profile";
 import { amountToCents, isCompatiblePluggyAccount, openFinanceConnectionIdSchema, shouldImportPluggyTransaction, transactionKind } from "./schemas";
 import { decryptSecret } from "./crypto";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, requestPluggyItemUpdate } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItem, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, pluggyItemAllowsManualUpdate, requestPluggyItemUpdate, type PluggyItem } from "./client";
 import { createId } from "@/lib/id";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { anchorPluggyCivilDate, isBeforeCutoff } from "./cutoff";
@@ -37,9 +37,17 @@ function classifyItemStatus(status: string, executionStatus: string | null): Ite
 }
 
 /** Pede atualização do item (claim/cooldown já garantem quota) e aguarda por tempo limitado; recusa é fail-open. */
-async function requestItemUpdate(apiKey: string, itemId: string, waitMs: number, signal?: AbortSignal): Promise<ItemUpdateOutcome> {
+async function requestItemUpdate(apiKey: string, itemId: string, waitMs: number, signal?: AbortSignal, initial?: PluggyItem): Promise<ItemUpdateOutcome> {
   let acceptedStatus = "UPDATING";
   let acceptedExecution: string | null = null;
+  if (initial && !pluggyItemAllowsManualUpdate(initial)) {
+    // MFA e proxy do Meu Pluggy só recebem dados novos pelo auto-sync/webhook do banco.
+    console.info("Open Finance item update skipped", { reason: "connector_not_updatable" });
+    return "unavailable";
+  }
+  if (initial && initial.status === "UPDATING") {
+    return waitForSettledItem(apiKey, itemId, waitMs, signal);
+  }
   try {
     const accepted = await requestPluggyItemUpdate(apiKey, itemId, signal);
     acceptedStatus = accepted.status;
@@ -49,11 +57,16 @@ async function requestItemUpdate(apiKey: string, itemId: string, waitMs: number,
     console.info("Open Finance item update unavailable", {
       status: error instanceof PluggyHttpError ? error.status : 0,
       code: error instanceof PluggyHttpError ? error.code : "UNKNOWN",
+      message: error instanceof PluggyHttpError ? error.providerMessage : null,
     });
     return "unavailable";
   }
   const settled = classifyItemStatus(acceptedStatus, acceptedExecution);
   if (settled) return settled;
+  return waitForSettledItem(apiKey, itemId, waitMs, signal);
+}
+
+async function waitForSettledItem(apiKey: string, itemId: string, waitMs: number, signal?: AbortSignal): Promise<ItemUpdateOutcome> {
   const deadline = Date.now() + Math.max(0, waitMs);
   for (;;) {
     signal?.throwIfAborted();
@@ -95,12 +108,12 @@ export async function resolvePluggyApiKey(userId: string, signal?: AbortSignal):
 }
 
 /** Núcleo único: identidade já autenticada pelo chamador; cooldown e claim compartilhados. */
-export async function syncOpenFinanceForUser(userId: string, input: unknown, mode: "manual" | "auto" = "manual", options: { signal?: AbortSignal; revalidate?: (path: string) => void; waitForUpdateMs?: number } = {}) {
+export async function syncOpenFinanceForUser(userId: string, input: unknown, mode: "manual" | "auto" | "webhook" = "manual", options: { signal?: AbortSignal; revalidate?: (path: string) => void; waitForUpdateMs?: number; skipItemUpdate?: boolean } = {}) {
   const { signal } = options;
   const revalidatePath = options.revalidate ?? (() => {});
   const waitForUpdateMs = options.waitForUpdateMs ?? (mode === "auto" ? AUTO_ITEM_UPDATE_WAIT_MS : DEFAULT_ITEM_UPDATE_WAIT_MS);
   signal?.throwIfAborted();
-  const cooldownMs = mode === "auto" ? AUTO_SYNC_COOLDOWN_MS : SYNC_COOLDOWN_MS;
+  const cooldownMs = mode === "webhook" ? 0 : mode === "auto" ? AUTO_SYNC_COOLDOWN_MS : SYNC_COOLDOWN_MS;
   const restriction = await getProfileRestriction(userId, "integration");
   if (restriction) return { error: restriction };
   const parsed = openFinanceConnectionIdSchema.safeParse({ connectionId: input });
@@ -152,8 +165,11 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
     }
     const apiKey = await resolvePluggyApiKey(userId, signal);
     const itemId = decryptSecret(connection.itemIdEnvelope, userId, "itemId");
-    const itemUpdate = await requestItemUpdate(apiKey, itemId, waitForUpdateMs, signal);
-    const item = await getPluggyItemStatus(apiKey, itemId, signal);
+    const currentItem = await getPluggyItem(apiKey, itemId, signal);
+    const itemUpdate = options.skipItemUpdate ? "skipped" : await requestItemUpdate(apiKey, itemId, waitForUpdateMs, signal, currentItem);
+    const item = itemUpdate === "skipped" || itemUpdate === "unavailable"
+      ? currentItem
+      : await getPluggyItemStatus(apiKey, itemId, signal);
     upstreamStatus = item.status;
     if ((item.status !== "UPDATED" || item.executionStatus !== "SUCCESS") && itemUpdate !== "pending") throw new Error(`PLUGGY_ITEM_${item.status}_${item.executionStatus ?? "UNKNOWN"}`);
     const remoteAccounts = await getPluggyAccounts(apiKey, itemId, signal);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, requestPluggyItemUpdate } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItem, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, pluggyItemAllowsManualUpdate, requestPluggyItemUpdate } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -45,7 +45,7 @@ describe("Pluggy client", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       await expect(getPluggyInvestmentSnapshot("key", "item", "remote")).rejects.toMatchObject({ endpoint: "/investments/:id/transactions", providerMessage: "Missing investment [redacted]" });
-      expect(log).toHaveBeenCalledWith("Pluggy HTTP error", { status: 404, code: "NOT_FOUND", endpoint: "/investments/:id/transactions" });
+      expect(log).toHaveBeenCalledWith("Pluggy HTTP error", expect.objectContaining({ status: 404, code: "NOT_FOUND", endpoint: "/investments/:id/transactions", message: expect.any(String) }));
     } finally { log.mockRestore(); }
   });
 
@@ -189,6 +189,24 @@ describe("Pluggy client", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.pluggy.ai/items/item-id");
   });
 
+  it("lê metadados do item para decidir se o PATCH é permitido", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      id: "item-id", status: "UPDATED", executionStatus: "SUCCESS",
+      connector: { id: 601, name: "Itaú", hasMFA: true, isOpenFinance: true },
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const item = await getPluggyItem("api-key", "item-id");
+    expect(item.connector).toEqual({ id: 601, name: "Itaú", hasMFA: true, isOpenFinance: true });
+    expect(pluggyItemAllowsManualUpdate(item)).toBe(false);
+  });
+
+  it("permite PATCH sem MFA e bloqueia Meu Pluggy", () => {
+    expect(pluggyItemAllowsManualUpdate({ connector: null })).toBe(true);
+    expect(pluggyItemAllowsManualUpdate({ connector: { id: 601, name: "Itaú", hasMFA: false, isOpenFinance: true } })).toBe(true);
+    expect(pluggyItemAllowsManualUpdate({ connector: { id: 200, name: "Meu Pluggy", hasMFA: false, isOpenFinance: false } })).toBe(false);
+  });
+
+
   it("pede atualização do item com PATCH e corpo vazio (credenciais ficam no cofre da Pluggy)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "item-id", status: "UPDATING", executionStatus: null }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -212,7 +230,10 @@ describe("Pluggy client", () => {
     expect((caught as PluggyHttpError).providerMessage).not.toContain("secret-client");
     expect((caught as PluggyHttpError).providerMessage).not.toContain("secret-item");
     expect(pluggyErrorForUser(caught as PluggyHttpError)).toContain("só existe em Demo");
-    expect(log).toHaveBeenCalledWith("Pluggy HTTP error", { status: 403, code: "LIST_ITEMS_FEATURE_NOT_ENABLED", endpoint: "/auth" });
+    expect(log).toHaveBeenCalledWith("Pluggy HTTP error", expect.objectContaining({ status: 403, code: "LIST_ITEMS_FEATURE_NOT_ENABLED", endpoint: "/auth", message: expect.any(String) }));
+    const logged = log.mock.calls[0]?.[1] as { message?: string } | undefined;
+    expect(logged?.message).not.toContain("client-123");
+    expect(logged?.message).not.toContain("secret-client");
     log.mockRestore();
   });
 
@@ -225,7 +246,7 @@ describe("Pluggy client", () => {
     expect(caught).toMatchObject({ status: 404, code: "ITEM_NOT_FOUND", endpoint: "/items/:id" });
     expect((caught as PluggyHttpError).providerMessage).not.toContain("private-item-id");
     expect(pluggyErrorForUser(caught as PluggyHttpError)).toContain("não encontrado");
-    expect(log).toHaveBeenCalledWith("Pluggy HTTP error", { status: 404, code: "ITEM_NOT_FOUND", endpoint: "/items/:id" });
+    expect(log).toHaveBeenCalledWith("Pluggy HTTP error", expect.objectContaining({ status: 404, code: "ITEM_NOT_FOUND", endpoint: "/items/:id", message: expect.any(String) }));
     log.mockRestore();
   });
 
@@ -241,7 +262,7 @@ describe("Pluggy client", () => {
     expect(caught).toMatchObject({ status: 503, code: "UPSTREAM_DOWN", endpoint: "/v2/transactions" });
     expect((caught as PluggyHttpError).providerMessage).toHaveLength(200);
     expect(pluggyErrorForUser(caught as PluggyHttpError)).toContain("Tente novamente mais tarde");
-    expect(log).toHaveBeenCalledWith("Pluggy HTTP error", { status: 503, code: "UPSTREAM_DOWN", endpoint: "/v2/transactions" });
+    expect(log).toHaveBeenCalledWith("Pluggy HTTP error", expect.objectContaining({ status: 503, code: "UPSTREAM_DOWN", endpoint: "/v2/transactions", message: expect.any(String) }));
     log.mockRestore();
   });
 });

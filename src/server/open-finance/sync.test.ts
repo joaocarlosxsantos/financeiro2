@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
-const mocks = vi.hoisted(() => ({ restriction: vi.fn(), select: vi.fn(), update: vi.fn(), transaction: vi.fn(), auth: vi.fn(), item: vi.fn(), itemUpdate: vi.fn(), remote: vi.fn(), remoteTx: vi.fn() }));
+const mocks = vi.hoisted(() => ({ restriction: vi.fn(), select: vi.fn(), update: vi.fn(), transaction: vi.fn(), auth: vi.fn(), item: vi.fn(), itemStatus: vi.fn(), itemUpdate: vi.fn(), remote: vi.fn(), remoteTx: vi.fn() }));
 vi.mock("@/db", () => ({ db: { select: mocks.select, update: mocks.update, transaction: mocks.transaction } }));
 vi.mock("@/server/usage-profile", () => ({ getProfileRestriction: mocks.restriction }));
 vi.mock("./crypto", () => ({ decryptSecret: () => "test-value" }));
-vi.mock("./client", async importOriginal => ({ ...await importOriginal<typeof import("./client")>(), authenticatePluggy: mocks.auth, getPluggyItemStatus: mocks.item, requestPluggyItemUpdate: mocks.itemUpdate, getPluggyAccounts: mocks.remote, getPluggyTransactions: mocks.remoteTx }));
+vi.mock("./client", async importOriginal => ({ ...await importOriginal<typeof import("./client")>(), authenticatePluggy: mocks.auth, getPluggyItem: mocks.item, getPluggyItemStatus: mocks.itemStatus, requestPluggyItemUpdate: mocks.itemUpdate, getPluggyAccounts: mocks.remote, getPluggyTransactions: mocks.remoteTx }));
 import { accounts, openFinanceConnections, openFinanceCredentials } from "@/db/schema";
 import { SYNC_COOLDOWN_MS, syncOpenFinanceForUser } from "./sync";
 
@@ -20,7 +20,8 @@ beforeEach(() => {
   connection = { id, userId: "owner", lastAttemptAt: null, lastSyncedAt: null, importFromDate: new Date("2026-11-01"), itemIdEnvelope: "test" };
   claimed = false; predicates = [];
   mocks.restriction.mockResolvedValue(null); mocks.auth.mockResolvedValue("test-key");
-  mocks.item.mockResolvedValue({ status: "UPDATED", executionStatus: "SUCCESS" }); mocks.remote.mockResolvedValue([]);
+  mocks.item.mockResolvedValue({ status: "UPDATED", executionStatus: "SUCCESS", connector: null });
+  mocks.itemStatus.mockResolvedValue({ status: "UPDATED", executionStatus: "SUCCESS" }); mocks.remote.mockResolvedValue([]);
   mocks.itemUpdate.mockResolvedValue({ accepted: true, status: "UPDATING", executionStatus: null });
   mocks.transaction.mockImplementation(async callback => callback({}));
   mocks.select.mockImplementation(() => {
@@ -92,10 +93,37 @@ describe("núcleo de sync comum ao botão, painel e Telegram", () => {
     const controller = new AbortController();
     let active = 0;
     mocks.itemUpdate.mockImplementation(async () => { expect(++active).toBe(1); return { accepted: true, status: "UPDATING", executionStatus: null }; });
-    mocks.item.mockImplementation(async () => { active--; return { status: "UPDATED", executionStatus: "SUCCESS" }; });
+    mocks.itemStatus.mockImplementation(async () => { active--; return { status: "UPDATED", executionStatus: "SUCCESS" }; });
     await syncOpenFinanceForUser("owner", id, "manual", { signal: controller.signal });
     expect(mocks.itemUpdate).toHaveBeenCalledExactlyOnceWith("test-key", "test-value", controller.signal);
     expect(mocks.item).toHaveBeenCalled();
+    expect(mocks.itemStatus).toHaveBeenCalled();
+  });
+  it("conector com MFA não recebe PATCH inútil: segue com os dados atuais", async () => {
+    mocks.item.mockResolvedValue({ status: "UPDATED", executionStatus: "SUCCESS", connector: { id: 601, name: "Itaú", hasMFA: true, isOpenFinance: true } });
+    mocks.remote.mockResolvedValue([{ id: "remote", type: "BANK", currencyCode: "BRL", balance: 10 }]);
+    mocks.remoteTx.mockResolvedValue({ transactions: [], invalid: 0 });
+    mocks.transaction.mockImplementation(async callback => callback({ select: mocks.select, update: () => ({ set: () => ({ where: async () => {} }) }), insert: vi.fn() }));
+    const result = await syncOpenFinanceForUser("owner", id);
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true, status: "UPDATED", itemUpdate: "unavailable" });
+  });
+  it("conector Meu Pluggy (proxy) não recebe PATCH inútil", async () => {
+    mocks.item.mockResolvedValue({ status: "UPDATED", executionStatus: "SUCCESS", connector: { id: 200, name: "MeuPluggy", hasMFA: false, isOpenFinance: false } });
+    mocks.remote.mockResolvedValue([{ id: "remote", type: "BANK", currencyCode: "BRL", balance: 10 }]);
+    mocks.remoteTx.mockResolvedValue({ transactions: [], invalid: 0 });
+    mocks.transaction.mockImplementation(async callback => callback({ select: mocks.select, update: () => ({ set: () => ({ where: async () => {} }) }), insert: vi.fn() }));
+    const result = await syncOpenFinanceForUser("owner", id);
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true, status: "UPDATED", itemUpdate: "unavailable" });
+  });
+  it("sync disparado pelo webhook usa os dados já atualizados e não pede PATCH", async () => {
+    mocks.remote.mockResolvedValue([{ id: "remote", type: "BANK", currencyCode: "BRL", balance: 10 }]);
+    mocks.remoteTx.mockResolvedValue({ transactions: [], invalid: 0 });
+    mocks.transaction.mockImplementation(async callback => callback({ select: mocks.select, update: () => ({ set: () => ({ where: async () => {} }) }), insert: vi.fn() }));
+    const result = await syncOpenFinanceForUser("owner", id, "webhook", { skipItemUpdate: true });
+    expect(mocks.itemUpdate).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true, status: "UPDATED", itemUpdate: "skipped" });
   });
   it("conector que recusa PATCH (MFA/consentimento) não quebra: segue com o cache e avisa", async () => {
     mocks.itemUpdate.mockRejectedValue(new Error("400"));
@@ -107,7 +135,8 @@ describe("núcleo de sync comum ao botão, painel e Telegram", () => {
     expect(mocks.remote).toHaveBeenCalled();
   });
   it("PATCH aceito sem concluir dentro do teto segue com dados atuais e reporta pendente", async () => {
-    mocks.item.mockResolvedValue({ status: "UPDATING", executionStatus: "TRANSACTIONS_IN_PROGRESS" });
+    mocks.item.mockResolvedValue({ status: "UPDATING", executionStatus: "TRANSACTIONS_IN_PROGRESS", connector: null });
+    mocks.itemStatus.mockResolvedValue({ status: "UPDATING", executionStatus: "TRANSACTIONS_IN_PROGRESS" });
     mocks.remote.mockResolvedValue([{ id: "remote", type: "BANK", currencyCode: "BRL", balance: 10 }]);
     mocks.remoteTx.mockResolvedValue({ transactions: [], invalid: 0 });
     mocks.transaction.mockImplementation(async callback => callback({ select: mocks.select, update: () => ({ set: () => ({ where: async () => {} }) }), insert: vi.fn() }));

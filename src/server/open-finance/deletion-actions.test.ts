@@ -93,7 +93,9 @@ vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: (...args: Parameters<typeof
 vi.mock("@/server/open-finance/crypto", () => ({ decryptSecret: () => "decrypted", encryptSecret: () => "encrypted", secretFingerprint: () => "fingerprint" }));
 vi.mock("@/server/open-finance/client", () => ({
   authenticatePluggy: async () => "api-key",
+  getPluggyItem: async () => ({ status: "UPDATED", executionStatus: "SUCCESS", connector: null }),
   getPluggyItemStatus: async () => ({ status: "UPDATED", executionStatus: "SUCCESS" }),
+  pluggyItemAllowsManualUpdate: () => true,
   requestPluggyItemUpdate: async () => ({ accepted: true, status: "UPDATING", executionStatus: null }),
   getPluggyAccounts: async () => mocks.state.remoteAccounts,
   investmentRemoteId: (connectionId: string) => `investments:${connectionId}`,

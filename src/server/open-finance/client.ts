@@ -62,7 +62,7 @@ async function request(path: string, apiKey?: string, body?: unknown, signal?: A
         continue;
       }
       const endpoint = safeEndpoint(path);
-      console.error("Pluggy HTTP error", { status, code: safe.code, endpoint });
+      console.error("Pluggy HTTP error", { status, code: safe.code, endpoint, message: safe.message });
       throw new PluggyHttpError(status, safe.code, safe.message, endpoint);
     } catch (error) {
       if (signal?.aborted) throw error;
@@ -118,6 +118,12 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
     clientUserId: z.string().nullable().optional(),
     status: z.string().max(80),
     executionStatus: z.string().max(80).nullable().optional(),
+    connector: z.object({
+      id: z.number().int().nullable().optional(),
+      name: z.string().max(200).nullable().optional(),
+      hasMFA: z.boolean().nullable().optional(),
+      isOpenFinance: z.boolean().nullable().optional(),
+    }).nullish(),
   }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, undefined, signal));
   const known = new Set(["UPDATED", "UPDATING", "LOGIN_ERROR", "OUTDATED", "WAITING_USER_INPUT", "LOGIN_IN_PROGRESS"]);
   return {
@@ -125,7 +131,28 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
     clientUserId: item.clientUserId ?? null,
     status: known.has(item.status) ? item.status : "UNKNOWN",
     executionStatus: item.executionStatus ?? null,
+    connector: item.connector ? {
+      id: item.connector.id ?? null,
+      name: item.connector.name ?? null,
+      hasMFA: item.connector.hasMFA ?? false,
+      isOpenFinance: item.connector.isOpenFinance ?? false,
+    } : null,
   };
+}
+
+export type PluggyItem = Awaited<ReturnType<typeof getPluggyItem>>;
+
+/**
+ * PATCH /items/{id} depende de credenciais reutilizáveis. Conectores com MFA e
+ * o proxy do Meu Pluggy recusam update manual (HTTP 400); nesses casos só o
+ * auto-sync/webhook do banco atualiza o item.
+ */
+export function pluggyItemAllowsManualUpdate(item: Pick<PluggyItem, "connector">): boolean {
+  const connector = item.connector;
+  if (!connector) return true;
+  if (connector.hasMFA) return false;
+  const name = (connector.name ?? "").replace(/[^a-z]/gi, "").toLowerCase();
+  return !name.includes("meupluggy");
 }
 
 export async function getPluggyItemStatus(apiKey: string, itemId: string, signal?: AbortSignal) {
