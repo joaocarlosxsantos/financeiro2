@@ -1,3 +1,4 @@
+import { withOpenFinanceAge } from "@/server/open-finance/data-age";
 import { and, eq, gte, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { telegramDeliveries, telegramLinks, telegramPreferences, transactions, users } from "@/db/schema";
@@ -422,7 +423,7 @@ export const dailySummaryDependencies: DailySummaryDependencies = {
       },
     }));
   },
-  render: (userId: string, now: Date) => renderDailySummary(userId, db, now),
+  render: async (userId: string, now: Date) => (await withOpenFinanceAge(userId, () => renderDailySummary(userId, db, now), now)) ?? "",
   async claim(userId: string, windowKey: string): Promise<boolean> {
     const [row] = await db
       .insert(telegramDeliveries)

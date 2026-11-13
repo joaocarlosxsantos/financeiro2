@@ -1,8 +1,8 @@
-import { handleMorningRefreshCron } from "@/server/open-finance/refresh";
+import { handleScheduledRefreshCron } from "@/server/open-finance/refresh";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function GET(request: Request) {
-  return handleMorningRefreshCron(request);
+  return handleScheduledRefreshCron(request);
 }

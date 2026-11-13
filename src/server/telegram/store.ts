@@ -8,7 +8,7 @@ import { renderDailySummary } from "./daily-summary";
 import { loadCardSummary } from "./card-summary";
 import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFinancialCommand, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
-import { telegramReplyWithOpenFinanceAge } from "@/server/open-finance/on-demand";
+import { withOpenFinanceAge } from "@/server/open-finance/data-age";
 import { parseNaturalTransaction } from "./natural-transaction-parser";
 import { createTransactionDraft, undoTransactionDraft } from "./draft-store";
 
@@ -185,11 +185,11 @@ export async function processMessage(updateId: number, message: TelegramMessage)
   });
   // Não segurar conexão nem lock do chat enquanto o provedor externo responde.
   if (result && typeof result === "object") {
-    // Refresh Open Finance em background (flag OPEN_FINANCE_REFRESH_ENABLED); a resposta usa o cache + idade.
-    if (result.kind === "question") return telegramReplyWithOpenFinanceAge(result.userId, () => answerQuestion(result.userId, chatId, result.question));
+    // Resposta usa o cache do banco e mostra a idade do dado (refresh só agendado, via cron).
+    if (result.kind === "question") return withOpenFinanceAge(result.userId, () => answerQuestion(result.userId, chatId, result.question));
     // Leituras financeiras (ex.: /resumo com 15+ queries) rodam diretamente no pool
     // sem segurar uma db.transaction aberta por múltiplos round-trips, lendo só o banco.
-    return telegramReplyWithOpenFinanceAge(result.userId, () => replyToCommand(message, db as unknown as TelegramTransaction, result.now, result.userId));
+    return withOpenFinanceAge(result.userId, () => replyToCommand(message, db as unknown as TelegramTransaction, result.now, result.userId));
   }
   return result;
 }

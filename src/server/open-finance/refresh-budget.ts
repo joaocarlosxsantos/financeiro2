@@ -3,7 +3,7 @@ export const REFRESH_DAILY_MAX = 8;
 export const REFRESH_MONTHLY_MAX = 230;
 export const REFRESH_MIN_INTERVAL_MS = 90 * 60_000;
 
-export type RefreshReason = "morning" | "on_demand";
+export type RefreshReason = "morning" | "scheduled";
 export type RefreshDenial = "MONTHLY_CAP" | "DAILY_CAP" | "TOO_SOON" | "MORNING_DONE" | "RATE_LIMITED";
 export type RefreshRecord = { at: Date; reason: RefreshReason; retryAfterAt?: Date | null };
 
@@ -34,10 +34,17 @@ export function decideRefresh(input: { now: Date; reason: RefreshReason; item: R
     return today.length < REFRESH_DAILY_MAX ? { allowed: true } : { allowed: false, denial: "DAILY_CAP" };
   }
 
-  // Sob demanda: uma vaga do dia fica reservada ao matinal enquanto ele não rodou.
+  // Agendado: uma vaga do dia fica reservada ao matinal enquanto ele não rodou.
   const reserved = morningDone ? 0 : 1;
   if (today.length + reserved >= REFRESH_DAILY_MAX) return { allowed: false, denial: "DAILY_CAP" };
   const last = input.item.reduce<number | null>((latest, row) => (latest === null || row.at.getTime() > latest ? row.at.getTime() : latest), null);
   if (last !== null && now.getTime() - last < REFRESH_MIN_INTERVAL_MS) return { allowed: false, denial: "TOO_SOON" };
   return { allowed: true };
+}
+
+const hourFormat = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", hourCycle: "h23" });
+/** Hora 06 a 08 de São Paulo = refresh matinal (06:30); demais horários agendados (09:00 a 23:00). */
+export function refreshReasonFor(now: Date): RefreshReason {
+  const hour = Number(hourFormat.format(now));
+  return hour >= 6 && hour <= 8 ? "morning" : "scheduled";
 }

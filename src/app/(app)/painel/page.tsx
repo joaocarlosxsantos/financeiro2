@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { investmentPosition } from "@/lib/investments";
 import { requireUserId } from "@/lib/auth";
-import { scheduleOpenFinanceRefresh } from "@/server/open-finance/on-demand";
 import {
   getAvgMonthlyCostCents,
   getBalances,
@@ -61,7 +60,6 @@ export default async function DashboardPage({
   searchParams: Promise<{ m?: string }>;
 }) {
   const userId = await requireUserId();
-  scheduleOpenFinanceRefresh(userId);
   const { m } = await searchParams;
   const ref = monthRefFromParam(m);
 

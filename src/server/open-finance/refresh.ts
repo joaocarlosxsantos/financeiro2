@@ -4,7 +4,7 @@ import { openFinanceConnections, openFinanceRefreshLog } from "@/db/schema";
 import { validWebhookSecret } from "@/server/telegram/protocol";
 import { decryptSecret } from "./crypto";
 import { patchPluggyItem, PluggyHttpError } from "./client";
-import { decideRefresh, REFRESH_MIN_INTERVAL_MS, saoPauloMonthStart, type RefreshDenial, type RefreshReason, type RefreshRecord } from "./refresh-budget";
+import { decideRefresh, refreshReasonFor, REFRESH_MIN_INTERVAL_MS, saoPauloMonthStart, type RefreshDenial, type RefreshReason, type RefreshRecord } from "./refresh-budget";
 
 /** Tempo que o cron matinal espera o webhook item/updated antes de seguir com o cache. */
 export const MORNING_SYNC_WAIT_MS = 120_000;
@@ -82,8 +82,8 @@ export async function requestOpenFinanceRefresh(
   }
 }
 
-/** Cron matinal (06:30 São Paulo = 09:30 UTC): refresh por conexão e espera curta pelo webhook. */
-export async function handleMorningRefreshCron(request: Request, deps: RefreshDependencies = defaultRefreshDependencies) {
+/** Cron agendado (8 horários SP, via GitHub Actions): refresh por conexão; no 06:30 espera o webhook. */
+export async function handleScheduledRefreshCron(request: Request, deps: RefreshDependencies = defaultRefreshDependencies, now = new Date()) {
   const headers = { "Cache-Control": "no-store" };
   const secret = process.env.CRON_SECRET;
   if (!secret) return Response.json({ error: "unavailable" }, { status: 503, headers });
@@ -92,11 +92,12 @@ export async function handleMorningRefreshCron(request: Request, deps: RefreshDe
   }
   if (!deps.enabled()) return Response.json({ skipped: "disabled" }, { headers });
   const counts = { ok: 0, denied: 0, failed: 0, synced: 0, pending: 0 };
-  const started = new Date();
+  const started = now;
+  const reason = refreshReasonFor(started);
   const refreshed: string[] = [];
   for (const row of await deps.connections()) {
-    const outcome = await requestOpenFinanceRefresh({ ...row, reason: "morning" }, deps);
-    if (outcome.ok) { counts.ok++; refreshed.push(row.connectionId); }
+    const outcome = await requestOpenFinanceRefresh({ ...row, reason }, deps);
+    if (outcome.ok) { counts.ok++; if (reason === "morning") refreshed.push(row.connectionId); }
     else if ("error" in outcome) counts.failed++;
     else counts.denied++;
   }

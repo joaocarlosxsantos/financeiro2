@@ -3,7 +3,6 @@ import { canUseCapability } from "@/lib/usage-profile";
 import { NewAccount } from "./new-account";
 import { Wallet } from "lucide-react";
 import { requireUserId } from "@/lib/auth";
-import { scheduleOpenFinanceRefresh } from "@/server/open-finance/on-demand";
 import { getBalances } from "@/server/queries";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -16,7 +15,6 @@ export const metadata = { title: "Saldos" };
 
 export default async function AccountsPage() {
   const userId = await requireUserId();
-  scheduleOpenFinanceRefresh(userId);
   const profile = await getUsageProfile(userId);
   const manualEntry = canUseCapability(profile, "manual-entry");
   const overview = await getBalances(userId);

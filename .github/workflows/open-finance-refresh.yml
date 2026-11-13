@@ -1,0 +1,36 @@
+name: Open Finance refresh
+
+# Horários em UTC = America/Sao_Paulo (UTC-3, sem horário de verão):
+# 06:30 09:00 12:00 14:00 17:00 19:00 21:00 23:00 SP
+on:
+  schedule:
+    - cron: "30 9 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 17 * * *"
+    - cron: "0 20 * * *"
+    - cron: "0 22 * * *"
+    - cron: "0 0 * * *"
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: open-finance-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Dispara refresh agendado no app
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          test -n "$APP_URL" || { echo "vars.APP_URL ausente"; exit 1; }
+          test -n "$CRON_SECRET" || { echo "secrets.CRON_SECRET ausente"; exit 1; }
+          curl -fsS --max-time 240 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/open-finance-refresh"
