@@ -1,4 +1,4 @@
--- PENDENTE. NAO APLICADA. Nao integra o journal do Drizzle (drizzle/meta).
+-- APLICADA em producao (Neon, banco do DIRECT_URL) em 2026-11-13, em transacao; nao integra o journal do Drizzle.
 -- Necessaria antes de ligar OPEN_FINANCE_REFRESH_ENABLED=true (sem ela o refresh falha ao reservar cota).
 -- Aplicar com autorizacao do dono; depois gerar migration numerada a partir do schema.
 
