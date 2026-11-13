@@ -32,7 +32,7 @@ describe("webhook Pluggy item/updated", () => {
     expect(mocks.findConnection).not.toHaveBeenCalled();
   });
 
-  it("autentica, localiza a conexão e agenda o sync sem PATCH depois do ACK", async () => {
+  it("autentica, localiza a conexão e agenda o sync depois do ACK", async () => {
     mocks.findConnection.mockResolvedValue({ id: "conn-1", userId: "owner-1" });
     mocks.sync.mockResolvedValue({ ok: true, status: "UPDATED", imported: 3 });
     mocks.dispatch.mockResolvedValue({});
@@ -104,6 +104,10 @@ describe("webhook Pluggy: segredo na URL, eventos e dedupe estável", () => {
     mocks.findConnection.mockResolvedValue({ id: "conn-t", userId: "owner-1" });
     const created = await handlePluggyWebhook(request({ event: "transactions/created", eventId: "e-tx", itemId: "item-1" }), secret, deps);
     expect(created.status).toBe(202);
+    expect(scheduled).toHaveLength(1);
+    mocks.sync.mockResolvedValue({ ok: true, status: "UPDATED", imported: 0 });
+    await scheduled[0]!();
+    expect(mocks.sync).toHaveBeenCalledWith("owner-1", "conn-t", "webhook");
     const other = await handlePluggyWebhook(request({ event: "item/login_succeeded", eventId: "e-ls", itemId: "item-1" }), secret, deps);
     expect(await other.json()).toMatchObject({ ignored: true });
   });

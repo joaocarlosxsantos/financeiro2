@@ -7,7 +7,7 @@ const PAGE_LIMIT = 200;
 const listSchema = z.object({ results: z.array(z.unknown()), next: z.string().nullable().optional(), totalPages: z.number().int().positive().optional(), page: z.number().int().positive().optional() });
 
 export class PluggyHttpError extends Error {
-  constructor(readonly status: number, readonly code: string, readonly providerMessage: string, readonly endpoint: string, readonly retryAfterSeconds: number | null = null) {
+  constructor(readonly status: number, readonly code: string, readonly providerMessage: string, readonly endpoint: string) {
     super(`PLUGGY_HTTP_${status}_${code}`);
     this.name = "PluggyHttpError";
   }
@@ -42,26 +42,12 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   return { code, message };
 }
 
-/** Retry-After em segundos ou data HTTP; limitado a 24 h. Inválido → null. */
-export function parseRetryAfterSeconds(value: string | null, nowMs = Date.now()): number | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  let seconds: number;
-  if (/^\d+$/.test(trimmed)) seconds = Number(trimmed);
-  else {
-    const at = Date.parse(trimmed);
-    if (Number.isNaN(at)) return null;
-    seconds = Math.ceil((at - nowMs) / 1000);
-  }
-  return Math.min(Math.max(seconds, 0), 86_400);
-}
-
-async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal, method?: "PATCH"): Promise<unknown> {
+async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     signal?.throwIfAborted();
     try {
       const response = await fetch(`${BASE}${path}`, {
-        method: method ?? (body ? "POST" : "GET"), redirect: "error", cache: "no-store",
+        method: body ? "POST" : "GET", redirect: "error", cache: "no-store",
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000),
         headers: { "content-type": "application/json", ...(apiKey ? { "X-API-KEY": apiKey } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -70,13 +56,13 @@ async function request(path: string, apiKey?: string, body?: unknown, signal?: A
       const status = response.status;
       const responseBody = await response.json().catch(() => null);
       const safe = safeProviderError(responseBody, status, path, apiKey, body);
-      if (attempt === 0 && method !== "PATCH" && (status === 429 || status >= 500)) {
+      if (attempt === 0 && (status === 429 || status >= 500)) {
         await new Promise((resolve) => setTimeout(resolve, 200));
         continue;
       }
       const endpoint = safeEndpoint(path);
       console.error("Pluggy HTTP error", { status, code: safe.code, endpoint, message: safe.message });
-      throw new PluggyHttpError(status, safe.code, safe.message, endpoint, parseRetryAfterSeconds(response.headers?.get("retry-after") ?? null));
+      throw new PluggyHttpError(status, safe.code, safe.message, endpoint);
     } catch (error) {
       if (signal?.aborted) throw error;
       if (attempt === 0 && !(error instanceof Error && error.message.startsWith("PLUGGY_"))) {
@@ -139,13 +125,6 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
     status: known.has(item.status) ? item.status : "UNKNOWN",
     executionStatus: item.executionStatus ?? null,
   };
-}
-
-/** PATCH /items/{id} com corpo vazio: pede atualização ao banco. Sem retry automático (cota por item). */
-export async function patchPluggyItem(apiKey: string, itemId: string, signal?: AbortSignal) {
-  const item = z.object({ status: z.string().max(80), executionStatus: z.string().max(80).nullable().optional() })
-    .parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, undefined, signal, "PATCH"));
-  return { status: item.status, executionStatus: item.executionStatus ?? null };
 }
 
 export async function getPluggyItemStatus(apiKey: string, itemId: string, signal?: AbortSignal) {

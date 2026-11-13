@@ -1,6 +1,6 @@
--- APLICADA em producao (Neon, banco do DIRECT_URL) em 2026-11-13, em transacao; nao integra o journal do Drizzle.
--- Necessaria antes de ligar OPEN_FINANCE_REFRESH_ENABLED=true (sem ela o refresh falha ao reservar cota).
--- Aplicar com autorizacao do dono; depois gerar migration numerada a partir do schema.
+-- APLICADA em producao em 2026-11-13. Tabela ORFA: codigo de refresh removido (fase 4, sem uso).
+-- NAO dropar automaticamente. drizzle-kit generate vai propor DROP TABLE: recusar ou dropar manualmente com autorizacao do dono.
+-- Conteudo original abaixo (referencia).
 
 CREATE TABLE IF NOT EXISTS "open_finance_refresh_log" (
 	"id" varchar(32) PRIMARY KEY NOT NULL,

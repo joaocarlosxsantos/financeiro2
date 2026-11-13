@@ -105,7 +105,7 @@ const dependencies: PluggyWebhookDependencies = {
 
 /**
  * Recebe webhooks Pluggy (item/updated, transactions/created) autenticados por segredo
- * (header x-webhook-secret ou ?secret=). Responde rápido e sincroniza depois, sem PATCH.
+ * (header x-webhook-secret ou ?secret=). Responde rápido e sincroniza depois.
  */
 export async function handlePluggyWebhook(
   request: Request,
