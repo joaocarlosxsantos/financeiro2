@@ -20,6 +20,7 @@ const base = (overrides: Partial<RefreshDependencies> = {}): RefreshDependencies
     itemId: vi.fn(async () => "item-plain"),
     patch: vi.fn(async () => { calls.push("patch"); return { status: "UPDATING", executionStatus: null }; }),
     connections: vi.fn(async () => [{ userId: "u1", connectionId: "c1" }]),
+    waitForSync: vi.fn(async (ids: string[]) => ids),
     ...overrides,
   };
 };
@@ -52,7 +53,7 @@ describe("refresh Open Finance sob demanda", () => {
     const deps = base({ patch: vi.fn(async () => { throw new PluggyHttpError(429, "RATE", "x", "/items/:id"); }) });
     expect(await requestOpenFinanceRefresh({ userId: "u1", connectionId: "c1", reason: "morning" }, deps, now)).toEqual({ ok: false, error: "HTTP_429" });
     expect(deps.patch).toHaveBeenCalledTimes(1);
-    expect(deps.finish).toHaveBeenCalledWith("log-1", "HTTP_429");
+    expect(deps.finish).toHaveBeenCalledWith("log-1", "HTTP_429", expect.any(Date));
   });
 
   it("single-flight: segunda chamada concorrente no mesmo item é recusada", async () => {
@@ -90,7 +91,7 @@ describe("cron matinal", () => {
     vi.stubEnv("CRON_SECRET", "s3cret");
     const deps = base({ connections: vi.fn(async () => [{ userId: "u1", connectionId: "c1" }, { userId: "u2", connectionId: "c2" }]) });
     const response = await handleMorningRefreshCron(request("Bearer s3cret"), deps);
-    expect(await response.json()).toEqual({ ok: 2, denied: 0, failed: 0 });
+    expect(await response.json()).toEqual({ ok: 2, denied: 0, failed: 0, synced: 2, pending: 0 });
     expect(deps.patch).toHaveBeenCalledTimes(2);
     expect(deps.reserve).toHaveBeenCalledWith(expect.objectContaining({ reason: "morning", connectionId: "c1" }));
   });

@@ -404,6 +404,7 @@ export const openFinanceRefreshLog = pgTable("open_finance_refresh_log", {
   connectionId: varchar("connection_id", { length: 32 }).notNull().references(() => openFinanceConnections.id, { onDelete: "cascade" }),
   reason: text("reason").notNull(),
   status: text("status").notNull(),
+  retryAfterAt: timestamp("retry_after_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("open_finance_refresh_log_user_created_idx").on(t.userId, t.createdAt)]);
 

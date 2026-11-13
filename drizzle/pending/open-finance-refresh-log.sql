@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS "open_finance_refresh_log" (
 	"connection_id" varchar(32) NOT NULL,
 	"reason" text NOT NULL,
 	"status" text NOT NULL,
+	"retry_after_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );--> statement-breakpoint
 ALTER TABLE "open_finance_refresh_log" ADD CONSTRAINT "open_finance_refresh_log_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

@@ -1,4 +1,6 @@
 import { requireProfileRoute } from "@/server/usage-profile";
+import { requireUserId } from "@/lib/auth";
+import { scheduleOpenFinanceRefresh } from "@/server/open-finance/on-demand";
 import { getOpenFinanceSetup } from "@/server/actions/open-finance";
 import { PageHeader } from "@/components/page-header";
 import { IntegrationPanel } from "./panel";
@@ -7,6 +9,7 @@ export const metadata = { title: "Integração" };
 
 export default async function IntegrationPage() {
   await requireProfileRoute("/configuracoes/integracao");
+  scheduleOpenFinanceRefresh(await requireUserId());
   const setup = await getOpenFinanceSetup();
   return (
     <>

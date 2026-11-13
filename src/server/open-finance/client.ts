@@ -7,7 +7,7 @@ const PAGE_LIMIT = 200;
 const listSchema = z.object({ results: z.array(z.unknown()), next: z.string().nullable().optional(), totalPages: z.number().int().positive().optional(), page: z.number().int().positive().optional() });
 
 export class PluggyHttpError extends Error {
-  constructor(readonly status: number, readonly code: string, readonly providerMessage: string, readonly endpoint: string) {
+  constructor(readonly status: number, readonly code: string, readonly providerMessage: string, readonly endpoint: string, readonly retryAfterSeconds: number | null = null) {
     super(`PLUGGY_HTTP_${status}_${code}`);
     this.name = "PluggyHttpError";
   }
@@ -42,6 +42,20 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   return { code, message };
 }
 
+/** Retry-After em segundos ou data HTTP; limitado a 24 h. Inválido → null. */
+export function parseRetryAfterSeconds(value: string | null, nowMs = Date.now()): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  let seconds: number;
+  if (/^\d+$/.test(trimmed)) seconds = Number(trimmed);
+  else {
+    const at = Date.parse(trimmed);
+    if (Number.isNaN(at)) return null;
+    seconds = Math.ceil((at - nowMs) / 1000);
+  }
+  return Math.min(Math.max(seconds, 0), 86_400);
+}
+
 async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal, method?: "PATCH"): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     signal?.throwIfAborted();
@@ -62,7 +76,7 @@ async function request(path: string, apiKey?: string, body?: unknown, signal?: A
       }
       const endpoint = safeEndpoint(path);
       console.error("Pluggy HTTP error", { status, code: safe.code, endpoint, message: safe.message });
-      throw new PluggyHttpError(status, safe.code, safe.message, endpoint);
+      throw new PluggyHttpError(status, safe.code, safe.message, endpoint, parseRetryAfterSeconds(response.headers?.get("retry-after") ?? null));
     } catch (error) {
       if (signal?.aborted) throw error;
       if (attempt === 0 && !(error instanceof Error && error.message.startsWith("PLUGGY_"))) {

@@ -4,8 +4,8 @@ export const REFRESH_MONTHLY_MAX = 230;
 export const REFRESH_MIN_INTERVAL_MS = 90 * 60_000;
 
 export type RefreshReason = "morning" | "on_demand";
-export type RefreshDenial = "MONTHLY_CAP" | "DAILY_CAP" | "TOO_SOON" | "MORNING_DONE";
-export type RefreshRecord = { at: Date; reason: RefreshReason };
+export type RefreshDenial = "MONTHLY_CAP" | "DAILY_CAP" | "TOO_SOON" | "MORNING_DONE" | "RATE_LIMITED";
+export type RefreshRecord = { at: Date; reason: RefreshReason; retryAfterAt?: Date | null };
 
 const dayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
 /** Dia civil de São Paulo (YYYY-MM-DD). */
@@ -23,6 +23,8 @@ export function decideRefresh(input: { now: Date; reason: RefreshReason; item: R
   const { now, reason } = input;
   const day = saoPauloDay(now);
   const month = saoPauloMonth(now);
+  // Retry-After da Pluggy vale para o app inteiro até o prazo (qualquer conexão, qualquer motivo).
+  if (input.all.some((row) => row.retryAfterAt && row.retryAfterAt.getTime() > now.getTime())) return { allowed: false, denial: "RATE_LIMITED" };
   if (input.all.filter((row) => saoPauloMonth(row.at) === month).length >= REFRESH_MONTHLY_MAX) return { allowed: false, denial: "MONTHLY_CAP" };
 
   const today = input.item.filter((row) => saoPauloDay(row.at) === day);
