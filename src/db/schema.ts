@@ -397,6 +397,16 @@ export const openFinanceDeleted = pgTable("open_finance_deleted", {
   deletedAt: timestamp("deleted_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("open_finance_deleted_identity_key").on(t.userId, t.accountId, t.externalId)]);
 
+/** Orçamento de refresh Open Finance: cada tentativa (inclusive falha) conta. Linha PENDING = reserva antes da chamada. */
+export const openFinanceRefreshLog = pgTable("open_finance_refresh_log", {
+  id: varchar("id", { length: 32 }).primaryKey().$defaultFn(createId),
+  userId: varchar("user_id", { length: 32 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  connectionId: varchar("connection_id", { length: 32 }).notNull().references(() => openFinanceConnections.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("open_finance_refresh_log_user_created_idx").on(t.userId, t.createdAt)]);
+
 export const goals = pgTable(
   "goals",
   {

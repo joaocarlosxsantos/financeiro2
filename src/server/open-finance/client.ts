@@ -42,12 +42,12 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   return { code, message };
 }
 
-async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
+async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal, method?: "PATCH"): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     signal?.throwIfAborted();
     try {
       const response = await fetch(`${BASE}${path}`, {
-        method: body ? "POST" : "GET", redirect: "error", cache: "no-store",
+        method: method ?? (body ? "POST" : "GET"), redirect: "error", cache: "no-store",
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000),
         headers: { "content-type": "application/json", ...(apiKey ? { "X-API-KEY": apiKey } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -56,7 +56,7 @@ async function request(path: string, apiKey?: string, body?: unknown, signal?: A
       const status = response.status;
       const responseBody = await response.json().catch(() => null);
       const safe = safeProviderError(responseBody, status, path, apiKey, body);
-      if (attempt === 0 && (status === 429 || status >= 500)) {
+      if (attempt === 0 && method !== "PATCH" && (status === 429 || status >= 500)) {
         await new Promise((resolve) => setTimeout(resolve, 200));
         continue;
       }
@@ -125,6 +125,13 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
     status: known.has(item.status) ? item.status : "UNKNOWN",
     executionStatus: item.executionStatus ?? null,
   };
+}
+
+/** PATCH /items/{id} com corpo vazio: pede atualização ao banco. Sem retry automático (cota por item). */
+export async function patchPluggyItem(apiKey: string, itemId: string, signal?: AbortSignal) {
+  const item = z.object({ status: z.string().max(80), executionStatus: z.string().max(80).nullable().optional() })
+    .parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, undefined, signal, "PATCH"));
+  return { status: item.status, executionStatus: item.executionStatus ?? null };
 }
 
 export async function getPluggyItemStatus(apiKey: string, itemId: string, signal?: AbortSignal) {

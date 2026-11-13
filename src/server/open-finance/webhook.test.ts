@@ -79,3 +79,51 @@ describe("webhook Pluggy item/updated", () => {
     expect(failure.status).toBe(500);
   });
 });
+
+describe("webhook Pluggy: segredo na URL, eventos e dedupe estável", () => {
+  const urlRequest = (body: unknown, query: string) =>
+    new Request(`https://app.test/api/open-finance/webhook${query}`, { method: "POST", headers: {}, body: JSON.stringify(body) });
+
+  it("aceita ?secret= quando o header não existe (painel Pluggy) e rejeita ?secret= errado", async () => {
+    mocks.findConnection.mockResolvedValue({ id: "conn-q", userId: "owner-1" });
+    expect((await handlePluggyWebhook(urlRequest(updated("e-q1"), `?secret=${secret}`), secret, deps)).status).toBe(202);
+    expect((await handlePluggyWebhook(urlRequest(updated("e-q2"), "?secret=nope"), secret, deps)).status).toBe(401);
+    expect((await handlePluggyWebhook(urlRequest(updated("e-q3"), ""), secret, deps)).status).toBe(401);
+  });
+
+  it("header com segredo errado não é salvo pelo ?secret= correto", async () => {
+    const response = await handlePluggyWebhook(
+      new Request(`https://app.test/api/open-finance/webhook?secret=${secret}`, { method: "POST", headers: { "x-webhook-secret": "wrong" }, body: JSON.stringify(updated("e-h")) }),
+      secret,
+      deps,
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("aceita transactions/created e ignora outros eventos", async () => {
+    mocks.findConnection.mockResolvedValue({ id: "conn-t", userId: "owner-1" });
+    const created = await handlePluggyWebhook(request({ event: "transactions/created", eventId: "e-tx", itemId: "item-1" }), secret, deps);
+    expect(created.status).toBe(202);
+    const other = await handlePluggyWebhook(request({ event: "item/login_succeeded", eventId: "e-ls", itemId: "item-1" }), secret, deps);
+    expect(await other.json()).toMatchObject({ ignored: true });
+  });
+
+  it("chave de dedupe é estável: mesmo evento repetido não reagenda, e a notificação não usa Date.now", async () => {
+    mocks.findConnection.mockResolvedValue({ id: "conn-s", userId: "owner-1" });
+    mocks.sync.mockResolvedValue({ ok: true, status: "UPDATED", imported: 1 });
+    mocks.dispatch.mockResolvedValue({});
+    expect((await handlePluggyWebhook(request(updated("e-stable")), secret, deps)).status).toBe(202);
+    expect((await handlePluggyWebhook(request(updated("e-stable")), secret, deps)).status).toBe(200);
+    expect(scheduled).toHaveLength(1);
+    await scheduled[0]!();
+    const dedupeKey = mocks.dispatch.mock.calls[0]?.[0]?.dedupeKey as string;
+    expect(dedupeKey).toMatch(/^pluggy_sync_[0-9a-f]{40}$/);
+  });
+
+  it("webhookEventKey: eventId diferente gera chave diferente; sem eventId usa hash do corpo", async () => {
+    const { webhookEventKey } = await import("./webhook");
+    expect(webhookEventKey("item/updated", "i", "a", "x")).not.toBe(webhookEventKey("item/updated", "i", "b", "x"));
+    expect(webhookEventKey("item/updated", "i", undefined, "x")).toBe(webhookEventKey("item/updated", "i", undefined, "x"));
+    expect(webhookEventKey("item/updated", "i", undefined, "x")).not.toBe(webhookEventKey("item/updated", "i", undefined, "y"));
+  });
+});

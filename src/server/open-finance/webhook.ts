@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -11,6 +11,8 @@ export const MAX_PLUGGY_WEBHOOK_BODY_BYTES = 16_384;
 /** Mesmo eventId pode ser entregue a várias URLs; evita sync repetido na mesma instância. */
 const DEDUPE_TTL_MS = 10 * 60_000;
 const DEDUPE_LIMIT = 500;
+/** Eventos que indicam dado novo no banco; os demais são ignorados (200). */
+const SYNC_EVENTS = new Set(["item/updated", "transactions/created"]);
 
 const payloadSchema = z.object({
   event: z.string().min(1).max(80),
@@ -33,17 +35,29 @@ export function validPluggyWebhookSecret(actual: string | null, expected: string
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-const seenEvents = new Map<string, number>();
-
-function alreadyProcessed(eventId: string | undefined, now: number): boolean {
-  for (const [key, at] of seenEvents) if (now - at > DEDUPE_TTL_MS) seenEvents.delete(key);
-  return eventId ? seenEvents.has(eventId) : false;
+/** Painel Pluggy não aceita header: o segredo também vem em ?secret=. Header tem precedência. */
+export function presentedPluggyWebhookSecret(request: Request): string | null {
+  const header = request.headers.get("x-webhook-secret");
+  if (header !== null) return header;
+  return new URL(request.url).searchParams.get("secret");
 }
 
-function markProcessed(eventId: string | undefined, now: number) {
-  if (!eventId) return;
+/** Chave estável por entrega: eventId quando existe, senão hash do corpo (retentativas idênticas). */
+export function webhookEventKey(event: string, itemId: string, eventId: string | undefined, rawBody: string): string {
+  const id = eventId ?? `body:${createHash("sha256").update(rawBody).digest("hex")}`;
+  return `${event}|${itemId}|${id}`;
+}
+
+const seenEvents = new Map<string, number>();
+
+function alreadyProcessed(key: string, now: number): boolean {
+  for (const [known, at] of seenEvents) if (now - at > DEDUPE_TTL_MS) seenEvents.delete(known);
+  return seenEvents.has(key);
+}
+
+function markProcessed(key: string, now: number) {
   if (seenEvents.size >= DEDUPE_LIMIT) seenEvents.delete(seenEvents.keys().next().value!);
-  seenEvents.set(eventId, now);
+  seenEvents.set(key, now);
 }
 
 /** Limite real sobre o stream: Content-Length pode estar ausente ou mentir. */
@@ -90,9 +104,8 @@ const dependencies: PluggyWebhookDependencies = {
 };
 
 /**
- * Recebe o webhook Pluggy `item/updated` autenticado por segredo (headers do
- * webhook configurado via POST /webhooks). Responde rápido e sincroniza depois,
- * sem pedir PATCH: o banco já liberou os dados novos.
+ * Recebe webhooks Pluggy (item/updated, transactions/created) autenticados por segredo
+ * (header x-webhook-secret ou ?secret=). Responde rápido e sincroniza depois, sem PATCH.
  */
 export async function handlePluggyWebhook(
   request: Request,
@@ -102,26 +115,29 @@ export async function handlePluggyWebhook(
   const deps: PluggyWebhookDependencies = { ...dependencies, ...overrides };
   const headers = { "Cache-Control": "no-store" };
   if (!secret) return Response.json({ error: "unavailable" }, { status: 503, headers });
-  if (!validPluggyWebhookSecret(request.headers.get("x-webhook-secret"), secret)) {
+  if (!validPluggyWebhookSecret(presentedPluggyWebhookSecret(request), secret)) {
     return Response.json({ error: "unauthorized" }, { status: 401, headers });
   }
 
+  let rawBody: string;
   let raw: unknown;
   try {
-    raw = JSON.parse(await boundedBody(request));
+    rawBody = await boundedBody(request);
+    raw = JSON.parse(rawBody);
   } catch (error) {
     return Response.json({ error: "invalid_request" }, { status: error instanceof RangeError ? 413 : 400, headers });
   }
   const parsed = payloadSchema.safeParse(raw);
   if (!parsed.success) return Response.json({ error: "invalid_request" }, { status: 400, headers });
 
-  if (parsed.data.event !== "item/updated") {
+  if (!SYNC_EVENTS.has(parsed.data.event)) {
     return Response.json({ ok: true, ignored: true }, { status: 200, headers });
   }
   if (!parsed.data.itemId) return Response.json({ error: "invalid_request" }, { status: 400, headers });
 
   const now = Date.now();
-  if (alreadyProcessed(parsed.data.eventId, now)) {
+  const eventKey = webhookEventKey(parsed.data.event, parsed.data.itemId, parsed.data.eventId, rawBody);
+  if (alreadyProcessed(eventKey, now)) {
     return Response.json({ ok: true, duplicate: true }, { status: 200, headers });
   }
 
@@ -137,20 +153,22 @@ export async function handlePluggyWebhook(
     return Response.json({ ok: true, ignored: true }, { status: 200, headers });
   }
 
-  markProcessed(parsed.data.eventId, now);
+  markProcessed(eventKey, now);
+  const found = connection;
+  const notifyKey = createHash("sha256").update(`${found.id}|${eventKey}`).digest("hex").slice(0, 40);
   deps.schedule(async () => {
     try {
-      const result = await syncOpenFinanceForUser(connection!.userId, connection!.id, "webhook");
+      const result = await syncOpenFinanceForUser(found.userId, found.id, "webhook");
       console.info("[pluggy-webhook]", { event: parsed.data.event, status: result.status });
       if ("ok" in result && result.ok && result.imported > 0) {
         const imported = result.imported;
         await notificationDispatcher.dispatch({
-          userId: connection!.userId,
+          userId: found.userId,
           category: "syncAlerts",
           type: "pluggy_sync_updated",
           body: `Dados atualizados: ${imported} nova${imported === 1 ? "" : "s"} transaç${imported === 1 ? "ão" : "ões"}`,
           actionUrl: "/configuracoes/integracao",
-          dedupeKey: `pluggy_sync_${parsed.data.eventId ?? connection!.id}_${Date.now()}`,
+          dedupeKey: `pluggy_sync_${notifyKey}`,
         });
       }
     } catch (error) {
