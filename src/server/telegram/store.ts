@@ -8,7 +8,6 @@ import { renderDailySummary } from "./daily-summary";
 import { loadCardSummary } from "./card-summary";
 import { CHAT_MAX_REQUESTS, CHAT_WINDOW_MS, commandReply, isFinancialCommand, isFreeQuestion, newLinkCode, type TelegramMessage } from "./protocol";
 import { answerQuestion } from "./ai-service";
-import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
 import { parseNaturalTransaction } from "./natural-transaction-parser";
 import { createTransactionDraft, undoTransactionDraft } from "./draft-store";
 
@@ -187,10 +186,8 @@ export async function processMessage(updateId: number, message: TelegramMessage)
   if (result && typeof result === "object") {
     if (result.kind === "question") return answerQuestion(result.userId, chatId, result.question);
     // Leituras financeiras (ex.: /resumo com 15+ queries) rodam diretamente no pool
-    // sem segurar uma db.transaction aberta por múltiplos round-trips. A integração
-    // é atualizada antes da leitura, com throttle de 5 min e teto de 8 s (fail-open).
-    return readWithOpenFinanceRefresh(result.userId,
-      () => replyToCommand(message, db as unknown as TelegramTransaction, result.now, result.userId));
+    // sem segurar uma db.transaction aberta por múltiplos round-trips, lendo só o banco.
+    return replyToCommand(message, db as unknown as TelegramTransaction, result.now, result.userId);
   }
   return result;
 }

@@ -4,7 +4,7 @@ import { accounts, categories, categoryRules, openFinanceConnections, openFinanc
 import { getProfileRestriction } from "@/server/usage-profile";
 import { amountToCents, isCompatiblePluggyAccount, openFinanceConnectionIdSchema, shouldImportPluggyTransaction, transactionKind } from "./schemas";
 import { decryptSecret } from "./crypto";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItem, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, pluggyItemAllowsManualUpdate, requestPluggyItemUpdate, type PluggyItem } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
 import { createId } from "@/lib/id";
 import { resolveTransactionInvoiceRef } from "@/lib/invoices";
 import { anchorPluggyCivilDate, isBeforeCutoff } from "./cutoff";
@@ -13,71 +13,6 @@ import { isExternalIdentityTombstoned } from "./deletion-policy";
 
 export const SYNC_COOLDOWN_MS = 60 * 1000;
 const AUTO_SYNC_COOLDOWN_MS = 5 * 60 * 1000;
-const ITEM_UPDATE_POLL_MS = 1_000;
-/** Botão manual espera mais; leituras automáticas ficam dentro do teto de 12s. */
-export const DEFAULT_ITEM_UPDATE_WAIT_MS = 20_000;
-export const AUTO_ITEM_UPDATE_WAIT_MS = 5_000;
-
-export type ItemUpdateOutcome = "updated" | "pending" | "unavailable" | "skipped";
-
-const TRANSITIVE_EXECUTION_STATES = new Set([
-  "CREATED", "LOGIN_IN_PROGRESS", "LOGIN_MFA_IN_PROGRESS", "ACCOUNTS_IN_PROGRESS",
-  "CREDITCARDS_IN_PROGRESS", "TRANSACTIONS_IN_PROGRESS", "INVESTMENT_TRANSACTIONS_IN_PROGRESS",
-  "PAYMENT_DATA_IN_PROGRESS", "IDENTITY_IN_PROGRESS", "MERGING",
-]);
-
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/** null = ainda em andamento. */
-function classifyItemStatus(status: string, executionStatus: string | null): ItemUpdateOutcome | null {
-  const execution = executionStatus ?? "";
-  if (status === "WAITING_USER_INPUT" || execution === "WAITING_USER_INPUT" || execution === "USER_AUTHORIZATION_PENDING") return "unavailable";
-  if (status === "UPDATING" || TRANSITIVE_EXECUTION_STATES.has(execution)) return null;
-  return status === "UPDATED" && (execution === "SUCCESS" || execution === "PARTIAL_SUCCESS") ? "updated" : "unavailable";
-}
-
-/** Pede atualização do item (claim/cooldown já garantem quota) e aguarda por tempo limitado; recusa é fail-open. */
-async function requestItemUpdate(apiKey: string, itemId: string, waitMs: number, signal?: AbortSignal, initial?: PluggyItem): Promise<ItemUpdateOutcome> {
-  let acceptedStatus = "UPDATING";
-  let acceptedExecution: string | null = null;
-  if (initial && !pluggyItemAllowsManualUpdate(initial)) {
-    // MFA e proxy do Meu Pluggy só recebem dados novos pelo auto-sync/webhook do banco.
-    console.info("Open Finance item update skipped", { reason: "connector_not_updatable" });
-    return "unavailable";
-  }
-  if (initial && initial.status === "UPDATING") {
-    return waitForSettledItem(apiKey, itemId, waitMs, signal);
-  }
-  try {
-    const accepted = await requestPluggyItemUpdate(apiKey, itemId, signal);
-    acceptedStatus = accepted.status;
-    acceptedExecution = accepted.executionStatus;
-  } catch (error) {
-    if (signal?.aborted) throw error;
-    console.info("Open Finance item update unavailable", {
-      status: error instanceof PluggyHttpError ? error.status : 0,
-      code: error instanceof PluggyHttpError ? error.code : "UNKNOWN",
-      message: error instanceof PluggyHttpError ? error.providerMessage : null,
-    });
-    return "unavailable";
-  }
-  const settled = classifyItemStatus(acceptedStatus, acceptedExecution);
-  if (settled) return settled;
-  return waitForSettledItem(apiKey, itemId, waitMs, signal);
-}
-
-async function waitForSettledItem(apiKey: string, itemId: string, waitMs: number, signal?: AbortSignal): Promise<ItemUpdateOutcome> {
-  const deadline = Date.now() + Math.max(0, waitMs);
-  for (;;) {
-    signal?.throwIfAborted();
-    const status = await getPluggyItemStatus(apiKey, itemId, signal);
-    const outcome = classifyItemStatus(status.status, status.executionStatus);
-    if (outcome) return outcome;
-    if (Date.now() >= deadline) return "pending";
-    await sleep(Math.min(ITEM_UPDATE_POLL_MS, Math.max(0, deadline - Date.now())));
-  }
-}
-
 export const safeError = (error: unknown) => error instanceof PluggyHttpError
   ? pluggyErrorForUser(error)
   : "Não foi possível concluir. Confira a conexão e tente novamente.";
@@ -108,10 +43,9 @@ export async function resolvePluggyApiKey(userId: string, signal?: AbortSignal):
 }
 
 /** Núcleo único: identidade já autenticada pelo chamador; cooldown e claim compartilhados. */
-export async function syncOpenFinanceForUser(userId: string, input: unknown, mode: "manual" | "auto" | "webhook" = "manual", options: { signal?: AbortSignal; revalidate?: (path: string) => void; waitForUpdateMs?: number; skipItemUpdate?: boolean } = {}) {
+export async function syncOpenFinanceForUser(userId: string, input: unknown, mode: "manual" | "auto" | "webhook" = "manual", options: { signal?: AbortSignal; revalidate?: (path: string) => void } = {}) {
   const { signal } = options;
   const revalidatePath = options.revalidate ?? (() => {});
-  const waitForUpdateMs = options.waitForUpdateMs ?? (mode === "auto" ? AUTO_ITEM_UPDATE_WAIT_MS : DEFAULT_ITEM_UPDATE_WAIT_MS);
   signal?.throwIfAborted();
   const cooldownMs = mode === "webhook" ? 0 : mode === "auto" ? AUTO_SYNC_COOLDOWN_MS : SYNC_COOLDOWN_MS;
   const restriction = await getProfileRestriction(userId, "integration");
@@ -165,13 +99,9 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
     }
     const apiKey = await resolvePluggyApiKey(userId, signal);
     const itemId = decryptSecret(connection.itemIdEnvelope, userId, "itemId");
-    const currentItem = await getPluggyItem(apiKey, itemId, signal);
-    const itemUpdate = options.skipItemUpdate ? "skipped" : await requestItemUpdate(apiKey, itemId, waitForUpdateMs, signal, currentItem);
-    const item = itemUpdate === "skipped" || itemUpdate === "unavailable"
-      ? currentItem
-      : await getPluggyItemStatus(apiKey, itemId, signal);
+    const item = await getPluggyItemStatus(apiKey, itemId, signal);
     upstreamStatus = item.status;
-    if ((item.status !== "UPDATED" || item.executionStatus !== "SUCCESS") && itemUpdate !== "pending") throw new Error(`PLUGGY_ITEM_${item.status}_${item.executionStatus ?? "UNKNOWN"}`);
+    if (item.status !== "UPDATED" || item.executionStatus !== "SUCCESS") throw new Error(`PLUGGY_ITEM_${item.status}_${item.executionStatus ?? "UNKNOWN"}`);
     const remoteAccounts = await getPluggyAccounts(apiKey, itemId, signal);
     const invId = investmentRemoteId(connection.id);
     const investment = linked.some((row) => row.type === "INVESTMENT" && row.externalAccountId === invId)
@@ -292,22 +222,11 @@ export async function syncOpenFinanceForUser(userId: string, input: unknown, mod
     const accountErrors = summaries.filter((summary) => summary.status === "ERROR").length;
     const finalStatus = accountErrors ? "ERROR" : "UPDATED";
     const lastSyncedAt = finalStatus === "UPDATED" ? new Date() : connection.lastSyncedAt;
-    const dataAt = prepared.length ? new Date(Math.min(...prepared.map((batch) => batch.snapshotAt.getTime()))) : null;
-    const notice = itemUpdate === "pending" ? "A Pluggy ainda está processando a atualização do banco; usei o último snapshot disponível."
-      : itemUpdate === "unavailable" ? "Não consegui pedir atualização ao banco agora; usei o último snapshot disponível."
-      : null;
     await db.update(openFinanceConnections).set({ status: finalStatus, ...(finalStatus === "UPDATED" ? { lastSyncedAt } : {}), lastErrorCode: accountErrors ? "SYNC_ACCOUNT_ERRORS" : null }).where(and(eq(openFinanceConnections.id, connectionId), eq(openFinanceConnections.userId, userId), eq(openFinanceConnections.lastAttemptAt, new Date(now))));
-    console.info("Open Finance sync summary", { ...counts(), categorization: categorizationCounts, itemUpdate });
+    console.info("Open Finance sync summary", { ...counts(), categorization: categorizationCounts });
     revalidatePath("/configuracoes/integracao"); revalidatePath("/contas"); revalidatePath("/painel"); revalidatePath("/lancamentos");
-    return { ok: true, status: finalStatus, lastSyncedAt, dataAt, itemUpdate, imported, accounts: summaries, categorization: categorizationCounts, ...(accountErrors ? { error: "Algumas contas não puderam ser sincronizadas. Consulte o resumo por conta." } : {}), ...(notice ? { notice } : {}) };
+    return { ok: true, status: finalStatus, lastSyncedAt, imported, accounts: summaries, categorization: categorizationCounts, ...(accountErrors ? { error: "Algumas contas não puderam ser sincronizadas. Consulte o resumo por conta." } : {}) };
   } catch (error) {
-    if (signal?.aborted) {
-      // Timeout/teto do chamador: devolve o status anterior em vez de marcar a conexão como ERROR.
-      const previousStatus = connection.status && connection.status !== "SYNCING" ? connection.status : "UPDATED";
-      await db.update(openFinanceConnections).set({ status: previousStatus, lastErrorCode: null }).where(and(eq(openFinanceConnections.id, connectionId), eq(openFinanceConnections.userId, userId), eq(openFinanceConnections.lastAttemptAt, new Date(now))));
-      console.info("Open Finance sync aborted", counts());
-      return { aborted: true, status: "ABORTED", imported: 0, accounts: summaries };
-    }
     const detail = persistedError(error);
     const message = safeError(error);
     for (const summary of summaries) if (summary.status === "PENDING") { summary.status = "ERROR"; summary.error = message; }

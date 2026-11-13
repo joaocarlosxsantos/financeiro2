@@ -118,6 +118,13 @@ export async function getOpenFinanceSetup() {
     .from(openFinanceConnections)
     .where(eq(openFinanceConnections.userId, userId))) ?? [];
 
+  const connections = Array.isArray(storedConnections)
+    ? storedConnections.map((connection) => ({
+        ...connection,
+        lastErrorMessage: connectionErrorMessage(connection.lastErrorCode),
+      }))
+    : [];
+
   const localAccounts = (await db
     .select({
       id: accounts.id,
@@ -125,7 +132,6 @@ export async function getOpenFinanceSetup() {
       type: accounts.type,
       financeMode: accounts.financeMode,
       externalAccountId: accounts.externalAccountId,
-      externalConnectionId: accounts.externalConnectionId,
       bankBalanceCents: accounts.bankBalanceCents,
       bankBalanceAt: accounts.bankBalanceAt,
       creditLimitCents: accounts.creditLimitCents,
@@ -134,21 +140,6 @@ export async function getOpenFinanceSetup() {
     })
     .from(accounts)
     .where(and(eq(accounts.userId, userId), eq(accounts.archived, false)))) ?? [];
-
-  const connections = Array.isArray(storedConnections)
-    ? storedConnections.map((connection) => {
-        const dates = (Array.isArray(localAccounts) ? localAccounts : [])
-          .filter((account) => account.externalConnectionId === connection.id)
-          .map((account) => account.bankBalanceAt ?? account.creditSnapshotAt)
-          .filter((date): date is Date => date instanceof Date);
-        return {
-          ...connection,
-          dataAt: dates.length ? new Date(Math.min(...dates.map((date) => date.getTime()))) : null,
-          dataStale: dates.length ? Date.now() - Math.min(...dates.map((date) => date.getTime())) > 2 * 60 * 60 * 1000 : false,
-          lastErrorMessage: connectionErrorMessage(connection.lastErrorCode),
-        };
-      })
-    : [];
 
   const invoices = (await db
     .select({

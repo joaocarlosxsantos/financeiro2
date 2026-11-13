@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ sync: vi.fn(), findConnection: vi.fn() }));
+const mocks = vi.hoisted(() => ({ sync: vi.fn(), findConnection: vi.fn(), dispatch: vi.fn() }));
 vi.mock("@/db", () => ({ db: {} }));
 vi.mock("./crypto", () => ({ secretFingerprint: (value: string) => `hash:${value}` }));
 vi.mock("./sync", () => ({ syncOpenFinanceForUser: mocks.sync }));
+vi.mock("@/server/notifications/dispatcher", () => ({ notificationDispatcher: { dispatch: mocks.dispatch } }));
 
 import { handlePluggyWebhook } from "./webhook";
 
@@ -33,14 +34,16 @@ describe("webhook Pluggy item/updated", () => {
 
   it("autentica, localiza a conexão e agenda o sync sem PATCH depois do ACK", async () => {
     mocks.findConnection.mockResolvedValue({ id: "conn-1", userId: "owner-1" });
-    mocks.sync.mockResolvedValue({ ok: true, status: "UPDATED" });
+    mocks.sync.mockResolvedValue({ ok: true, status: "UPDATED", imported: 3 });
+    mocks.dispatch.mockResolvedValue({});
     const response = await handlePluggyWebhook(request(updated("e-202", "private-item", "owner-1")), secret, deps);
     expect(response.status).toBe(202);
     expect(mocks.findConnection).toHaveBeenCalledWith("private-item", "owner-1");
     expect(mocks.sync).not.toHaveBeenCalled();
     expect(scheduled).toHaveLength(1);
     await scheduled[0]!();
-    expect(mocks.sync).toHaveBeenCalledWith("owner-1", "conn-1", "webhook", { skipItemUpdate: true });
+    expect(mocks.sync).toHaveBeenCalledWith("owner-1", "conn-1", "webhook");
+    expect(mocks.dispatch).toHaveBeenCalledWith(expect.objectContaining({ userId: "owner-1", category: "syncAlerts", type: "pluggy_sync_updated" }));
   });
 
   it("ignora eventos que não sejam item/updated e item desconhecido", async () => {

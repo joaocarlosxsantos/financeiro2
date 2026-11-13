@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { openFinanceConnections } from "@/db/schema";
 import { secretFingerprint } from "./crypto";
 import { syncOpenFinanceForUser } from "./sync";
+import { notificationDispatcher } from "@/server/notifications/dispatcher";
 
 export const MAX_PLUGGY_WEBHOOK_BODY_BYTES = 16_384;
 /** Mesmo eventId pode ser entregue a várias URLs; evita sync repetido na mesma instância. */
@@ -139,8 +140,19 @@ export async function handlePluggyWebhook(
   markProcessed(parsed.data.eventId, now);
   deps.schedule(async () => {
     try {
-      const result = await syncOpenFinanceForUser(connection!.userId, connection!.id, "webhook", { skipItemUpdate: true });
+      const result = await syncOpenFinanceForUser(connection!.userId, connection!.id, "webhook");
       console.info("[pluggy-webhook]", { event: parsed.data.event, status: result.status });
+      if ("ok" in result && result.ok && result.imported > 0) {
+        const imported = result.imported;
+        await notificationDispatcher.dispatch({
+          userId: connection!.userId,
+          category: "syncAlerts",
+          type: "pluggy_sync_updated",
+          body: `Dados atualizados: ${imported} nova${imported === 1 ? "" : "s"} transaç${imported === 1 ? "ão" : "ões"}`,
+          actionUrl: "/configuracoes/integracao",
+          dedupeKey: `pluggy_sync_${parsed.data.eventId ?? connection!.id}_${Date.now()}`,
+        });
+      }
     } catch (error) {
       console.error("[pluggy-webhook]", { event: parsed.data.event, status: "sync_failed", code: error instanceof Error ? error.name : "UNKNOWN" });
     }

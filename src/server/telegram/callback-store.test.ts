@@ -4,7 +4,6 @@ import type { SQL } from "drizzle-orm";
 
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), select: vi.fn(), rows: [] as unknown[][], events: [] as { kind: string; table?: unknown; value?: unknown }[] }));
 const provider = vi.hoisted(() => ({ refresh: vi.fn(), sync: vi.fn() }));
-vi.mock("@/server/open-finance/refresh", () => ({ readWithOpenFinanceRefresh: provider.refresh, refreshFinancialData: provider.refresh }));
 vi.mock("@/server/open-finance/sync", () => ({ syncOpenFinanceForUser: provider.sync }));
 vi.mock("@/db", () => ({ db: { transaction: mocks.transaction, select: mocks.select } }));
 import { telegramChatState, telegramPreferences, users } from "@/db/schema";

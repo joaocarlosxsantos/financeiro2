@@ -42,13 +42,12 @@ function safeProviderError(body: unknown, status: number, path: string, apiKey?:
   return { code, message };
 }
 
-async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal, method?: "GET" | "POST" | "PATCH"): Promise<unknown> {
-  const verb = method ?? (body ? "POST" : "GET");
+async function request(path: string, apiKey?: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
   for (let attempt = 0; attempt < 2; attempt++) {
     signal?.throwIfAborted();
     try {
       const response = await fetch(`${BASE}${path}`, {
-        method: verb, redirect: "error", cache: "no-store",
+        method: body ? "POST" : "GET", redirect: "error", cache: "no-store",
         signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000),
         headers: { "content-type": "application/json", ...(apiKey ? { "X-API-KEY": apiKey } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
@@ -118,12 +117,6 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
     clientUserId: z.string().nullable().optional(),
     status: z.string().max(80),
     executionStatus: z.string().max(80).nullable().optional(),
-    connector: z.object({
-      id: z.number().int().nullable().optional(),
-      name: z.string().max(200).nullable().optional(),
-      hasMFA: z.boolean().nullable().optional(),
-      isOpenFinance: z.boolean().nullable().optional(),
-    }).nullish(),
   }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, undefined, signal));
   const known = new Set(["UPDATED", "UPDATING", "LOGIN_ERROR", "OUTDATED", "WAITING_USER_INPUT", "LOGIN_IN_PROGRESS"]);
   return {
@@ -131,43 +124,12 @@ export async function getPluggyItem(apiKey: string, itemId: string, signal?: Abo
     clientUserId: item.clientUserId ?? null,
     status: known.has(item.status) ? item.status : "UNKNOWN",
     executionStatus: item.executionStatus ?? null,
-    connector: item.connector ? {
-      id: item.connector.id ?? null,
-      name: item.connector.name ?? null,
-      hasMFA: item.connector.hasMFA ?? false,
-      isOpenFinance: item.connector.isOpenFinance ?? false,
-    } : null,
   };
-}
-
-export type PluggyItem = Awaited<ReturnType<typeof getPluggyItem>>;
-
-/**
- * PATCH /items/{id} depende de credenciais reutilizáveis. Conectores com MFA e
- * o proxy do Meu Pluggy recusam update manual (HTTP 400); nesses casos só o
- * auto-sync/webhook do banco atualiza o item.
- */
-export function pluggyItemAllowsManualUpdate(item: Pick<PluggyItem, "connector">): boolean {
-  const connector = item.connector;
-  if (!connector) return true;
-  if (connector.hasMFA) return false;
-  const name = (connector.name ?? "").replace(/[^a-z]/gi, "").toLowerCase();
-  return !name.includes("meupluggy");
 }
 
 export async function getPluggyItemStatus(apiKey: string, itemId: string, signal?: AbortSignal) {
   const item = await getPluggyItem(apiKey, itemId, signal);
   return { status: item.status, executionStatus: item.executionStatus };
-}
-
-/** PATCH /items/{id} sem credenciais: pede à Pluggy um novo sync usando o consentimento salvo. */
-export async function requestPluggyItemUpdate(apiKey: string, itemId: string, signal?: AbortSignal) {
-  const item = z.object({
-    id: z.string(),
-    status: z.string().max(80),
-    executionStatus: z.string().max(80).nullable().optional(),
-  }).parse(await request(`/items/${encodeURIComponent(itemId)}`, apiKey, {}, signal, "PATCH"));
-  return { accepted: true as const, status: item.status, executionStatus: item.executionStatus ?? null };
 }
 
 async function collect(path: string, apiKey: string, pagination: "cursor" | "page", signal?: AbortSignal) {

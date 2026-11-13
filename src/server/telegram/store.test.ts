@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   subscriptions: vi.fn(),
   cards: vi.fn(),
   ai: vi.fn(),
-  refresh: vi.fn(),
 }));
 vi.mock("@/db", () => ({
   db: {
@@ -40,7 +39,6 @@ vi.mock("./daily-summary", () => ({
   renderDailySummary: (...args: unknown[]) => mocks.summary(...args),
 }));
 vi.mock("./ai-service", () => ({ answerQuestion: (...args: unknown[]) => mocks.ai(...args) }));
-vi.mock("@/server/open-finance/refresh", () => ({ readWithOpenFinanceRefresh: (...args: unknown[]) => mocks.refresh(...args) }));
 
 import { disconnect, issueLink, loadTelegramBalance, processMessage } from "./store";
 import { telegramLinkCodes, telegramLinks, telegramPreferences, users } from "@/db/schema";
@@ -51,7 +49,6 @@ const sqlQuery = (value: unknown) => new PgDialect().sqlToQuery(value as SQL);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.refresh.mockImplementation(async (_userId: string, read: () => Promise<string>) => read());
   mocks.results.length = mocks.events.length = 0;
   const query = (kind: string, table?: unknown) => {
     mocks.events.push({ kind, value: table });
@@ -86,26 +83,15 @@ describe("persistência Telegram", () => {
     expect(await loadTelegramBalance("linked-owner", connection)).toEqual({ availableCents: 1000, investedCents: 2000, netWorthCents: 2500, totalIncomplete: true, needsOpeningBalance: false });
     expect(mocks.balance).toHaveBeenCalledWith("linked-owner", connection);
   });
-  it("atualiza a integração após liberar o claim e antes de ler o saldo", async () => {
+  it("lê o saldo após liberar o claim", async () => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
-    const callback = mocks.transaction.getMockImplementation()!;
-    let commits = 0;
-    mocks.transaction.mockImplementation(async (...args: unknown[]) => { const result = await callback(...args); commits++; return result; });
-    mocks.refresh.mockImplementation(async (userId: string, read: () => Promise<string>) => {
-      expect(userId).toBe("linked-owner");
-      expect(commits).toBe(1);
-      expect(mocks.balance).not.toHaveBeenCalled();
-      return `${await read()}\n\nAtualizado há 20 s.`;
-    });
     mocks.balance.mockResolvedValue({ availableCents: 100, totalIncomplete: false });
-    expect(await processMessage(11, message("/saldo"))).toContain("Atualizado há 20 s.");
-    expect(mocks.refresh).toHaveBeenCalledOnce();
-    expect(commits).toBe(1);
+    expect(await processMessage(11, message("/saldo"))).toContain("1,00");
   });
-  it.each(["/ajuda", "/pausar", "/start", "/desconhecido"])("não faz refresh em comando sem leitura financeira: %s", async text => {
+  it.each(["/ajuda", "/pausar", "/start", "/desconhecido"])("não chama readTool em comando sem leitura financeira: %s", async text => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }]);
     await processMessage(12, message(text));
-    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(mocks.balance).not.toHaveBeenCalled();
   });
   it("vínculo removido ou trocado entre claim e leitura não lê dados de outro dono", async () => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "different-owner" }]);
@@ -141,7 +127,6 @@ describe("persistência Telegram", () => {
     mocks.results.push(rows);
     expect(await processMessage(10, message("/saldo"))).toBeNull();
     expect(mocks.balance).not.toHaveBeenCalled();
-    expect(mocks.refresh).not.toHaveBeenCalled();
     expect(mocks.events.filter((e) => e.kind === "select")).toHaveLength(0);
     const upsert = mocks.events.find((e) => e.kind === "upsert")?.value as { setWhere: SQL; set: { requestCount: SQL } };
     expect(sqlQuery(upsert.setWhere).sql).toContain('"telegram_chat_state"."last_update_id" <');
@@ -168,14 +153,12 @@ describe("persistência Telegram", () => {
     const reply = await processMessage(12, message("/resumo"));
     expect(reply).toBe("CONTA\nSaldo total: R$ 500,00");
     expect(mocks.summary).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
-    expect(mocks.refresh).toHaveBeenCalledWith("linked-owner", expect.any(Function));
   });
-  it.each(["/resumo", "/resumo semana", "/resumo semanal"])("%s atualiza a integração antes de responder", async text => {
+  it.each(["/resumo", "/resumo semana", "/resumo semanal"])("%s lê diretamente sem refresh", async text => {
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.summary.mockResolvedValue("Resumo salvo");
     expect(await processMessage(12, message(text))).toBe("Resumo salvo");
     expect(mocks.summary).toHaveBeenCalledOnce();
-    expect(mocks.refresh).toHaveBeenCalledWith("linked-owner", expect.any(Function));
   });
   it("consome por DELETE RETURNING com validade e nunca sobrescreve vínculo existente", async () => {
     const token = newLinkCode();

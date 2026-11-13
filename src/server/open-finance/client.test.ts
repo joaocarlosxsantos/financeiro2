@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItem, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser, pluggyItemAllowsManualUpdate, requestPluggyItemUpdate } from "./client";
+import { authenticatePluggy, getPluggyAccounts, getPluggyBills, getPluggyInvestmentSnapshot, investmentRemoteId, getPluggyItem, getPluggyItemStatus, getPluggyTransactions, PluggyHttpError, pluggyErrorForUser } from "./client";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -189,33 +189,14 @@ describe("Pluggy client", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.pluggy.ai/items/item-id");
   });
 
-  it("lê metadados do item para decidir se o PATCH é permitido", async () => {
+  it("lê status do item sem campo connector", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       id: "item-id", status: "UPDATED", executionStatus: "SUCCESS",
-      connector: { id: 601, name: "Itaú", hasMFA: true, isOpenFinance: true },
     }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const item = await getPluggyItem("api-key", "item-id");
-    expect(item.connector).toEqual({ id: 601, name: "Itaú", hasMFA: true, isOpenFinance: true });
-    expect(pluggyItemAllowsManualUpdate(item)).toBe(false);
-  });
-
-  it("permite PATCH sem MFA e bloqueia Meu Pluggy", () => {
-    expect(pluggyItemAllowsManualUpdate({ connector: null })).toBe(true);
-    expect(pluggyItemAllowsManualUpdate({ connector: { id: 601, name: "Itaú", hasMFA: false, isOpenFinance: true } })).toBe(true);
-    expect(pluggyItemAllowsManualUpdate({ connector: { id: 200, name: "Meu Pluggy", hasMFA: false, isOpenFinance: false } })).toBe(false);
-  });
-
-
-  it("pede atualização do item com PATCH e corpo vazio (credenciais ficam no cofre da Pluggy)", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "item-id", status: "UPDATING", executionStatus: null }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
-    expect(await requestPluggyItemUpdate("api-key", "item-id")).toEqual({ accepted: true, status: "UPDATING", executionStatus: null });
-    const [url, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("https://api.pluggy.ai/items/item-id");
-    expect(options.method).toBe("PATCH");
-    expect(options.body).toBe("{}");
-    expect(options.headers).toMatchObject({ "X-API-KEY": "api-key" });
+    expect(item.status).toBe("UPDATED");
+    expect(item.executionStatus).toBe("SUCCESS");
   });
 
   it("preserves sanitized 403 code/message without credentials or IDs and maps it for the UI", async () => {

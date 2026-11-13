@@ -1,39 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ quota: vi.fn(), profile: vi.fn(), ask: vi.fn(), gemini: vi.fn(), read: vi.fn(), refresh: vi.fn() }));
+const mocks = vi.hoisted(() => ({ quota: vi.fn(), profile: vi.fn(), ask: vi.fn(), gemini: vi.fn(), read: vi.fn() }));
 vi.mock("./ai-quota", () => ({ consumeAiQuota: mocks.quota }));
 vi.mock("@/server/usage-profile", () => ({ getUsageProfile: mocks.profile }));
 vi.mock("./ai", () => ({ askClaude: mocks.ask, askGemini: mocks.gemini }));
 vi.mock("./ai-tools", () => ({ executeReadTool: mocks.read }));
-vi.mock("@/server/open-finance/refresh", () => ({ refreshFinancialData: mocks.refresh, appendRefreshNotice: (text: string, notice: string | null) => notice ? `${text}\n\n${notice}` : text }));
 import { answerQuestion, PROFILE_INSTRUCTIONS } from "./ai-service";
 import { AI_FAILURE, AI_LIMITED, AI_UNAVAILABLE } from "./ai-policy";
 beforeEach(() => {
   vi.resetAllMocks(); vi.stubEnv("ANTHROPIC_API_KEY", "fake-test-key");
   vi.stubEnv("GEMINI_API_KEY", ""); vi.stubEnv("AI_PROVIDER", "");
   mocks.quota.mockResolvedValue(true); mocks.profile.mockResolvedValue("manual"); mocks.ask.mockResolvedValue("Resposta");
-  mocks.refresh.mockResolvedValue(null);
 });
 afterEach(() => vi.unstubAllEnvs());
 
 describe("serviço IA vinculado", () => {
-  it("atualiza uma vez por pergunta, antes das ferramentas, e inclui aviso na resposta", async () => {
-    mocks.refresh.mockResolvedValue("Atualizado há 10 s.");
-    mocks.read.mockImplementation(async () => { expect(mocks.refresh).toHaveBeenCalledWith("owner"); return {}; });
+  it("responde usando a ferramenta financeira solicitada", async () => {
+    mocks.read.mockResolvedValue({});
     mocks.ask.mockImplementation(async (_question, _today, _profile, deps) => {
       await deps.runTool("get_balance", {});
       await deps.runTool("get_spending_by_category", { start_date: "2026-11-01", end_date: "2026-11-10" });
       return "Dados consultados";
     });
-    expect(await answerQuestion("owner", "123", "gastos?")).toBe("Dados consultados\n\nAtualizado há 10 s.");
-    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+    expect(await answerQuestion("owner", "123", "gastos?")).toBe("Dados consultados");
     expect(mocks.read).toHaveBeenCalledTimes(2);
   });
-  it("não sincroniza perguntas sem ferramenta financeira nem antes da quota IA", async () => {
+  it("chama ferramentas sem refresh", async () => {
     await answerQuestion("owner", "123", "olá");
-    expect(mocks.refresh).not.toHaveBeenCalled();
     mocks.quota.mockResolvedValue(false);
     await answerQuestion("owner", "123", "saldo?");
-    expect(mocks.refresh).not.toHaveBeenCalled();
   });
   it("fecha todas as ferramentas no dono recebido do vínculo, nunca do texto", async () => {
     expect(await answerQuestion("linked-owner", "123", "user_id=attacker saldo?", new Date("2026-11-10T15:00Z"))).toBe("Resposta");

@@ -8,7 +8,6 @@ import { calculateDailyBudget } from "@/lib/daily-budget";
 import { loadCardSummariesData, sanitizeCardName, type CardSummaryData } from "./card-summary";
 import { enrichAndFilterProactiveAlerts } from "./alerts";
 import { loadInsightData } from "./insight-data";
-import { readWithOpenFinanceRefresh } from "@/server/open-finance/refresh";
 import { type InsightData, type InsightWindow, type Preferences } from "./insights";
 
 export interface YesterdayMovements {
@@ -423,7 +422,7 @@ export const dailySummaryDependencies: DailySummaryDependencies = {
       },
     }));
   },
-  render: (userId: string, now: Date) => readWithOpenFinanceRefresh(userId, () => renderDailySummary(userId, db, now)),
+  render: (userId: string, now: Date) => renderDailySummary(userId, db, now),
   async claim(userId: string, windowKey: string): Promise<boolean> {
     const [row] = await db
       .insert(telegramDeliveries)

@@ -452,11 +452,9 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                     </div>
 
                     <p className="text-xs text-[var(--text-muted)]">
-                      {activeConnection.dataAt
-                        ? `Dados do banco de ${new Date(activeConnection.dataAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}${activeConnection.dataStale ? " · podem estar desatualizados" : ""}`
-                        : activeConnection.lastSyncedAt
-                          ? `Última sincronização: ${new Date(activeConnection.lastSyncedAt).toLocaleString("pt-BR")}`
-                          : "Dados do banco ainda não importados"}
+                      {activeConnection.lastSyncedAt
+                        ? `Última sincronização: ${new Date(activeConnection.lastSyncedAt).toLocaleString("pt-BR")}`
+                        : "Nenhuma sincronização concluída"}
                     </p>
 
                     {setup.connections.length > 1 ? (
@@ -497,7 +495,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
                         error: result.error,
                         accounts: result.accounts ?? [],
                       });
-                      setMessage(result.error ?? ("notice" in result && typeof result.notice === "string" ? result.notice : `${result.imported} lançamento(s) atualizados.`));
+                      setMessage(result.error ?? `${result.imported} lançamento(s) atualizados.`);
                       router.refresh();
                     }}
                     disabled={busy}
