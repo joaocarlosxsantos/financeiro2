@@ -11,6 +11,7 @@ import { TelegramPanel } from "./telegram-panel";
 import { BackupButton } from "./backup-button";
 import Link from "next/link";
 import { Bell, ArrowRight } from "lucide-react";
+import { OnboardingSettingsActions } from "@/components/onboarding/settings-actions";
 
 export const metadata = { title: "Configurações" };
 
@@ -28,6 +29,8 @@ export default async function SettingsPage() {
         title="Configurações"
         description="Renda, contas e categorias."
       />
+
+      <OnboardingSettingsActions />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="min-w-0 border-[var(--acento)]/30 lg:col-span-2">

@@ -73,7 +73,7 @@ declare global {
   }
 }
 
-export function IntegrationPanel({ initial }: { initial: Setup }) {
+export function IntegrationPanel({ initial, userId }: { initial: Setup; userId: string }) {
   const manualEntry = canUseCapability(useUsageProfile(), "manual-entry");
   const router = useRouter();
   const confirm = useConfirm();
@@ -103,7 +103,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
 
   const activeConnection = setup.connections.find((c) => c.id === connectionId) ?? setup.connections[0];
 
-  async function handleSaveCredentials(form: FormData) {
+  async function handleSaveCredentials(form: FormData, formElement?: HTMLFormElement) {
     setBusy(true);
     setMessage("");
     const clientId = String(form.get("clientId") ?? "");
@@ -113,6 +113,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
     if (res.error) {
       return setMessage(res.error);
     }
+    formElement?.reset();
     setActiveSheet(null);
     setMessage("Credenciais da Pluggy salvas e validadas com sucesso!");
     router.refresh();
@@ -166,7 +167,7 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
           if (connectRes.error) {
             setMessage(connectRes.error);
           } else {
-            setMessage("Conexão concluída e sincronizada com sucesso!");
+            setMessage("Conexão autorizada. Sincronize agora e confira o resultado por conta para confirmar a leitura dos dados.");
             router.refresh();
           }
         },
@@ -331,18 +332,18 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
               <div>
                 <h2 className="text-heading font-semibold text-[var(--text)]">Configurar Pluggy Open Finance</h2>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Uso pessoal e gratuito para até 5 contas conectadas.
+                  Confira com a Pluggy se a modalidade da aplicação permite o uso pretendido.
                 </p>
               </div>
             </div>
           </div>
 
-          <PluggyCredentialsGuide />
+          <PluggyCredentialsGuide key={userId} />
 
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              await handleSaveCredentials(new FormData(e.currentTarget));
+              await handleSaveCredentials(new FormData(e.currentTarget), e.currentTarget);
             }}
             className="space-y-4"
           >
@@ -650,12 +651,12 @@ export function IntegrationPanel({ initial }: { initial: Setup }) {
           onClose={() => setActiveSheet(null)}
         >
           <div className="space-y-4">
-            <PluggyCredentialsGuide />
+            <PluggyCredentialsGuide key={userId} />
 
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                await handleSaveCredentials(new FormData(e.currentTarget));
+                await handleSaveCredentials(new FormData(e.currentTarget), e.currentTarget);
               }}
               className="space-y-4"
             >

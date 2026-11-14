@@ -264,7 +264,7 @@ export default async function DashboardPage({
 
       {/* 2. Alerta/onboarding compacta logo abaixo */}
       <div className="mt-4 space-y-3">
-        <OnboardingCard checklist={onboarding} profile={user.usageProfile} />
+        {onboarding.journey ? <OnboardingCard journey={onboarding.journey} profile={user.usageProfile} userId={userId} /> : null}
 
         {canUseCapability(user.usageProfile, "manual-entry") && (<RecurringBanner
           monthRef={ref}

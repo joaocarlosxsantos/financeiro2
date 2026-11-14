@@ -4,6 +4,7 @@ import { UsageProfileFields } from "@/components/usage-profile-fields";
 import type { UsageProfile } from "@/lib/usage-profile";
 import { useActionState, useMemo, useState } from "react";
 import { completeOnboarding, type ActionState } from "@/server/actions/settings";
+import { skipOnboardingCalibration } from "@/server/actions/onboarding";
 import { Field, MoneyInput, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/button";
 import { formatCents, parseMoneyToCents } from "@/lib/money";
@@ -17,6 +18,7 @@ export function OnboardingForm({
   defaults: { usageProfile: UsageProfile; income: number; emergencyMonths: number; savingsTargetPct: number };
 }) {
   const [state, formAction, pending] = useActionState(completeOnboarding, initial);
+  const [skipState, skipFormAction, skipPending] = useActionState(skipOnboardingCalibration, initial);
   const [income, setIncome] = useState(defaults.income ? (defaults.income / 100).toFixed(2).replace(".", ",") : "");
   const [months, setMonths] = useState(String(defaults.emergencyMonths || 6));
   const [savePct, setSavePct] = useState(String(defaults.savingsTargetPct || 20));
@@ -114,6 +116,14 @@ export function OnboardingForm({
       <SubmitButton className="min-h-11 min-w-11 w-full sm:w-auto" pendingLabel="Preparando seu painel...">
         Ir para o painel
       </SubmitButton>
+      {skipState.error ? <p role="alert" className="rounded-xl bg-[var(--color-money-out-soft)] px-3.5 py-2.5 text-[0.8125rem] text-[var(--text-out)]">{skipState.error}</p> : null}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+        <p className="text-sm font-medium text-[var(--text)]">Prefere começar sem informar sua renda?</p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">Você pode escolher o modo acima e adiar a calibração. Sua renda e suas preferências atuais são preservadas; ajuste esses dados depois em Configurações.</p>
+        <button type="submit" formAction={skipFormAction} formNoValidate disabled={pending || skipPending} className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] px-3.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-2)] disabled:opacity-50">
+          {skipPending ? "Abrindo seu painel…" : "Pular calibração por agora"}
+        </button>
+      </div>
     </form>
   );
 }
