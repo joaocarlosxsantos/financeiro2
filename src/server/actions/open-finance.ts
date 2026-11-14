@@ -2,18 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@/db";
 import { accounts, openFinanceConnections, openFinanceCredentials, openFinanceDeleted, openFinanceInvoices, transactions } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { getProfileRestriction } from "@/server/usage-profile";
-import { deleteAllOpenFinanceSchema, deletePluggyTransactionSchema, isCompatiblePluggyAccount, linkOpenFinanceAccountSchema, openFinanceConnectionIdSchema, removeOpenFinanceConnectionSchema, removeOpenFinanceCredentialsSchema, saveOpenFinanceSetupSchema } from "@/server/open-finance/schemas";
+import { connectPluggyItemSchema, deleteAllOpenFinanceSchema, deletePluggyTransactionSchema, isCompatiblePluggyAccount, linkOpenFinanceAccountSchema, openFinanceConnectionIdSchema, removeOpenFinanceConnectionSchema, removeOpenFinanceCredentialsSchema, saveOpenFinanceCredentialsSchema, saveOpenFinanceSetupSchema } from "@/server/open-finance/schemas";
 import { canDeletePluggyTransaction, planConnectionDataDeletion } from "@/server/open-finance/deletion-policy";
 import { decryptSecret, encryptSecret, secretFingerprint } from "@/server/open-finance/crypto";
 import { authenticatePluggy, createPluggyConnectToken, getPluggyAccounts, getPluggyItem, investmentRemoteId, PluggyHttpError, pluggyErrorForUser } from "@/server/open-finance/client";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolvePluggyApiKey, safeError, syncOpenFinanceForUser } from "@/server/open-finance/sync";
 import { maskClientId } from "@/server/open-finance/access";
+import { summarizeInitialOnboardingSync } from "@/lib/onboarding";
 
 const OPEN_FINANCE_SETUP_LIMIT = 10;
 const OPEN_FINANCE_SETUP_WINDOW_MS = 60 * 60 * 1000;
@@ -34,11 +34,6 @@ function connectionErrorMessage(value: string | null): string | null {
   } catch { /* Older rows contain a plain sanitized error code. */ }
   return "Não foi possível sincronizar esta conexão. Confira os dados e tente novamente.";
 }
-
-const saveOpenFinanceCredentialsSchema = z.object({
-  clientId: z.string().trim().min(5, "Informe um Client ID válido."),
-  clientSecret: z.string().trim().min(5, "Informe um Client Secret válido."),
-});
 
 export async function saveOpenFinanceCredentials(input: unknown) {
   const userId = await requireUserId();
@@ -74,6 +69,8 @@ export async function saveOpenFinanceCredentials(input: unknown) {
         },
       });
   } catch (error) {
+    if (error instanceof PluggyHttpError && error.code === "CLIENT_DISABLED") return { error: "Aplicação Pluggy desativada. Confira a aplicação no Dashboard antes de tentar novamente." };
+    if (error instanceof PluggyHttpError && error.code === "CLIENT_KEYS_UNAUTHORIZED") return { error: "Par de credenciais inválido. Confira Client ID, Client Secret e ambiente da mesma aplicação." };
     return { error: safeError(error) };
   }
 
@@ -209,11 +206,6 @@ export async function getPluggyConnectToken() {
   }
 }
 
-const connectPluggyItemSchema = z.object({
-  itemId: z.string().min(1).max(100),
-  label: z.string().max(100).optional(),
-});
-
 export async function connectPluggyItem(input: unknown) {
   const userId = await requireUserId();
   const restriction = await getProfileRestriction(userId, "integration");
@@ -264,16 +256,18 @@ export async function connectPluggyItem(input: unknown) {
       .where(and(eq(openFinanceConnections.userId, userId), eq(openFinanceConnections.itemIdHash, itemIdHash)))
       .limit(1);
 
+    if (!connection) return { error: "A conexão não pôde ser confirmada. Tente novamente." };
+    let initialSync = summarizeInitialOnboardingSync({ skipped: true });
     if (connection) {
       try {
-        await syncOpenFinance({ connectionId: connection.id });
+        initialSync = summarizeInitialOnboardingSync(await syncOpenFinance({ connectionId: connection.id }));
       } catch {
-        // Falha no sync inicial não quebra o salvamento
+        initialSync = summarizeInitialOnboardingSync(null);
       }
     }
 
     revalidatePath("/configuracoes/integracao");
-    return { ok: true, connectionId: connection?.id };
+    return { ok: true, connected: true, connectionId: connection.id, initialSync };
   } catch (error) {
     return { error: safeError(error) };
   }
@@ -287,7 +281,8 @@ export async function saveOpenFinanceSetup(input: unknown) {
     return { error: "Muitas tentativas de configuração. Aguarde uma hora e tente novamente." };
   }
   const parsed = saveOpenFinanceSetupSchema.safeParse(input);
-  if (!parsed.success) return { error: "Confira os campos informados." };
+  if (!parsed.success) return { error: parsed.error.issues.length === 1 && parsed.error.issues[0]?.path[0] === "importFromDate"
+    ? "A data inicial precisa ser válida e não futura." : "Confira os campos informados." };
   const data = parsed.data;
   const date = new Date(`${data.importFromDate}T00:00:00.000Z`);
   if (!Number.isFinite(date.getTime()) || date > new Date()) return { error: "A data inicial precisa ser válida e não futura." };
@@ -297,6 +292,8 @@ export async function saveOpenFinanceSetup(input: unknown) {
     const clientSecret = data.clientSecret || (stored ? decryptSecret(stored.clientSecretEnvelope, userId, "clientSecret") : "");
     if (!clientId || !clientSecret) return { error: "Informe clientId e clientSecret para a primeira conexão." };
     const apiKey = await authenticatePluggy(clientId, clientSecret);
+    const item = await getPluggyItem(apiKey, data.itemId);
+    if (!item.clientUserId || item.clientUserId !== userId) return { error: "Item não autorizado para este usuário. Use o widget do Mutano; importação do Demo não está disponível." };
     await getPluggyAccounts(apiKey, data.itemId);
     const itemIdHash = secretFingerprint(data.itemId);
     await db.transaction(async (tx) => {
@@ -337,7 +334,9 @@ export async function linkOpenFinanceAccount(input: { accountId: string; connect
     const manualRestriction = await getProfileRestriction(userId, "manual-entry");
     if (manualRestriction) return { error: manualRestriction };
   }
-  const [account] = await db.select({ id: accounts.id, type: accounts.type, financeMode: accounts.financeMode }).from(accounts).where(and(eq(accounts.id, data.accountId), eq(accounts.userId, userId))).limit(1);
+  const [account] = await db.select({ id: accounts.id, type: accounts.type, financeMode: accounts.financeMode,
+    externalAccountId: accounts.externalAccountId, externalConnectionId: accounts.externalConnectionId,
+  }).from(accounts).where(and(eq(accounts.id, data.accountId), eq(accounts.userId, userId))).limit(1);
   if (!account) return { error: "Conta não encontrada." };
   const [connection] = await db.select().from(openFinanceConnections).where(and(eq(openFinanceConnections.id, data.connectionId), eq(openFinanceConnections.userId, userId))).limit(1);
   if (!connection) return { error: "Conexão não encontrada." };
@@ -354,7 +353,15 @@ export async function linkOpenFinanceAccount(input: { accountId: string; connect
     const [duplicate] = await db.select({ id: accounts.id }).from(accounts).where(and(eq(accounts.userId, userId), eq(accounts.externalAccountId, data.externalAccountId))).limit(1);
     if (duplicate && duplicate.id !== account.id) return { error: "Essa conta externa já está vinculada." };
   }
-  await db.update(accounts).set({ financeMode: data.mode, externalAccountId: data.mode === "integracao" ? data.externalAccountId : null, externalConnectionId: data.mode === "integracao" ? data.connectionId : null }).where(and(eq(accounts.id, account.id), eq(accounts.userId, userId)));
+  const externalAccountId = data.mode === "integracao" ? data.externalAccountId : null;
+  const externalConnectionId = data.mode === "integracao" ? data.connectionId : null;
+  const mappingChanged = account.financeMode !== data.mode || account.externalAccountId !== externalAccountId || account.externalConnectionId !== externalConnectionId;
+  if (mappingChanged) await db.transaction(async tx => {
+    await tx.update(accounts).set({ financeMode: data.mode, externalAccountId, externalConnectionId }).where(and(eq(accounts.id, account.id), eq(accounts.userId, userId)));
+    // A new account mapping needs a fresh local sync; keep the historical success timestamp.
+    if (data.mode === "integracao") await tx.update(openFinanceConnections).set({ status: "NOT_SYNCED", lastErrorCode: null })
+      .where(and(eq(openFinanceConnections.id, data.connectionId), eq(openFinanceConnections.userId, userId)));
+  });
   revalidatePath("/configuracoes"); revalidatePath("/contas"); revalidatePath("/importar");
   return { ok: true };
 }

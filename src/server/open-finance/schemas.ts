@@ -44,15 +44,22 @@ export const linkOpenFinanceAccountSchema = z.object({
 });
 
 const localEntityIdSchema = z.string().regex(/^[a-z0-9]{26}$/);
+const pastedValue = (minimum: number, maximum: number, label: string) => z.string().trim().min(minimum, `Informe ${label}.`).max(maximum, `${label} muito longo.`)
+  .refine(value => !/[\u0000-\u0020\u007f]/.test(value) && !/^["']|["']$/.test(value)
+    && !/^(?:client[_-]?(?:id|secret)|api[_-]?key|connect[_-]?token|item[_-]?id)\s*=/i.test(value), `Cole somente o valor de ${label}, sem aspas, espaços ou prefixos.`);
+
+// Opaque provider values: their format is not a UUID guarantee; authenticate on the server.
+export const saveOpenFinanceCredentialsSchema = z.object({ clientId: pastedValue(4, 300, "Client ID"), clientSecret: pastedValue(8, 1000, "Client Secret") }).strict();
+export const connectPluggyItemSchema = z.object({ itemId: pastedValue(1, 200, "itemId"), label: z.string().trim().max(100).refine(value => !/[\u0000-\u001f\u007f]/.test(value)).optional() }).strict();
 export const deletePluggyTransactionSchema = z.object({ transactionId: localEntityIdSchema, confirmation: z.literal("EXCLUIR LANCAMENTO PLUGGY") }).strict();
 export const openFinanceConnectionIdSchema = z.object({ connectionId: localEntityIdSchema }).strict();
 export const saveOpenFinanceSetupSchema = z.object({
-  clientId: z.string().refine((value) => value.length === 0 || (value.length >= 4 && value.length <= 300)),
-  clientSecret: z.string().refine((value) => value.length === 0 || (value.length >= 8 && value.length <= 1000)),
-  itemId: z.string().min(4).max(300),
-  label: z.string().optional(),
-  importFromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-}).strict();
+  clientId: z.union([z.literal(""), pastedValue(4, 300, "Client ID")]),
+  clientSecret: z.union([z.literal(""), pastedValue(8, 1000, "Client Secret")]),
+  itemId: pastedValue(1, 200, "itemId"),
+  label: z.string().trim().max(100).optional(),
+  importFromDate: z.string().date(),
+}).strict().refine(value => Boolean(value.clientId) === Boolean(value.clientSecret), "Informe o par de credenciais completo ou mantenha ambos vazios.");
 export const deleteAllOpenFinanceSchema = z.object({ connectionId: localEntityIdSchema, confirmation: z.literal("EXCLUIR DADOS PLUGGY") }).strict();
 export const removeOpenFinanceCredentialsSchema = z.object({ confirmation: z.literal("REMOVER CREDENCIAIS") }).strict();
 export const removeOpenFinanceConnectionSchema = z.object({

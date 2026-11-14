@@ -55,6 +55,7 @@ export const getAccounts = cache(async (userId: string) => {
 export type OnboardingChecklist = {
   hasAccount: boolean;
   hasTransaction: boolean;
+  journey?: import("@/lib/onboarding").OnboardingJourney;
 };
 
 /**
@@ -64,11 +65,11 @@ export type OnboardingChecklist = {
  * revisitar quantas vezes precisar até fazer os dois.
  */
 export async function getOnboardingChecklist(userId: string): Promise<OnboardingChecklist> {
-  const [account, tx] = await Promise.all([
-    db.select({ id: accountsTable.id }).from(accountsTable).where(eq(accountsTable.userId, userId)).limit(1),
-    db.select({ id: txTable.id }).from(txTable).where(eq(txTable.userId, userId)).limit(1),
-  ]);
-  return { hasAccount: account.length > 0, hasTransaction: tx.length > 0 };
+  const { loadOnboardingFacts } = await import("./onboarding");
+  const { deriveOnboardingJourney } = await import("@/lib/onboarding");
+  const facts = await loadOnboardingFacts(userId);
+  return { hasAccount: facts.hasAccount, hasTransaction: facts.profile === "manual" ? facts.hasManualTransaction : facts.integration.status === "complete",
+    journey: deriveOnboardingJourney(facts) };
 }
 
 /**

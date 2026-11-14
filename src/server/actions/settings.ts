@@ -9,6 +9,7 @@ import { accounts, categories, users } from "@/db/schema";
 import { requireUserId } from "@/lib/auth";
 import { getProfileRestriction } from "@/server/usage-profile";
 import { isUsageProfile } from "@/lib/usage-profile";
+import { onboardingCalibrationSchema } from "@/lib/onboarding";
 import { accountSchema } from "@/lib/account-schema";
 import { parseMoneyToCents, MAX_CENTS } from "@/lib/money";
 import { safeNameSchema, safeOptionalTextSchema } from "@/server/validation/sanitization";
@@ -56,25 +57,23 @@ export async function completeOnboarding(_prev: ActionState, formData: FormData)
   const userId = await requireUserId();
   const usageProfile = formData.get("usageProfile");
   if (!isUsageProfile(usageProfile)) return { error: "Escolha como quer usar o app." };
-  const income = Math.abs(parseMoneyToCents(String(formData.get("income") ?? "")));
-  if (income > MAX_CENTS) return { error: "Valor muito alto." };
-  if (income <= 0) return { error: "Informe sua renda mensal líquida." };
+  const parsed = onboardingCalibrationSchema.safeParse({ usageProfile, income: formData.get("income"),
+    emergencyMonths: formData.get("emergencyMonths") ?? undefined, savingsTargetPct: formData.get("savingsTargetPct") ?? undefined });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os campos." };
 
-  const emergencyMonths = Number(formData.get("emergencyMonths") ?? 6);
-  const savingsTargetPct = Number(formData.get("savingsTargetPct") ?? 20);
-
-  await db
+  const changed = await db
     .update(users)
     .set({
       usageProfile,
-      monthlyIncomeCents: income,
-      emergencyMonths: Number.isFinite(emergencyMonths) ? emergencyMonths : 6,
-      savingsTargetPct: Number.isFinite(savingsTargetPct) ? savingsTargetPct : 20,
+      monthlyIncomeCents: parsed.data.income,
+      emergencyMonths: parsed.data.emergencyMonths,
+      savingsTargetPct: parsed.data.savingsTargetPct,
       onboardedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(users.id, userId));
-
+    .where(eq(users.id, userId)).returning({ id: users.id });
+  if (!changed.length) return { error: "Usuário não encontrado." };
+  revalidatePath("/", "layout");
   redirect("/painel");
 }
 
