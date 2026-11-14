@@ -138,10 +138,13 @@ self.addEventListener("push",event=>{
   }));
 });
 self.addEventListener("notificationclick",event=>{
- event.notification.close();const target=notificationUrl(event.notification.data?.url);
- event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients=>{
-  const existing=clients.find(c=>new URL(c.url).origin===self.location.origin);
-  if(existing&&"navigate"in existing){await existing.navigate(target);return existing.focus();}
+ event.notification.close();const data=event.notification.data||{};const target=notificationUrl(data.url);
+ const opening=self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients=>{
+  const existing=clients.find(c=>{try{return new URL(c.url).origin===self.location.origin;}catch{return false;}});
+  if(existing&&"navigate"in existing){try{await existing.navigate(target);return await existing.focus();}catch{ /* Open a new app window if navigation failed. */ }}
   return self.clients.openWindow(target);
- }));
+ });
+ const noticeId=typeof data.noticeId==="string"&&/^[A-Za-z0-9_-]{1,32}$/.test(data.noticeId)?data.noticeId:null;
+ const marking=noticeId?fetch("/api/notifications",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"read",id:noticeId}),keepalive:true}).catch(()=>{}):Promise.resolve();
+ event.waitUntil(Promise.allSettled([opening,marking]));
 });

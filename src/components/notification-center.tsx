@@ -3,8 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
-import { Sheet } from "./sheet";
+import { Sheet, useSheetClose } from "./sheet";
 import { Button } from "./ui/button";
+import { safeNotificationPath } from "./notification-links";
 
 type Item = { id: string; title: string; body: string; actionUrl: string; critical: boolean; readAt: string | null; createdAt: string };
 type Feed = { items: Item[]; unreadCount: number; hasMore: boolean };
@@ -16,7 +17,7 @@ export async function notificationRequest(url: string, body?: unknown, method = 
 }
 function changed() { window.dispatchEvent(new Event("notifications-changed")); }
 export function NotificationsFeed({ compact = false }: { compact?: boolean }) {
-  const router = useRouter(); const [filter, setFilter] = useState("all"), [page, setPage] = useState(1);
+  const router = useRouter(); const closeSheet = useSheetClose(); const [filter, setFilter] = useState("all"), [page, setPage] = useState(1);
   const [feed, setFeed] = useState<Feed | null>(null), [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const reload = useCallback(async () => {
     try { setFeed(await notificationRequest(`/api/notifications?filter=${filter}&page=${page}`)); setError(""); } catch (e) { setError((e as Error).message); }
@@ -24,8 +25,19 @@ export function NotificationsFeed({ compact = false }: { compact?: boolean }) {
   useEffect(() => { const start = setTimeout(() => void reload(), 0); const timer = setInterval(() => void reload(), 60000); return () => { clearTimeout(start); clearInterval(timer); }; }, [reload]);
   async function update(action: string, id?: string, url?: string) {
     setBusy(true); setError("");
-    try { await notificationRequest("/api/notifications", { action, ...(id ? { id } : {}) }); changed(); await reload(); if (url) router.push(url); }
-    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try {
+      await notificationRequest("/api/notifications", { action, ...(id ? { id } : {}) });
+      changed();
+      await reload();
+    } catch (e) {
+      if (!url) setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      if (url) {
+        closeSheet();
+        router.push(safeNotificationPath(url, window.location.origin));
+      }
+    }
   }
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center gap-2">
@@ -34,7 +46,7 @@ export function NotificationsFeed({ compact = false }: { compact?: boolean }) {
     </div>
     {error && <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-out)]"><span>{error}</span><Button size="sm" variant="outline" onClick={() => void reload()}>Tentar novamente</Button></div>}
     {!feed && !error && <p role="status">Carregando notificações…</p>}
-    {feed?.items.length===0 && <p className="text-sm text-[var(--text-muted)]">Nenhuma notificação por aqui.</p>}
+    {feed?.items.length===0 && <div className="space-y-2 text-sm text-[var(--text-muted)]"><p>Nenhum aviso {filter === "unread" ? "não lido" : filter === "critical" ? "crítico" : "por aqui"}.</p><Link href="/notificacoes#preferencias" className="inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)]">Ver preferências de notificações</Link></div>}
     <ul className="divide-y divide-[var(--border)]">{feed?.items.slice(0,compact?10:20).map(item => <li key={item.id} className="flex items-start gap-2 py-3">
       <button disabled={busy} onClick={() => void update("read",item.id,item.actionUrl)} className="min-h-11 min-w-0 flex-1 cursor-pointer rounded-lg px-1 text-left transition-colors hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] disabled:cursor-not-allowed disabled:opacity-50">
         <span className="flex items-center gap-2 font-medium">{!item.readAt && <span aria-label="Não lida" className="size-2 shrink-0 rounded-full bg-[var(--acento)]" />}{item.critical ? "Atenção" : item.title}</span>
