@@ -1,6 +1,6 @@
 import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { bills, budgets, categories, goals, transactions } from "@/db/schema";
+import { accounts, bills, budgets, categories, goals, transactions } from "@/db/schema";
 import { todayRef } from "@/lib/dates";
 import { loadCardInvoicesAlerts } from "@/server/telegram/alerts";
 import { loadProactiveContext } from "@/server/telegram/proactive-context";
@@ -14,7 +14,7 @@ export async function loadAlertEvents(userId: string, now: Date): Promise<Notifi
   const day = todayRef(now);
   const today = new Date(`${day}T00:00:00.000Z`);
   const year = today.getUTCFullYear(), month = today.getUTCMonth() + 1, index = year * 12 + month;
-  const monthStart = new Date(Date.UTC(year, month - 1, 1)), nextMonthStart = new Date(Date.UTC(year, month, 1));
+  const monthStart = new Date(Date.UTC(year, month - 1, 1)), tomorrow = new Date(today.getTime() + DAY);
   const civilToday = new Date(`${day}T12:00:00.000Z`);
 
   const [billRows, budgetRows, spendRows, goalRows, cardsDue, context] = await Promise.all([
@@ -28,9 +28,10 @@ export async function loadAlertEvents(userId: string, now: Date): Promise<Notifi
       .where(and(eq(budgets.userId, userId), eq(budgets.periodYear, year), eq(budgets.periodMonth, month))),
     db.select({ categoryId: transactions.categoryId, total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)::int` })
       .from(transactions)
+      .innerJoin(accounts, and(eq(accounts.id, transactions.accountId), eq(accounts.userId, userId)))
       .where(and(eq(transactions.userId, userId), eq(transactions.kind, "EXPENSE"), eq(transactions.isTransfer, false),
         eq(transactions.isCardPayment, false), or(isNull(transactions.externalStatus), eq(transactions.externalStatus, "POSTED")),
-        gte(transactions.date, monthStart), lt(transactions.date, nextMonthStart)))
+        sql`${accounts.type} <> 'INVESTMENT'`, gte(transactions.date, monthStart), lt(transactions.date, tomorrow)))
       .groupBy(transactions.categoryId),
     db.select({ id: goals.id, name: goals.name, targetCents: goals.targetCents, savedCents: goals.savedCents, targetDate: goals.targetDate })
       .from(goals).where(and(eq(goals.userId, userId), eq(goals.archived, false))),
@@ -51,7 +52,8 @@ export async function loadAlertEvents(userId: string, now: Date): Promise<Notifi
 
   return buildAlertEvents(userId, {
     bills: billFacts,
-    cardsDue: cardsDue.map((card) => ({ id: card.id, cardName: card.cardName, invoiceCents: card.invoiceCents, date: card.dueDate, diffDays: card.diffDays })),
+    cardsDue: cardsDue.map((card) => ({ id: card.id, cardName: card.cardName, invoiceCents: card.invoiceCents,
+      date: new Date(today.getTime() + card.diffDays * DAY).toISOString().slice(0, 10), diffDays: card.diffDays })),
     cardsClosing: context.cardClosings.map((card) => ({ id: card.id, cardName: card.cardName, date: card.closingDate, diffDays: card.diffDays })),
     budgets: budgetRows.map((budget) => ({ id: budget.id, name: budget.name ?? "Categoria sem gastos",
       limitCents: Number(budget.limitCents), spentCents: spentByCategory.get(budget.categoryId) ?? 0 })),

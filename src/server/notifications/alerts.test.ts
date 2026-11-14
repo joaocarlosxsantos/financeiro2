@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAlertEvents, MAX_ALERT_EVENTS, type AlertFacts } from "./alerts-build";
+import { buildAlertEvents, type AlertFacts } from "./alerts-build";
 import { DEFAULT_NOTIFICATION_PREFERENCES, pushPayload } from "./policy";
 
 const day = "2026-11-12";
@@ -88,11 +88,12 @@ describe("deterministic notification alerts", () => {
     expect(events[0].body).not.toContain("segredo");
   });
 
-  it("limita a quantidade por usuário e mantém as dedupeKeys únicas", () => {
+  it("preserva todas as contas no app e mantém as dedupeKeys únicas", () => {
     const many = Array.from({ length: 12 }, (_, index) => ({ id: `b${index}`, name: `Conta ${index}`, totalCents: 1000, dueDate: day, diffDays: 0 }));
     const events = buildAlertEvents("owner", facts({ bills: many }), day);
-    expect(events).toHaveLength(MAX_ALERT_EVENTS);
-    expect(new Set(events.map((event) => event.dedupeKey)).size).toBe(MAX_ALERT_EVENTS);
+    expect(events).toHaveLength(12);
+    expect(new Set(events.map((event) => event.dedupeKey)).size).toBe(12);
+    expect(events.every(e => e.critical)).toBe(true);
   });
 
   it("push usa o título fixo e o modo discreto esconde valores financeiros", () => {

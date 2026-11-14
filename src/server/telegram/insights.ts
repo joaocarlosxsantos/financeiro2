@@ -44,7 +44,7 @@ export type InsightData = {
   summaryDay: string;
   incomeCents: number;
   expenseCents: number;
-  categories: { name: string; todayCents: number; historyCents: number; historyCount: number; historyDays: number }[];
+  categories: { id?: string; name: string; todayCents: number; historyCents: number; historyCount: number; historyDays: number }[];
   due: { id?: string; name: string; date: string; totalCents: number; diffDays?: number }[];
   budgets: { id?: string; name: string; spentCents: number; limitCents: number; pct?: number }[];
   cardInvoices?: { id: string; cardName: string; invoiceCents: number; dueDate: string; diffDays: number }[];
@@ -56,8 +56,11 @@ export type InsightData = {
     projectedExpenseCents?: number;
     recommendedDailyCents?: number;
     status?: string;
+    limitedHistory?: boolean;
   };
   subscriptions?: {
+    lastChargeId?: string;
+    lastChargedOn?: string;
     name: string;
     currentCents: number;
     previousCents?: number;

@@ -35,5 +35,5 @@ export const subscriptionSchema = z.object({ endpoint: z.string().max(2048).refi
   keys: z.object({ p256dh: key(65), auth: key(16) }).strict() }).strict();
 export function pushPayload(event: NotificationEvent, prefs: NotificationPreferences, id: string) {
   return { title: "Mutano Contas", body: prefs.discretePushMode ? "Você tem uma nova notificação. Abra o app para conferir." : event.body.slice(0, 180),
-    url: event.actionUrl, tag: `mutano-${id}`, icon: "/icon-192.png", badge: "/icon-192.png" };
+    url: event.actionUrl, noticeId: id, tag: `mutano-${id}`, icon: "/icon-192.png", badge: "/icon-192.png" };
 }

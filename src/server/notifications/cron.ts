@@ -6,10 +6,15 @@ export interface NotificationCronDependencies {
   users(after?: string): Promise<{ id: string }[]>;
   events(userId: string, mode: NotificationCronMode, now: Date): Promise<NotificationEvent[]>;
   dispatch(event: NotificationEvent, now: Date): Promise<Record<string, string>>;
+  dispatchBatch?(events: NotificationEvent[], now: Date): Promise<Record<string, string>>;
 }
 export function notificationWindow(mode: NotificationCronMode, now: Date) {
   const local = getNowInSaoPaulo(now), hour = local.getHours();
   if (hour < 8 || hour > 21 || (mode === "monthly" && local.getDate() !== 1)) return null;
+  if ((mode === "daily" || mode === "monthly") && hour !== 8) return null;
+  // Monthly replaces the morning daily/weekly delivery on the first, including Mondays.
+  if (mode === "daily" && local.getDate() === 1) return null;
+  if (mode === "insights" && hour < 14) return null;
   const day = todayRef(now);
   return mode === "daily" ? `${day}:ds` : mode === "monthly" ? `${monthRefToParam(shiftMonth(currentMonthRef(now), -1))}:month`
     : mode === "alerts" ? `${day}:alerts` : `${day}:${hour >= 20 ? 20 : hour >= 14 ? 14 : 8}`;
@@ -31,8 +36,9 @@ export async function handleNotificationCron(request: Request, mode: Notificatio
           try {
             const events = await d.events(user.id, mode, now);
             if (!events.length) result.skipped++;
-            for (const event of events) {
-              const channels = Object.values(await d.dispatch(event, now));
+            const batches = d.dispatchBatch ? [events] : events.map(event => [event]);
+            for (const batch of batches) {
+              const channels = Object.values(d.dispatchBatch ? await d.dispatchBatch(batch, now) : await d.dispatch(batch[0], now));
               if (channels.includes("sent")) result.sent++;
               else if (channels.includes("failed")) result.failed++;
               else result.skipped++;

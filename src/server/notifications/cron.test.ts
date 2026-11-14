@@ -22,13 +22,16 @@ describe("unified notification crons", () => {
     expect(d.users).not.toHaveBeenCalled();
   });
   it("janelas estáveis e mês anterior correto, sem envios fora de horário", () => {
-    expect(notificationWindow("insights", now)).toBe("2026-11-12:8");
+    expect(notificationWindow("insights", now)).toBeNull();
     expect(notificationWindow("insights", new Date("2026-11-12T17:00:00Z"))).toBe("2026-11-12:14");
     expect(notificationWindow("monthly", new Date("2027-01-01T11:00:00Z"))).toBe("2026-12:month");
     expect(notificationWindow("alerts", now)).toBe("2026-11-12:alerts");
     expect(notificationWindow("alerts", new Date("2026-11-12T04:00:00Z"))).toBeNull();
     expect(notificationWindow("monthly", now)).toBeNull();
     expect(notificationWindow("daily", new Date("2026-11-12T04:00:00Z"))).toBeNull();
+    expect(notificationWindow("daily", new Date("2027-02-01T11:00:00Z"))).toBeNull(); // first + Monday
+    expect(notificationWindow("monthly", new Date("2027-02-01T11:00:00Z"))).toBe("2027-01:month");
+    expect(notificationWindow("daily", new Date("2027-02-08T11:00:00Z"))).toBe("2027-02-08:ds");
   });
   it("falha de um destinatário não derruba os demais", async () => {
     vi.stubEnv("CRON_SECRET", "secret"); const d = deps();

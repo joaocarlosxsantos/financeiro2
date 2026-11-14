@@ -1,0 +1,23 @@
+.anchor {
+  position: fixed;
+  z-index: 35;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: var(--site-chat-bottom, calc(6rem + env(safe-area-inset-bottom)));
+}
+
+.panel {
+  width: min(24rem, calc(100vw - 2rem));
+  /* Keep the mobile header and its actions visible above the panel. */
+  height: min(38rem, calc(100dvh - var(--site-chat-bottom, 7rem) - 5rem - env(safe-area-inset-top)));
+  box-shadow: var(--shadow-overlay);
+}
+
+@media (min-width: 1024px) {
+  .anchor {
+    left: 248px;
+    bottom: var(--site-chat-bottom, 1.5rem);
+  }
+  .panel {
+    height: min(38rem, calc(100dvh - var(--site-chat-bottom, 1.5rem) - 1rem));
+  }
+}

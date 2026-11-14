@@ -2,9 +2,10 @@ import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { bills, budgets, categories, transactions } from "@/db/schema";
 import { dayDate, type InsightData, type InsightWindow } from "./insights";
+import { getDetectedSubscriptions } from "@/server/queries";
 
 /** Todas as leituras exigem o dono determinado no servidor; datas civis do app em UTC. */
-export async function loadInsightData(userId: string, window: InsightWindow, connection: Pick<typeof db, "select"> = db): Promise<InsightData> {
+export async function loadInsightData(userId: string, window: InsightWindow, connection: Pick<typeof db, "select"> = db, options: { subscriptions?: boolean } = {}): Promise<InsightData> {
   const today = dayDate(window.day);
   const tomorrow = dayDate(window.day, 1);
   const summaryStart = dayDate(window.day, window.hour === 8 ? -1 : 0);
@@ -15,7 +16,7 @@ export async function loadInsightData(userId: string, window: InsightWindow, con
   const historyStart = dayDate(window.day, -30);
   const common = and(eq(transactions.userId, userId), eq(transactions.isTransfer, false),
     eq(transactions.isCardPayment, false), or(isNull(transactions.externalStatus), eq(transactions.externalStatus, "POSTED")));
-  const [totals, spending, limits, upcoming] = await Promise.all([
+  const [totals, spending, limits, upcoming, subscriptions] = await Promise.all([
     connection.select({ kind: transactions.kind, total: sql<number>`coalesce(sum(${transactions.amountCents}),0)` })
       .from(transactions).where(and(common, gte(transactions.date, summaryStart), lt(transactions.date, summaryEnd))).groupBy(transactions.kind),
     connection.select({
@@ -32,6 +33,7 @@ export async function loadInsightData(userId: string, window: InsightWindow, con
       .where(and(eq(budgets.userId, userId), eq(budgets.periodYear, today.getUTCFullYear()), eq(budgets.periodMonth, today.getUTCMonth() + 1))),
     connection.select({ name: bills.name, year: bills.year, month: bills.month, dueDay: bills.dueDay, totalCents: bills.totalCents }).from(bills)
       .where(and(eq(bills.userId, userId), eq(bills.paid, false), sql`(${bills.year} * 12 + ${bills.month}) between ${today.getUTCFullYear() * 12 + today.getUTCMonth() + 1} and ${today.getUTCFullYear() * 12 + today.getUTCMonth() + 2}`)),
+    options.subscriptions ? getDetectedSubscriptions(userId, connection).catch(() => []) : [],
   ]);
   const byCategory = new Map(spending.map((c) => [c.id, c]));
   const dueEnd = dayDate(window.day, 4).getTime();
@@ -39,7 +41,11 @@ export async function loadInsightData(userId: string, window: InsightWindow, con
     summaryDay: summaryStart.toISOString().slice(0, 10),
     incomeCents: Number(totals.find((t) => t.kind === "INCOME")?.total ?? 0),
     expenseCents: Number(totals.find((t) => t.kind === "EXPENSE")?.total ?? 0),
-    categories: spending.map((c) => ({ name: c.name ?? "Sem categoria", todayCents: Number(c.todayCents), historyCents: Number(c.historyCents), historyCount: Number(c.historyCount), historyDays: Number(c.historyDays) })),
+    categories: spending.map((c) => ({ id: c.id ?? undefined, name: c.name ?? "Sem categoria", todayCents: Number(c.todayCents), historyCents: Number(c.historyCents), historyCount: Number(c.historyCount), historyDays: Number(c.historyDays) })),
+    subscriptions: subscriptions.map(s => ({ name: s.name, currentCents: s.currentAmountCents, previousCents: s.previousAmountCents,
+      hasPriceIncrease: s.hasPriceIncrease, priceIncreasePct: s.priceIncreasePct, isRegistered: s.isRegistered,
+      lastChargeId: s.lastChargeId, lastChargedOn: s.lastChargedOn,
+    })),
     budgets: limits.map((b) => ({ name: byCategory.get(b.categoryId)?.name ?? "Categoria sem gastos", limitCents: b.limitCents, spentCents: Number(byCategory.get(b.categoryId)?.monthCents ?? 0) })),
     due: upcoming.flatMap((bill) => {
       if (!bill.dueDay) return [];

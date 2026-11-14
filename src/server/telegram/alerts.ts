@@ -153,13 +153,14 @@ export async function loadForecastAlert(
   connection: Pick<typeof db, "select"> = db,
 ): Promise<InsightData["forecast"]> {
   try {
-    const { forecast, daily } = await loadSpendingForecast(userId, connection, today);
+    const { forecast, daily, historyDays } = await loadSpendingForecast(userId, connection, today);
     if (forecast.projectedBalanceCents < 0) {
       return {
         balanceCents: forecast.projectedBalanceCents,
         projectedExpenseCents: forecast.projectedExpenseCents,
         recommendedDailyCents: daily.remainingTodayCents,
         status: forecast.status,
+        limitedHistory: historyDays < 14,
       };
     }
   } catch {

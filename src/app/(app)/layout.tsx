@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { NotificationBell } from "@/components/notification-center";
+import { SiteChat } from "@/components/site-chat";
 import { Sidebar } from "@/components/sidebar";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { getAccounts, getCategories } from "@/server/queries";
@@ -42,9 +43,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex justify-end px-4 pt-3 md:px-6"><NotificationBell /></div>
           <main id="conteudo" className="mx-auto min-w-0 max-w-[1120px] px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 lg:max-w-none lg:py-10 xl:px-8">
             {children}
+            <div aria-hidden="true" className="h-16" />
           </main>
         </div>
       </div>
+      <SiteChat key={userId} />
     </ConfirmProvider></UsageProfileProvider>
   );
 }

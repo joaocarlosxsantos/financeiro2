@@ -2,9 +2,6 @@ import { formatCents } from "@/lib/money";
 import { safeLabel } from "@/server/telegram/ai-policy";
 import { eventSchema, type NotificationEvent } from "./policy";
 
-/** Teto por usuário e dia: evita tempestade de pushes quando há muitas contas/eixos estourados. */
-export const MAX_ALERT_EVENTS = 8;
-
 export interface AlertBillFact {
   id: string;
   name: string;
@@ -57,7 +54,7 @@ function billEvent(userId: string, bill: AlertBillFact): NotificationEvent {
     : bill.diffDays === 0
       ? ["DUE_BILL_TODAY", `Conta vence hoje: ${name}${value}. Não esqueça de pagar.`]
       : ["DUE_BILL_D3", `Conta a vencer em 3 dias: ${name}${value}. Planeje o saldo.`];
-  return eventSchema.parse({ userId, category: "dueBills", type, body, actionUrl: "/contas-a-pagar", dedupeKey: `bill:${bill.id}:${type}:${bill.dueDate}` });
+  return eventSchema.parse({ userId, category: "dueBills", type, body, critical: bill.diffDays <= 0, actionUrl: "/contas-a-pagar", dedupeKey: `bill:${bill.id}:${type}:${bill.dueDate}` });
 }
 
 function cardDueEvent(userId: string, card: AlertCardFact): NotificationEvent {
@@ -65,7 +62,7 @@ function cardDueEvent(userId: string, card: AlertCardFact): NotificationEvent {
   const value = card.invoiceCents && card.invoiceCents > 0 ? `: ${money(card.invoiceCents)}` : "";
   return eventSchema.parse({ userId, category: "cardInvoice", type: "CARD_INVOICE_DUE",
     body: `Fatura ${label(card.cardName)} vence ${when}${value}.`, actionUrl: "/contas",
-    dedupeKey: `card:${card.id}:due:${card.date}` });
+    critical: card.diffDays <= 1, dedupeKey: `card:${card.id}:due:${card.date}` });
 }
 
 function cardClosingEvent(userId: string, card: AlertCardFact): NotificationEvent {
@@ -128,8 +125,7 @@ export function buildAlertEvents(userId: string, facts: AlertFacts, day: string)
       dedupeKey: `sync:${day}` })]
     : [];
 
-  // Urgência primeiro; o teto diário corta o excedente sem repetir nada no dia seguinte.
+  // Keep every eligible fact in-app; the shared external delivery quota handles interruptions.
   return [...sync, ...overdue, ...dueToday, ...cardsDueToday, ...closingToday, ...exceeded,
-    ...dueIn3, ...cardsDueTomorrow, ...cardsDueIn3, ...closingTomorrow, ...warning, ...goalsLate, ...goalsReached]
-    .slice(0, MAX_ALERT_EVENTS);
+    ...dueIn3, ...cardsDueTomorrow, ...cardsDueIn3, ...closingTomorrow, ...warning, ...goalsLate, ...goalsReached];
 }

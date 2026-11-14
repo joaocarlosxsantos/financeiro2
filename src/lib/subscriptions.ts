@@ -1,4 +1,5 @@
 export type RawTransactionForDetection = {
+  id?: string;
   description: string;
   amountCents: number;
   date: Date;
@@ -10,6 +11,8 @@ export type RawTransactionForDetection = {
 };
 
 export type DetectedSubscription = {
+  lastChargeId?: string;
+  lastChargedOn: string;
   name: string;
   normalizedName: string;
   categoryName?: string;
@@ -68,6 +71,7 @@ export function detectSubscriptions(
 
   // Agrupa transações por nome normalizado
   type TxMonthData = {
+    id?: string;
     yearMonth: string; // YYYY-MM
     date: Date;
     amountCents: number;
@@ -95,6 +99,7 @@ export function detectSubscriptions(
       groups.set(norm, []);
     }
     groups.get(norm)!.push({
+      id: tx.id,
       yearMonth: ym,
       date: tx.date,
       amountCents: tx.amountCents,
@@ -159,6 +164,8 @@ export function detectSubscriptions(
     const isRegistered = normalizedRules.has(norm);
 
     subscriptions.push({
+      lastChargeId: latestTx.id,
+      lastChargedOn: latestTx.date.toISOString().slice(0, 10),
       name: latestTx.rawDescription,
       normalizedName: norm,
       categoryName: latestTx.categoryName,

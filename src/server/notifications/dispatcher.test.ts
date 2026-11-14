@@ -9,6 +9,12 @@ function drivers(): NotificationDrivers {
 }
 const noon = new Date("2026-11-12T15:00:00Z");
 describe("NotificationDispatcher", () => {
+  it("previsão avulsa nunca envia push/Telegram; as métricas ficam no resumo", async () => {
+    const d = drivers();
+    const result = await new NotificationDispatcher(d).dispatch({ ...event, category: "negativeForecast", type: "OLD_FORECAST", body: "Saldo previsto negativo" }, noon);
+    expect(result).toEqual({ in_app: "sent", push: "skipped", telegram: "skipped" });
+    expect(d.push).not.toHaveBeenCalled(); expect(d.telegram).not.toHaveBeenCalled();
+  });
   it.each(["in_app", "push", "telegram"] as const)("falha em %s não bloqueia os outros canais", async failed => {
     const d = drivers(); vi.mocked(d[failed]).mockRejectedValue(new Error("private-provider-data"));
     const result = await new NotificationDispatcher(d).dispatch(event, noon);

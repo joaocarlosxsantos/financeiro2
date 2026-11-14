@@ -138,5 +138,5 @@ export function spendingForecast(input: {
   const upcoming = commitments.filter(r => r.kind === "EXPENSE" && stamp(r.date) >= time && stamp(r.date) <= time + 7 * DAY).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 2);
   if (upcoming.length) insights.push(`Próximos compromissos: ${upcoming.map(r => `${label(r.name)} ${r.date.slice(8)}/${r.date.slice(5, 7)}: ${formatCents(r.amountCents)}`).join(", ")}.`);
   insights.push(`Fim do mês: ${projectedBalanceCents >= 0 ? "sobra" : "falta"} de ${formatCents(Math.abs(projectedBalanceCents))} no resultado mensal.`);
-  return { forecast, daily, insights, weekdayCents, committedCents: committed, historyDays: Math.round((time - historyStart) / DAY) };
+  return { forecast, daily, insights, weekdayCents, spentTodayCents: spentToday, committedCents: committed, historyDays: Math.round((time - historyStart) / DAY) };
 }

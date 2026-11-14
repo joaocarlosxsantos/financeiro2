@@ -1410,6 +1410,7 @@ export async function getDetectedSubscriptions(userId: string, connection: Pick<
   const [txs, rules] = await Promise.all([
     connection
       .select({
+        id: txTable.id,
         description: txTable.description,
         amountCents: txTable.amountCents,
         date: txTable.date,

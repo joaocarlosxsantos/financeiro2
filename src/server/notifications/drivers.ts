@@ -1,12 +1,16 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { sendNotification } from "web-push";
 import { db } from "@/db";
 import { inAppNotifications as notices, pushSubscriptions, telegramLinks, telegramPreferences, userNotificationPreferences } from "@/db/schema";
 import { DEFAULT_NOTIFICATION_PREFERENCES, preferencesSchema, pushPayload, validPushEndpoint } from "./policy";
 import type { NotificationDrivers } from "./dispatcher";
 import { getNowInSaoPaulo } from "@/lib/dates";
+import { appDetailsUrl } from "@/server/telegram/inline-actions";
 
 export const notificationDrivers: NotificationDrivers = {
+  async batch(channel, receipts, prefs, now) {
+    return (await import("./delivery")).deliverNotificationBatch(channel, receipts, prefs, now);
+  },
   async preferences(userId) {
     const [row] = await db.select().from(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId)).limit(1);
     if (row) return preferencesSchema.parse(Object.fromEntries(Object.keys(DEFAULT_NOTIFICATION_PREFERENCES).map(k => [k, row[k as keyof typeof row]])));
@@ -17,7 +21,10 @@ export const notificationDrivers: NotificationDrivers = {
     return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...flags, channelTelegram: Boolean(enabled) };
   },
   async receipt(event) {
-    const [created] = await db.insert(notices).values(event).onConflictDoNothing({ target: [notices.userId, notices.dedupeKey] }).returning({ id: notices.id });
+    // Refresh mutable amounts/copy in-app without resetting any external claim.
+    const [created] = await db.insert(notices).values(event).onConflictDoUpdate({ target: [notices.userId, notices.dedupeKey],
+      set: { body: event.body, actionUrl: event.actionUrl, critical: sql`${notices.critical} or ${event.critical}` },
+    }).returning({ id: notices.id });
     if (created) return created.id;
     const [row] = await db.select({ id: notices.id }).from(notices).where(and(eq(notices.userId, event.userId), eq(notices.dedupeKey, event.dedupeKey))).limit(1);
     if (!row) throw new Error("notification_receipt_failed");
@@ -27,9 +34,12 @@ export const notificationDrivers: NotificationDrivers = {
     const rows = await db.update(notices).set({ visible: true }).where(and(eq(notices.userId, event.userId), eq(notices.id, id), eq(notices.visible, false))).returning({ id: notices.id });
     return rows.length;
   },
-  async push(event, id, prefs) {
+  async push(event, id, prefs, reserved = false) {
+    if (event.category === "negativeForecast") return 0;
+    if (!reserved) {
     const [claim] = await db.update(notices).set({ pushClaimedAt: new Date() }).where(and(eq(notices.userId, event.userId), eq(notices.id, id), isNull(notices.pushClaimedAt))).returning({ id: notices.id });
     if (!claim) return 0;
+    }
     const subscriptions = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, event.userId));
     if (!subscriptions.length) return 0;
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, privateKey = process.env.VAPID_PRIVATE_KEY;
@@ -53,19 +63,24 @@ export const notificationDrivers: NotificationDrivers = {
     if (results.some(r => r.status === "rejected")) throw new Error("push_delivery_failed");
     return results.reduce((count, r) => count + (r.status === "fulfilled" ? r.value : 0), 0);
   },
-  async telegram(event, id) {
+  async telegram(event, id, reserved = false, now = new Date()) {
+    if (event.category === "negativeForecast") return 0;
     const [link] = await db.select({ chatId: telegramLinks.chatId, prefs: telegramPreferences }).from(telegramLinks)
       .innerJoin(telegramPreferences, eq(telegramPreferences.userId, telegramLinks.userId))
       .where(and(eq(telegramLinks.userId, event.userId), eq(telegramPreferences.enabled, true))).limit(1);
     if (!link || (event.category in link.prefs && link.prefs[event.category as keyof typeof link.prefs] === false)) return 0;
-    const hour = getNowInSaoPaulo().getHours(), slot = hour >= 20 ? 20 : hour >= 14 ? 14 : 8;
+    const hour = getNowInSaoPaulo(now).getHours(), slot = hour >= 20 ? 20 : hour >= 14 ? 14 : 8;
     if (hour < 8 || hour > 21 || !link.prefs.hours.includes(slot)) return 0;
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) return 0;
-    const [claim] = await db.update(notices).set({ telegramClaimedAt: new Date() }).where(and(eq(notices.userId, event.userId), eq(notices.id, id), isNull(notices.telegramClaimedAt))).returning({ id: notices.id });
-    if (!claim) return 0;
+    if (!reserved) {
+      const [claim] = await db.update(notices).set({ telegramClaimedAt: now }).where(and(eq(notices.userId, event.userId), eq(notices.id, id), isNull(notices.telegramClaimedAt))).returning({ id: notices.id });
+      if (!claim) return 0;
+    }
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { method: "POST", cache: "no-store", signal: AbortSignal.timeout(5000),
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: link.chatId, text: event.body, protect_content: true }) });
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: link.chatId, text: event.body, protect_content: true,
+        reply_markup: { inline_keyboard: [[{ text: "Abrir no app", url: new URL(event.actionUrl, appDetailsUrl("d2")).toString() }]] },
+      }) });
     const data: unknown = await response.json();
     if (!response.ok || !(data as { ok?: boolean })?.ok) throw new Error("telegram_delivery_failed");
     return 1;
