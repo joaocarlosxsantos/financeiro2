@@ -59,12 +59,12 @@ export function NotificationsFeed({ compact = false }: { compact?: boolean }) {
     {compact && <Link href="/notificacoes" className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--line)] px-4 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acento)] active:bg-[var(--surface-3)]">Ver todas e configurar notificações</Link>}
   </div>;
 }
-export function NotificationBell() {
+export function NotificationBell({ mobileOnly = false }: { mobileOnly?: boolean }) {
   const [count,setCount]=useState(0),[open,setOpen]=useState(false);
   useEffect(()=>{ let active=true; const refresh=()=>notificationRequest("/api/notifications").then((data:Feed)=>{if(active)setCount(data.unreadCount);}).catch(()=>{});
     void refresh();const timer=setInterval(()=>void refresh(),60000);window.addEventListener("notifications-changed",refresh);document.addEventListener("visibilitychange",refresh);
     return()=>{active=false;clearInterval(timer);window.removeEventListener("notifications-changed",refresh);document.removeEventListener("visibilitychange",refresh);};},[]);
-  return <><button type="button" onClick={()=>setOpen(true)} aria-label={`Notificações${count?`, ${count} não lidas`:""}`} className="relative flex size-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+  return <><button type="button" onClick={()=>setOpen(true)} aria-label={`Notificações${count?`, ${count} não lidas`:""}`} className={`relative flex size-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] ${mobileOnly ? "lg:hidden" : "hidden lg:flex"}`}>
     <Bell aria-hidden="true" className="size-5"/>{count>0&&<span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[var(--acento)] px-1 text-center text-xs text-[var(--on-acento)]">{count>9?"9+":count}</span>}
   </button>{open&&<Sheet title="Notificações" onClose={()=>setOpen(false)}><NotificationsFeed compact/></Sheet>}</>;
 }
