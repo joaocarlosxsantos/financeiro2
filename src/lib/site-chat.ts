@@ -17,7 +17,7 @@ export const isSiteChatCommand = (value: unknown): value is string => typeof val
 
 export type ChatMessage = { id: number; role: "user" | "assistant"; text: string };
 
-/** Keep the launcher above mobile navigation/install banners, without moving desktop content. */
+/** Keep the launcher clear of mobile navigation/install banners at its current edge. */
 export function floatingChatBottom(viewportHeight: number, anchor: { left: number; right: number }, obstacles: { left: number; right: number; top: number; height: number }[]) {
   return obstacles.reduce((bottom, rect) => rect.height > 0 && rect.left < anchor.right && rect.right > anchor.left
     ? Math.max(bottom, viewportHeight - rect.top + 16) : bottom, 24);

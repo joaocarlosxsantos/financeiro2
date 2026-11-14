@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import styles from "./site-chat.module.css";
 
-const greeting: ChatMessage = { id: 0, role: "assistant", text: "Olá! Escolha um comando para consultar suas contas. As respostas são as mesmas do bot Telegram." };
+export const SITE_CHAT_GREETING: ChatMessage = { id: 0, role: "assistant", text: "Olá! Escolha um comando para consultar suas contas." };
 
 export function ChatTranscript({ messages, busy }: { messages: ChatMessage[]; busy: boolean }) {
   return <div role="log" aria-label="Conversa com o Mutano" aria-live="polite" aria-relevant="additions" aria-busy={busy} className="space-y-4">
@@ -31,7 +31,7 @@ export function SiteChat() {
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(true);
-  const [messages, setMessages] = useState<ChatMessage[]>([greeting]);
+  const [messages, setMessages] = useState<ChatMessage[]>([SITE_CHAT_GREETING]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [signedOut, setSignedOut] = useState(false);
