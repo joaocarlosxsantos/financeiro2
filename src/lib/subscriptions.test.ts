@@ -2,6 +2,42 @@ import { describe, expect, it } from "vitest";
 import { detectSubscriptions, type RawTransactionForDetection } from "./subscriptions";
 
 describe("detectSubscriptions", () => {
+  const pair = (description: string, extra = {}): RawTransactionForDetection[] => [
+    { description, amountCents: 3990, date: new Date("2026-10-05T12:00Z"), ...extra },
+    { description, amountCents: 3990, date: new Date("2026-11-05T12:00Z"), ...extra },
+  ];
+  it("exclui falsos positivos mesmo quando repetidos em meses distintos", () => {
+    const transactions = ["PIX João", "Mercado Central", "Restaurante Central", "Amazon BR", "Google Play",
+      "Transferência Netflix", "Netflix parcela 1/12", "Notebook 2/10"].flatMap(d => pair(d));
+    transactions.push(...pair("Spotify", { isTransfer: true }), ...pair("Netflix", { isCardPayment: true }),
+      ...pair("Assinatura CDB", { accountType: "INVESTMENT" }), ...pair("Mensalidade celular", { installmentGroupId: "phone" }));
+    expect(detectSubscriptions(transactions, ["Mercado Central", "Restaurante Central"])).toEqual([]);
+  });
+  it("exige cadência e valor estáveis até para merchants conhecidos", () => {
+    expect(detectSubscriptions([pair("Netflix")[0]], [])).toEqual([]);
+    expect(detectSubscriptions([pair("Netflix")[0], { ...pair("Netflix")[1], amountCents: 19000 }], [])).toEqual([]);
+    expect(detectSubscriptions([pair("Netflix")[0], { ...pair("Netflix")[1], date: new Date("2026-11-25T12:00Z") }], [])).toEqual([]);
+    expect(detectSubscriptions([...pair("Netflix"), { ...pair("Netflix")[1], date: new Date("2026-11-10T12:00Z") }], [])).toEqual([]);
+  });
+  it("reconhece cobrança anual e descritores de adquirentes sem incluir compras Amazon", () => {
+    const result = detectSubscriptions([
+      { description: "EBN *Netflix 123456", amountCents: 3990, date: new Date("2026-10-05T12:00Z") },
+      { description: "Netflix.com 789456", amountCents: 3990, date: new Date("2026-11-05T12:00Z") },
+      { description: "Amazon Prime", amountCents: 16680, date: new Date("2025-11-05T12:00Z") },
+      { description: "Amazon Prime", amountCents: 16680, date: new Date("2026-11-05T12:00Z") },
+      ...pair("Amazon Marketplace"),
+    ], ["Netflix"]);
+    expect(result).toHaveLength(2);
+    expect(result.find(s => s.name === "Amazon Prime")?.cadence).toBe("annual");
+    expect(result.find(s => s.normalizedName === "netflix")).toMatchObject({ cadence: "monthly", isRegistered: true });
+  });
+  it("aceita serviços desconhecidos com evidência explícita de assinatura e recorrência", () => {
+    expect(detectSubscriptions(pair("Assinatura Revista Ciência"), [])[0]).toMatchObject({ cadence: "monthly" });
+    expect(detectSubscriptions(pair("PIX avulso Assinatura Revista Ciência"), [])).toEqual([]);
+  });
+  it("não lista como ativa uma assinatura mensal que deixou de cobrar", () => {
+    expect(detectSubscriptions(pair("Netflix"), [], new Date("2027-02-01T12:00Z"))).toEqual([]);
+  });
   it("detecta assinaturas recorrentes com base em múltiplos meses de cobrança", () => {
     const txs: RawTransactionForDetection[] = [
       // Mês 10

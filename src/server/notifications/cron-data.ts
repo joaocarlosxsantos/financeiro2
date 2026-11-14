@@ -8,6 +8,7 @@ import { getNowInSaoPaulo, todayRef } from "@/lib/dates";
 import { loadPeriodMovements } from "@/server/telegram/daily-summary";
 import { loadInsightData } from "@/server/telegram/insight-data";
 import { loadForecastAlert } from "@/server/telegram/alerts";
+import { loadSpendingForecast } from "@/server/telegram/spending-forecast";
 import { proactiveLines } from "@/server/telegram/proactive-copy";
 import { DEFAULT_PREFERENCES } from "@/server/telegram/insights";
 import { loadMonthlyReport } from "@/server/telegram/monthly-report";
@@ -24,10 +25,17 @@ export async function sourceEvents(userId: string, mode: NotificationCronMode, n
   if (mode === "daily") {
     if (!prefs.summary) return [];
     const weekly = getNowInSaoPaulo(now).getDay() === 1;
-    const [balance, movement] = await Promise.all([getBalances(userId), loadPeriodMovements(userId, now, weekly ? 7 : 1)]);
+    const [balance, movement, analysis] = await Promise.all([getBalances(userId), loadPeriodMovements(userId, now, weekly ? 7 : 1),
+      prefs.spending ? loadSpendingForecast(userId, db, now).catch(() => undefined) : undefined]);
     const partial = balance.totalIncomplete ? " (parcial)" : "";
+    const extra: string[] = [];
+    if (analysis) {
+      const offset = getNowInSaoPaulo(now).getDate() % analysis.insights.length;
+      extra.push(...[...analysis.insights.slice(offset), ...analysis.insights.slice(0, offset)].slice(0, 2),
+        `Restante hoje: ${formatCents(analysis.daily.remainingTodayCents)} (compromissos reservados; renda prevista).`);
+    }
     return [eventSchema.parse({ userId, category: "summary", type: weekly ? "WEEKLY_SUMMARY" : "DAILY_SUMMARY", actionUrl: "/painel", dedupeKey: key,
-      body: `Resumo ${weekly ? "semanal" : "diário"}: entrou ${formatCents(movement.incomeCents)} · gastou ${formatCents(movement.expenseCents)} · disponível ${formatCents(balance.availableCents)}${partial}.\nInvestido: ${formatCents(balance.investedCents)} · patrimônio: ${formatCents(balance.netWorthCents)}${partial}.` })];
+      body: [`Resumo ${weekly ? "semanal" : "diário"}: entrou ${formatCents(movement.incomeCents)} · gastou ${formatCents(movement.expenseCents)} · disponível ${formatCents(balance.availableCents)}${partial}.\nInvestido: ${formatCents(balance.investedCents)} · patrimônio: ${formatCents(balance.netWorthCents)}${partial}.`, ...extra].join("\n") })];
   }
   const day = todayRef(now), hour = getNowInSaoPaulo(now).getHours();
   const window = { day, key, hour: (hour >= 20 ? 20 : hour >= 14 ? 14 : 8) as 8 | 14 | 20 };

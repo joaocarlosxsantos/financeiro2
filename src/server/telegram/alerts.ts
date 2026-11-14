@@ -1,13 +1,11 @@
 import { createHash } from "crypto";
 import { and, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { accounts, openFinanceInvoices, telegramDeliveries, transactions, users } from "@/db/schema";
+import { accounts, openFinanceInvoices, telegramDeliveries, transactions } from "@/db/schema";
 import { type InsightData, type InsightWindow } from "./insights";
 import { getCivilToday, invoiceCycle, toCivilUtcDate } from "@/lib/invoices";
 import { sanitizeCardName } from "./card-summary";
-import { currentMonthRef, getNowInSaoPaulo, monthRange } from "@/lib/dates";
-import { monthForecast } from "@/lib/forecast";
-import { calculateDailyBudget } from "@/lib/daily-budget";
+import { loadSpendingForecast } from "./spending-forecast";
 import { loadProactiveContext } from "./proactive-context";
 
 /**
@@ -155,55 +153,12 @@ export async function loadForecastAlert(
   connection: Pick<typeof db, "select"> = db,
 ): Promise<InsightData["forecast"]> {
   try {
-    const d = getNowInSaoPaulo(today);
-    const ref = currentMonthRef(today);
-    const { start, end } = monthRange(ref);
-    const daysInMonth = new Date(ref.year, ref.month, 0).getDate();
-    const dayOfMonth = d.getDate();
-
-    const [monthTotals, [userRecord]] = await Promise.all([
-      connection
-        .select({
-          kind: transactions.kind,
-          total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)::int`,
-        })
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.userId, userId),
-            eq(transactions.isTransfer, false),
-            eq(transactions.isCardPayment, false),
-            or(isNull(transactions.externalStatus), eq(transactions.externalStatus, "POSTED")),
-            gte(transactions.date, start),
-            lt(transactions.date, end),
-          ),
-        )
-        .groupBy(transactions.kind),
-      connection.select({ monthlyIncomeCents: users.monthlyIncomeCents }).from(users).where(eq(users.id, userId)).limit(1),
-    ]);
-
-    const currentExpenseCents = Number(monthTotals.find((t) => t.kind === "EXPENSE")?.total ?? 0);
-    const recordedIncomeCents = Number(monthTotals.find((t) => t.kind === "INCOME")?.total ?? 0);
-    const incomeCents = Number(userRecord?.monthlyIncomeCents || recordedIncomeCents);
-
-    const forecast = monthForecast({
-      incomeCents,
-      expenseSoFarCents: currentExpenseCents,
-      dayOfMonth,
-      daysInMonth,
-    });
-
+    const { forecast, daily } = await loadSpendingForecast(userId, connection, today);
     if (forecast.projectedBalanceCents < 0) {
-      const daily = calculateDailyBudget({
-        incomeCents,
-        expenseSoFarCents: currentExpenseCents,
-        dayOfMonth,
-        daysInMonth,
-      });
       return {
         balanceCents: forecast.projectedBalanceCents,
         projectedExpenseCents: forecast.projectedExpenseCents,
-        recommendedDailyCents: daily.dailyAllowanceCents,
+        recommendedDailyCents: daily.remainingTodayCents,
         status: forecast.status,
       };
     }

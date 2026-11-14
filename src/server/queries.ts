@@ -1401,11 +1401,12 @@ export async function getBillsForMonth(userId: string, ref: MonthRef): Promise<B
 }
 
 /**
- * Detecta assinaturas e despesas periódicas nos últimos 90 dias,
+ * Detecta assinaturas mensais/anuais nos últimos 400 dias,
  * apontando as que ainda não foram cadastradas e variações de aumento de preço.
  */
 export async function getDetectedSubscriptions(userId: string, connection: Pick<typeof db, "select"> = db) {
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const historyStart = new Date(now.getTime() - 400 * 24 * 60 * 60 * 1000);
   const [txs, rules] = await Promise.all([
     connection
       .select({
@@ -1413,9 +1414,14 @@ export async function getDetectedSubscriptions(userId: string, connection: Pick<
         amountCents: txTable.amountCents,
         date: txTable.date,
         categoryName: categoriesTable.name,
+        isTransfer: txTable.isTransfer,
+        isCardPayment: txTable.isCardPayment,
+        installmentGroupId: txTable.installmentGroupId,
+        accountType: accountsTable.type,
       })
       .from(txTable)
-      .leftJoin(categoriesTable, eq(categoriesTable.id, txTable.categoryId))
+      .leftJoin(categoriesTable, and(eq(categoriesTable.id, txTable.categoryId), eq(categoriesTable.userId, userId)))
+      .innerJoin(accountsTable, and(eq(accountsTable.id, txTable.accountId), eq(accountsTable.userId, userId)))
       .where(
         and(
           eq(txTable.userId, userId),
@@ -1423,27 +1429,25 @@ export async function getDetectedSubscriptions(userId: string, connection: Pick<
           eq(txTable.isTransfer, false),
           eq(txTable.isCardPayment, false),
           or(isNull(txTable.externalStatus), eq(txTable.externalStatus, "POSTED")),
-          gte(txTable.date, ninetyDaysAgo),
+          isNull(txTable.installmentGroupId),
+          sql`${accountsTable.type} <> 'INVESTMENT'`,
+          gte(txTable.date, historyStart),
+          lt(txTable.date, now),
         ),
       )
-      .orderBy(desc(txTable.date))
-      .limit(500),
+      .orderBy(desc(txTable.date)),
     connection
       .select({
         description: recurringRulesTable.description,
       })
       .from(recurringRulesTable)
-      .where(eq(recurringRulesTable.userId, userId)),
+      .where(and(eq(recurringRulesTable.userId, userId), eq(recurringRulesTable.active, true))),
   ]);
 
   return detectSubscriptions(
-    txs.map((t) => ({
-      description: t.description,
-      amountCents: t.amountCents,
-      date: t.date,
-      categoryName: t.categoryName,
-    })),
+    txs,
     rules.map((r) => r.description),
+    now,
   );
 }
 

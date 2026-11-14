@@ -238,10 +238,12 @@ describe("persistência Telegram", () => {
     mocks.subscriptions.mockResolvedValue("Assinaturas mock");
     expect(await processMessage(22, message("/assinaturas"))).toBe("Assinaturas mock");
     expect(mocks.subscriptions).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }));
+    mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
+    expect(await processMessage(23, message("assinaturas"))).toBe("Assinaturas mock");
 
     mocks.results.push([{ count: 1 }], [{ userId: "linked-owner" }], [{ userId: "linked-owner" }]);
     mocks.cards.mockResolvedValue("Cartões mock");
-    expect(await processMessage(23, message("/cartao"))).toBe("Cartões mock");
+    expect(await processMessage(24, message("/cartao"))).toBe("Cartões mock");
     expect(mocks.cards).toHaveBeenCalledWith("linked-owner", expect.objectContaining({ select: expect.any(Function) }), expect.any(Date));
   });
   it("processa lançamento natural gerando rascunho de confirmação", async () => {

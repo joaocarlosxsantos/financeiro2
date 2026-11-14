@@ -57,12 +57,14 @@ export type TelegramCallback = NonNullable<TelegramUpdate["callback_query"]>;
 
 function commandText(text: string | undefined) {
   const value = text?.trim() ?? "";
+  if (/^assinaturas$/i.test(value)) return "/assinaturas";
   // Only normalize the command token. Link codes and arguments are case-sensitive.
   return value.replace(/^\/[a-z_]+(?:@[a-z0-9_]{5,32})?(?=\s|$)/i,
     token => token.split("@")[0].toLowerCase());
 }
 
 export function isFreeQuestion(text: string | undefined) {
+  if (commandText(text) === "/assinaturas") return false;
   const value = text?.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() ?? "";
   if (!value || value.startsWith("/")) return false;
   // Greetings and unrelated/unknown messages take the local welcome path,

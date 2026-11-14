@@ -104,6 +104,7 @@ describe("protocolo Telegram", () => {
 
     expect(await commandReply(message("/assinaturas"), d)).toBe("Assinaturas identificadas");
     expect(d.subscriptions).toHaveBeenCalledWith("linked-owner");
+    expect(await commandReply(message(" Assinaturas "), d)).toBe("Assinaturas identificadas");
 
     vi.mocked(d.linkedUser).mockResolvedValue(null);
     expect(await commandReply(message("/previsao"), d)).toContain("Vincule");
@@ -111,7 +112,7 @@ describe("protocolo Telegram", () => {
     expect(await commandReply(message("/assinaturas"), d)).toContain("Vincule");
     expect(d.forecast).toHaveBeenCalledTimes(1);
     expect(d.dailyBudget).toHaveBeenCalledTimes(1);
-    expect(d.subscriptions).toHaveBeenCalledTimes(1);
+    expect(d.subscriptions).toHaveBeenCalledTimes(2);
   });
   it("/avisos e /desfazer consultam o dono vinculado e rejeitam chat não vinculado", async () => {
     const d = {

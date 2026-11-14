@@ -1,11 +1,11 @@
 import { withOpenFinanceAge } from "@/server/open-finance/data-age";
 import { and, eq, gte, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { telegramDeliveries, telegramLinks, telegramPreferences, transactions, users } from "@/db/schema";
+import { telegramDeliveries, telegramLinks, telegramPreferences, transactions } from "@/db/schema";
 import { getNowInSaoPaulo, todayRef } from "@/lib/dates";
 import { formatCents } from "@/lib/money";
 import { getBalances } from "@/server/queries";
-import { calculateDailyBudget } from "@/lib/daily-budget";
+import { loadSpendingForecast } from "./spending-forecast";
 import { loadCardSummariesData, sanitizeCardName, type CardSummaryData } from "./card-summary";
 import { enrichAndFilterProactiveAlerts } from "./alerts";
 import { loadInsightData } from "./insight-data";
@@ -299,37 +299,31 @@ export async function loadDailySummaryData(
   };
 
   // 1. Balanço das contas e movimentações de ontem ou da semana
-  const [balances, yesterdayMovements, cards, rawInsightData, [user]] = await Promise.all([
+  const [balances, yesterdayMovements, cards, rawInsightData] = await Promise.all([
     getBalances(userId, connection),
     period === "weekly" ? loadPeriodMovements(userId, now, 7, connection) : loadYesterdayMovements(userId, now, connection),
     loadCardSummariesData(userId, connection, now),
     loadInsightData(userId, window, connection),
-    connection.select({ monthlyIncomeCents: users.monthlyIncomeCents }).from(users).where(eq(users.id, userId)).limit(1),
   ]);
 
   // 2. Alertas proativos e enriquecimento
   const enrichedInsightData = await enrichAndFilterProactiveAlerts(userId, rawInsightData, window, connection);
 
-  // 3. Cálculo de cota diária (se possível)
+  // Reserve all monthly commitments before suggesting a daily envelope.
   let dailyBudgetCents: number | undefined;
+  let spendingInsights: string[] = [];
   try {
-    const daysInMonth = new Date(spNow.getFullYear(), spNow.getMonth() + 1, 0).getDate();
-    const dayOfMonth = spNow.getDate();
-    const incomeCents = Number(user?.monthlyIncomeCents ?? rawInsightData.incomeCents ?? 0);
-    if (incomeCents > 0) {
-      const budget = calculateDailyBudget({
-        incomeCents,
-        expenseSoFarCents: rawInsightData.expenseCents,
-        dayOfMonth,
-        daysInMonth,
-      });
-      dailyBudgetCents = budget.dailyAllowanceCents;
-    }
+    const analysis = await loadSpendingForecast(userId, connection, now);
+    dailyBudgetCents = analysis.daily.remainingTodayCents;
+    // Rotate comparisons across days without making the summary longer.
+    const offset = spNow.getDate() % Math.max(1, analysis.insights.length);
+    spendingInsights = [...analysis.insights.slice(offset), ...analysis.insights.slice(0, offset)];
   } catch {
-    // Cálculo de orçamento diário não bloqueia o resumo
+    // Missing analysis must never prevent due-bill alerts.
   }
-
-  const insights = selectDailyInsights(enrichedInsightData, dailyBudgetCents);
+  const priority = selectDailyInsights(enrichedInsightData);
+  const insights = [...priority, ...spendingInsights,
+    ...(dailyBudgetCents !== undefined ? [`Cota restante hoje: ${formatCurrency(dailyBudgetCents)} (compromissos reservados).`] : [])].slice(0, 3);
 
   return {
     dayLabel,
